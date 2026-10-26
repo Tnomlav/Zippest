@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <title>解压 · Android 高保真界面</title>
+  <style>
+    :root { --bg: oklch(97.48% 0.0028 128.49); --surface: oklch(100% 0 0); --surface-2: oklch(98.15% 0.004 150); --fg: oklch(24.05% 0.0104 163.95); --muted: oklch(48.67% 0.0137 161.64); --border: oklch(91.18% 0.0110 149.85); --outline: oklch(81.6% 0.013 158); --accent: oklch(47.03% 0.0926 166.26); --accent-hover: oklch(41.2% 0.086 166.26); --accent-soft: oklch(94.4% 0.025 166.26); --accent-faint: oklch(96.8% 0.012 166.26); --warning: oklch(60.45% 0.1414 46.33); --warning-ink: oklch(49.13% 0.1278 42.97); --warning-hover: oklch(54.4% 0.132 46.33); --warning-soft: oklch(95.4% 0.029 46.33); --success: oklch(52% 0.09 157); --success-soft: oklch(95.4% 0.023 157); --board: oklch(90.8% 0.008 150); --font: "Noto Sans SC", "Roboto", "PingFang SC", "Microsoft YaHei", sans-serif; --mono: "Roboto Mono", "SFMono-Regular", Consolas, monospace; } * { box-sizing: border-box; } html { background: var(--board); } body { margin: 0; min-width: 100%; background: var(--board); color: var(--fg); font-family: var(--font); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; } button, input { font: inherit; } button { cursor: pointer; } .icon { width: 24px; height: 24px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; } .svg-sprite { position: absolute; width: 0; height: 0; overflow: hidden; } :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; } .board { width: max-content; min-width: 100%; padding: 44px 52px 58px; } .board-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 48px; padding-bottom: 24px; border-bottom: 1px solid oklch(76.5% 0.014 150); } .brand-lockup { display: flex; align-items: center; gap: 18px; } .brand-mark { width: 64px; height: 64px; border-radius: 20px; background: var(--accent); color: var(--surface); display: grid; place-items: center; box-shadow: 0 8px 18px oklch(28% 0.05 166 / 0.18); } .brand-mark .icon { width: 32px; height: 32px; } .eyebrow { margin: 0 0 5px; font-size: 11px; line-height: 1.2; letter-spacing: 0.16em; font-weight: 700; color: oklch(40% 0.012 160); } .board-title { margin: 0; font-size: 42px; line-height: 1; font-weight: 750; letter-spacing: -0.04em; } .board-subtitle { margin: 8px 0 0; color: oklch(38% 0.012 160); font-size: 15px; line-height: 1.5; } .board-meta { display: grid; justify-items: end; gap: 6px; text-align: right; color: oklch(37% 0.012 160); font-size: 12px; line-height: 1.4; } .board-meta strong { color: var(--fg); font-family: var(--mono); font-size: 13px; letter-spacing: -0.02em; } .board-rule { display: flex; justify-content: space-between; align-items: center; margin: 16px 0 26px; color: oklch(36% 0.012 160); font-size: 12px; font-weight: 600; } .board-rule span:nth-child(2) { letter-spacing: 0.02em; } .board-row { display: flex; align-items: flex-start; gap: 40px; } .shot { flex: 0 0 393px; } .phone-caption { display: flex; align-items: flex-start; gap: 12px; margin-top: 18px; } .caption-index { min-width: 28px; padding-top: 2px; font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--accent); } .caption-copy strong { display: block; font-size: 14px; line-height: 1.25; font-weight: 750; color: var(--fg); } .caption-copy span { display: block; margin-top: 4px; color: oklch(41% 0.012 160); font-size: 12px; line-height: 1.35; } .device { width: 393px; height: 852px; position: relative; overflow: hidden; border: 1px solid oklch(78% 0.012 160); border-radius: 30px; background: var(--bg); box-shadow: 0 24px 44px oklch(22% 0.012 160 / 0.13), 0 4px 10px oklch(22% 0.012 160 / 0.08); } .screen { position: absolute; inset: 0; overflow: hidden; background: var(--bg); } .statusbar { position: relative; z-index: 40; height: 32px; padding: 0 22px; display: flex; align-items: center; justify-content: space-between; color: var(--fg); font-size: 11px; line-height: 1; font-weight: 650; letter-spacing: -0.01em; } .camera-dot { position: absolute; top: 10px; left: 50%; width: 10px; height: 10px; border-radius: 50%; background: oklch(18% 0.01 160); transform: translateX(-50%); box-shadow: inset 0 0 0 2px oklch(26% 0.012 160); } .sb-icons { display: flex; align-items: center; gap: 5px; } .sb-icons .icon { width: 14px; height: 14px; stroke-width: 1.6; } .app-shell { position: absolute; inset: 32px 0 0; display: flex; flex-direction: column; background: var(--bg); } .appbar { height: 64px; padding: 0 12px 0 20px; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; background: var(--bg); } .appbar.compact { height: 60px; } .appbar-left { display: flex; align-items: center; min-width: 0; gap: 6px; } .appbar-title { margin: 0; font-size: 27px; line-height: 1.2; font-weight: 750; letter-spacing: -0.045em; } .appbar-subtitle { margin-left: 7px; padding: 4px 8px 5px; border-radius: 999px; background: var(--accent-faint); color: var(--accent); font-size: 10px; line-height: 1; font-weight: 700; } .back-title { min-width: 0; font-size: 17px; line-height: 1.2; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .icon-btn { width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: transparent; color: var(--fg); transition: background-color 160ms ease, transform 120ms ease; } .icon-btn:hover { background: oklch(93.6% 0.008 150); } .icon-btn:active { transform: scale(0.96); } .icon-btn.quiet { color: var(--muted); } .icon-btn.quiet:hover { color: var(--fg); } .content-area { min-height: 0; flex: 1; overflow: hidden; } .home-main { padding: 4px 20px 92px; } .home-lede { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; letter-spacing: 0.002em; } .hero-card { margin-top: 16px; padding: 18px; border: 1px solid var(--border); border-radius: 24px; background: var(--surface); box-shadow: 0 4px 14px oklch(25% 0.012 160 / 0.045); } .hero-card-head { display: flex; align-items: center; gap: 14px; } .archive-tile { width: 58px; height: 58px; flex: 0 0 58px; display: grid; place-items: center; border-radius: 18px; background: var(--accent-soft); color: var(--accent); } .archive-tile .icon { width: 29px; height: 29px; stroke-width: 1.7; } .hero-card h2 { margin: 0; font-size: 19px; line-height: 1.3; font-weight: 750; letter-spacing: -0.025em; } .hero-card p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; } .primary-btn, .tonal-btn, .outline-btn, .text-btn { min-height: 52px; border-radius: 17px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; font-size: 15px; line-height: 1; font-weight: 700; transition: background-color 160ms ease, border-color 160ms ease, transform 120ms ease; } .primary-btn { width: 100%; border: 1px solid var(--accent); background: var(--accent); color: var(--surface); box-shadow: 0 4px 12px oklch(35% 0.06 166 / 0.18); } .primary-btn:hover { background: var(--accent-hover); border-color: var(--accent-hover); } .primary-btn:active, .tonal-btn:active, .outline-btn:active, .text-btn:active { transform: scale(0.985); } .primary-btn .icon { width: 20px; height: 20px; } .hero-card .primary-btn { margin-top: 16px; } .local-note { margin-top: 9px; display: flex; justify-content: center; align-items: center; gap: 5px; color: var(--muted); font-size: 10.5px; line-height: 1.3; } .local-note .icon { width: 13px; height: 13px; stroke-width: 2; } .format-strip { display: flex; align-items: center; gap: 7px; margin-top: 13px; overflow: hidden; } .format-strip .label { margin-right: 2px; color: var(--muted); font-size: 10.5px; font-weight: 650; white-space: nowrap; } .chip { min-height: 27px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; background: var(--surface); color: oklch(35% 0.02 163); font-family: var(--mono); font-size: 10px; font-weight: 650; line-height: 1; white-space: nowrap; } .section-head { display: flex; align-items: center; justify-content: space-between; min-height: 44px; margin-top: 4px; } .section-head h2 { margin: 0; font-size: 17px; line-height: 1.25; font-weight: 750; letter-spacing: -0.02em; } .section-head .text-link { min-height: 32px; padding: 0 11px; border: 1px solid transparent; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 700; transition: background-color 160ms ease, border-color 160ms ease; } .section-head .text-link:hover { background: oklch(91.8% 0.034 166); border-color: oklch(86% 0.045 166); } .recent-card { overflow: hidden; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); } .recent-row { position: relative; min-height: 72px; padding: 10px 12px; display: flex; align-items: center; gap: 11px; } .recent-row + .recent-row { border-top: 1px solid var(--border); } .file-tile { width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center; border-radius: 13px; background: oklch(95.5% 0.007 150); color: oklch(37% 0.016 160); } .file-tile .icon { width: 21px; height: 21px; } .recent-copy { min-width: 0; flex: 1; } .recent-copy strong { display: block; overflow: hidden; color: var(--fg); font-size: 13.5px; line-height: 1.35; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; } .recent-meta { margin-top: 3px; display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10.5px; line-height: 1.3; white-space: nowrap; } .meta-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--outline); } .status-chip { min-height: 25px; padding: 0 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; font-size: 10px; line-height: 1; font-weight: 700; white-space: nowrap; } .status-chip .icon { width: 12px; height: 12px; stroke-width: 2; } .status-chip.success { background: var(--success-soft); color: var(--success); } .status-chip.warning { background: var(--warning-soft); color: var(--warning-ink); } .status-chip.accent { background: var(--accent-soft); color: var(--accent); } .recent-row.failed { min-height: 86px; align-items: flex-start; padding-top: 12px; } .recent-row.failed .status-chip { margin-top: 2px; } .failure-copy { margin-top: 4px; color: var(--warning-ink); font-size: 10.5px; line-height: 1.35; } .bottom-nav { position: absolute; left: 0; right: 0; bottom: 0; z-index: 20; height: 84px; padding: 8px 28px 14px; display: flex; align-items: flex-start; justify-content: space-between; border-top: 1px solid var(--border); background: var(--surface); } .nav-item { min-width: 74px; height: 60px; padding: 0; border: 0; display: grid; justify-items: center; align-content: start; gap: 3px; background: transparent; color: var(--muted); } .nav-indicator { width: 58px; height: 30px; display: grid; place-items: center; border-radius: 999px; transition: background-color 160ms ease; } .nav-item:hover .nav-indicator { background: oklch(94.5% 0.009 150); } .nav-item.active .nav-indicator { background: var(--accent-soft); color: var(--accent); } .nav-item.active { color: var(--accent); } .nav-item .icon { width: 22px; height: 22px; } .nav-item span:last-child { font-size: 10.5px; line-height: 1.2; font-weight: 650; } .gesture-bar { position: absolute; z-index: 45; left: 50%; bottom: 6px; width: 112px; height: 4px; border-radius: 99px; background: oklch(22% 0.01 160); transform: translateX(-50%); } .detail-main { padding: 0 20px 172px; } .summary-card { padding: 16px; border: 1px solid var(--border); border-radius: 22px; background: var(--surface); } .summary-top { display: flex; align-items: center; gap: 13px; } .summary-icon { width: 52px; height: 52px; flex: 0 0 52px; border-radius: 16px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); } .summary-icon .icon { width: 27px; height: 27px; } .summary-title { min-width: 0; flex: 1; } .summary-title h2 { margin: 0; overflow: hidden; font-size: 17px; line-height: 1.35; font-weight: 750; letter-spacing: -0.025em; text-overflow: ellipsis; white-space: nowrap; } .summary-title p { margin: 4px 0 0; color: var(--muted); font-size: 11.5px; line-height: 1.35; } .summary-chips { display: flex; gap: 6px; margin-top: 14px; } .detail-section-head { min-height: 48px; display: flex; align-items: center; justify-content: space-between; } .detail-section-head h3 { margin: 0; font-size: 15px; line-height: 1.3; font-weight: 750; } .detail-section-head span { color: var(--muted); font-size: 10.5px; } .content-list { overflow: hidden; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); } .list-item { min-height: 60px; padding: 8px 13px; display: flex; align-items: center; gap: 11px; } .list-item + .list-item { border-top: 1px solid var(--border); } .list-item .file-tile { width: 36px; height: 36px; flex-basis: 36px; border-radius: 11px; } .list-item .file-tile .icon { width: 19px; height: 19px; } .list-copy { min-width: 0; flex: 1; } .list-copy strong { display: block; overflow: hidden; font-size: 13px; line-height: 1.3; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; } .list-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; line-height: 1.25; } .list-size { color: var(--muted); font-family: var(--mono); font-size: 10.5px; line-height: 1.3; white-space: nowrap; } .detail-actions { position: absolute; z-index: 25; left: 0; right: 0; bottom: 0; padding: 14px 20px 22px; border-top: 1px solid var(--border); background: var(--surface); box-shadow: 0 -8px 20px oklch(20% 0.01 160 / 0.035); } .target-label { margin: 0 0 4px; color: var(--muted); font-size: 10.5px; line-height: 1.2; font-weight: 600; } .target-row { height: 38px; display: flex; align-items: center; gap: 8px; } .target-path { min-width: 0; flex: 1; display: flex; align-items: center; gap: 7px; color: var(--fg); font-size: 12.5px; line-height: 1.3; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .target-path .icon { width: 17px; height: 17px; color: var(--accent); } .space-check { min-height: 24px; display: flex; align-items: center; gap: 5px; color: var(--accent); font-size: 10.5px; line-height: 1.2; font-weight: 650; } .space-check .icon { width: 13px; height: 13px; stroke-width: 2.1; } .detail-actions .primary-btn { min-height: 51px; margin-top: 8px; } .progress-bg { position: absolute; inset: 0; opacity: 0.67; filter: blur(5.5px); transform: scale(1.015); pointer-events: none; } .progress-bg .summary-card { margin: 0 20px; } .progress-bg .content-list { margin: 0 20px; } .progress-scrim { position: absolute; inset: 0; background: oklch(18% 0.012 160 / 0.2); } .progress-panel { position: absolute; z-index: 15; top: 176px; left: 12px; right: 12px; bottom: 12px; padding: 13px 24px 20px; display: flex; flex-direction: column; align-items: center; overflow: hidden; border: 1px solid oklch(89% 0.01 150); border-radius: 28px; background: var(--surface); box-shadow: 0 18px 38px oklch(18% 0.014 160 / 0.19); } .sheet-handle { width: 36px; height: 5px; flex: 0 0 auto; border-radius: 99px; background: oklch(78% 0.013 155); } .progress-kicker { margin: 13px 0 0; color: var(--accent); font-size: 10.5px; line-height: 1.2; font-weight: 750; letter-spacing: 0.05em; } .ring-wrap { position: relative; width: 170px; height: 170px; margin-top: 10px; display: grid; place-items: center; } .progress-ring { width: 170px; height: 170px; transform: rotate(-90deg); } .ring-track, .ring-value { fill: none; stroke-width: 12; } .ring-track { stroke: var(--accent-faint); } .ring-value { stroke: var(--accent); stroke-linecap: round; } .ring-copy { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; } .ring-copy strong { font-size: 40px; line-height: 1; font-weight: 700; letter-spacing: -0.055em; } .ring-copy strong span { font-size: 18px; font-weight: 650; letter-spacing: -0.02em; } .ring-copy small { margin-top: 6px; color: var(--muted); font-size: 10px; } .current-file { width: 100%; margin-top: 6px; text-align: center; } .current-file span { color: var(--muted); font-size: 10px; line-height: 1.2; font-weight: 600; } .current-file strong { display: block; margin-top: 5px; overflow: hidden; font-size: 14px; line-height: 1.35; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; } .progress-metrics { width: 100%; margin-top: 17px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .metric { min-height: 68px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface-2); } .metric span { display: block; color: var(--muted); font-size: 9.5px; line-height: 1.2; } .metric strong { display: block; margin-top: 5px; font-family: var(--mono); font-size: 14px; line-height: 1.2; font-weight: 700; letter-spacing: -0.03em; } .cancel-btn { width: 100%; min-height: 49px; margin-top: auto; border: 1px solid oklch(76% 0.045 46); border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--surface); color: var(--warning-ink); font-size: 14px; line-height: 1; font-weight: 700; } .cancel-btn:hover { background: var(--warning-soft); border-color: oklch(68% 0.08 46); } .cancel-btn .icon { width: 19px; height: 19px; } .background-note { margin: 10px 0 0; color: var(--muted); font-size: 9.5px; line-height: 1.3; text-align: center; } .queue-main { padding: 2px 20px 94px; } .queue-summary { min-height: 84px; padding: 14px 10px; display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--border); border-radius: 22px; background: var(--surface); } .summary-stat { position: relative; display: grid; align-content: center; justify-items: center; gap: 3px; } .summary-stat + .summary-stat::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 1px; background: var(--border); } .summary-stat strong { font-family: var(--mono); font-size: 25px; line-height: 1; font-weight: 700; letter-spacing: -0.05em; } .summary-stat span { color: var(--muted); font-size: 10px; line-height: 1.2; } .summary-stat.running strong { color: var(--accent); } .summary-stat.done strong { color: var(--success); } .queue-head { min-height: 50px; margin-top: 2px; } .queue-head h3 { margin: 0; font-size: 15px; line-height: 1.3; font-weight: 750; } .queue-head span { color: var(--muted); font-size: 10.5px; } .queue-card { overflow: hidden; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); } .queue-row { min-height: 83px; padding: 10px 12px; display: grid; grid-template-columns: 34px minmax(0, 1fr) 44px; column-gap: 9px; align-items: center; } .queue-row + .queue-row { border-top: 1px solid var(--border); } .queue-row .file-tile { width: 34px; height: 34px; flex-basis: 34px; border-radius: 11px; } .queue-row .file-tile .icon { width: 18px; height: 18px; } .queue-copy { min-width: 0; } .queue-title-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; } .queue-title-line strong { min-width: 0; overflow: hidden; font-size: 12.5px; line-height: 1.3; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; } .queue-status { flex: 0 0 auto; font-size: 9.5px; line-height: 1; font-weight: 700; } .queue-status.running { color: var(--accent); } .queue-status.waiting, .queue-status.paused { color: var(--muted); } .queue-status.done { color: var(--success); } .queue-status.failed { color: var(--warning-ink); } .linear-progress { position: relative; height: 4px; margin-top: 8px; overflow: hidden; border-radius: 99px; background: var(--border); } .linear-progress span { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--accent); } .queue-row.is-paused .linear-progress span { opacity: 0.55; } .queue-row.is-done .linear-progress span { background: var(--success); } .queue-row.is-failed .linear-progress span { background: var(--warning); } .queue-foot { margin-top: 5px; display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 9.5px; line-height: 1.2; } .queue-foot .failure-note { color: var(--warning-ink); } .task-toggle { width: 44px; height: 44px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--accent); } .task-toggle:hover { background: var(--accent-soft); } .task-toggle .icon { width: 21px; height: 21px; } .task-toggle.retry { color: var(--warning-ink); } .task-toggle.retry:hover { background: var(--warning-soft); } .task-toggle.complete { color: var(--success); cursor: default; } .task-toggle.complete:hover { background: transparent; } .password-backdrop { opacity: 0.49; filter: blur(4.5px); transform: scale(1.01); } .password-scrim { background: oklch(17% 0.012 160 / 0.39); } .password-sheet { position: absolute; z-index: 20; left: 0; right: 0; bottom: 0; padding: 12px 24px 24px; border-radius: 28px 28px 0 0; background: var(--surface); box-shadow: 0 -20px 44px oklch(16% 0.012 160 / 0.24); } .password-sheet .sheet-handle { margin: 0 auto; } .sheet-icon { width: 46px; height: 46px; margin-top: 15px; border-radius: 15px; display: grid; place-items: center; background: var(--warning-soft); color: var(--warning-ink); } .sheet-icon .icon { width: 24px; height: 24px; } .password-sheet h2 { margin: 13px 0 0; font-size: 22px; line-height: 1.3; font-weight: 750; letter-spacing: -0.035em; } .sheet-file { margin: 6px 0 0; color: var(--muted); font-size: 11.5px; line-height: 1.45; } .sheet-file strong { color: oklch(36% 0.014 160); font-weight: 650; } .field-label { display: block; margin: 17px 0 7px; color: var(--muted); font-size: 10.5px; line-height: 1.2; font-weight: 650; } .password-field { height: 54px; display: flex; align-items: center; gap: 8px; padding: 0 7px 0 14px; border: 1.5px solid var(--warning); border-radius: 15px; background: var(--surface); } .password-field:focus-within { outline: 2px solid var(--warning-ink); outline-offset: 1px; } .password-field > .icon { width: 19px; height: 19px; color: var(--muted); } .password-field input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--fg); font-family: var(--mono); font-size: 14px; line-height: 1; letter-spacing: 0.08em; } .password-field input::selection { background: var(--accent-soft); } .password-toggle { width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: transparent; color: var(--muted); } .password-toggle:hover { background: oklch(94% 0.009 150); color: var(--fg); } .password-toggle .icon { width: 20px; height: 20px; } .error-text { margin: 6px 0 0; display: flex; align-items: center; gap: 5px; color: var(--warning-ink); font-size: 10.5px; line-height: 1.3; font-weight: 600; } .error-text .icon { width: 13px; height: 13px; stroke-width: 2; } .space-check.sheet-space { margin-top: 11px; padding: 8px 10px; border-radius: 11px; background: var(--accent-faint); } .password-sheet .primary-btn { min-height: 54px; margin-top: 14px; } .sheet-cancel { width: 100%; min-height: 44px; margin-top: 3px; border: 0; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--muted); font-size: 12px; font-weight: 650; } .sheet-cancel:hover { color: var(--fg); } .settings-main { padding: 4px 20px 22px; overflow: hidden; } .settings-section + .settings-section { margin-top: 18px; } .settings-section h2 { margin: 0 0 8px 2px; color: var(--muted); font-size: 10.5px; line-height: 1.2; font-weight: 700; letter-spacing: 0.05em; } .settings-card { overflow: hidden; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); } .settings-row { width: 100%; min-height: 66px; padding: 8px 13px; border: 0; display: flex; align-items: center; gap: 11px; background: var(--surface); color: var(--fg); text-align: left; } button.settings-row:hover { background: oklch(97.2% 0.006 150); } .settings-row + .settings-row { border-top: 1px solid var(--border); } .settings-icon { width: 36px; height: 36px; flex: 0 0 36px; border-radius: 11px; display: grid; place-items: center; background: oklch(95.5% 0.008 150); color: oklch(39% 0.018 160); } .settings-icon .icon { width: 19px; height: 19px; } .settings-copy { min-width: 0; flex: 1; } .settings-copy strong { display: block; font-size: 13px; line-height: 1.3; font-weight: 650; } .settings-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 10.5px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .settings-value { max-width: 132px; color: var(--muted); font-size: 11.5px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .settings-chevron { width: 18px; height: 18px; color: oklch(61% 0.012 158); } .switch { width: 48px; height: 28px; padding: 2px; border: 1.5px solid var(--outline); border-radius: 999px; background: var(--surface-2); position: relative; transition: background-color 150ms ease, border-color 150ms ease; } .switch::after { content: ""; position: absolute; left: 4px; top: 4px; width: 18px; height: 18px; border-radius: 50%; background: var(--muted); transition: transform 150ms ease, background-color 150ms ease; } .switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); } .switch[aria-checked="true"]::after { background: var(--surface); transform: translateX(20px); } .settings-footnote { margin-top: 16px; display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 9.5px; line-height: 1.4; } .settings-footnote span:last-child { font-family: var(--mono); } .appendix { width: 292px; flex: 0 0 292px; margin-top: 96px; } .appendix-label { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: oklch(38% 0.014 160); font-size: 11px; line-height: 1.2; font-weight: 700; } .appendix-label::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--warning); } .mini-device { width: 280px; height: 448px; overflow: hidden; border: 1px solid oklch(78% 0.012 160); border-radius: 24px; background: var(--bg); box-shadow: 0 18px 32px oklch(22% 0.012 160 / 0.1); } .mini-appbar { height: 48px; padding: 0 12px 0 14px; display: flex; align-items: center; justify-content: space-between; background: var(--bg); } .mini-appbar strong { font-size: 19px; letter-spacing: -0.04em; } .mini-appbar .icon-btn { width: 36px; height: 36px; } .mini-appbar .icon { width: 20px; height: 20px; } .mini-main { padding: 5px 12px 14px; } .mini-hero { padding: 12px; border: 1px solid var(--border); border-radius: 17px; background: var(--surface); } .mini-hero-head { display: flex; align-items: center; gap: 9px; } .mini-hero .archive-tile { width: 40px; height: 40px; flex-basis: 40px; border-radius: 13px; } .mini-hero .archive-tile .icon { width: 21px; height: 21px; } .mini-hero strong { display: block; font-size: 12px; line-height: 1.3; } .mini-hero small { display: block; margin-top: 3px; color: var(--muted); font-size: 8px; line-height: 1.3; } .mini-cta { width: 100%; min-height: 38px; margin-top: 10px; border: 0; border-radius: 12px; background: var(--accent); color: var(--surface); font-size: 10.5px; font-weight: 700; } .mini-section { margin: 13px 1px 7px; display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 750; } .mini-section span:last-child { color: var(--muted); font-size: 8px; font-weight: 500; } .mini-empty { height: 204px; padding: 25px 18px; border: 1px solid var(--border); border-radius: 17px; display: flex; flex-direction: column; align-items: center; text-align: center; background: var(--surface); } .empty-icon { width: 50px; height: 50px; border-radius: 16px; display: grid; place-items: center; background: var(--accent-faint); color: var(--accent); } .empty-icon .icon { width: 25px; height: 25px; } .mini-empty strong { margin-top: 14px; font-size: 12px; line-height: 1.4; } .mini-empty p { max-width: 154px; margin: 5px 0 0; color: var(--muted); font-size: 9px; line-height: 1.55; } .mini-empty .text-btn { min-height: 34px; margin-top: 13px; padding: 0 12px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); color: var(--accent); font-size: 9px; } .appendix .phone-caption { margin-top: 14px; } .appendix .caption-copy strong { font-size: 13px; } @media (max-width: 720px) { .board { padding: 28px 20px 44px; } .board-head { display: block; } .board-meta { justify-items: start; text-align: left; margin-top: 18px; } .board-rule { gap: 20px; } .board-rule span:nth-child(2) { display: none; } } @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0.01ms !important; } }
+    .assurance-band {
+      margin-top: 14px;
+      min-height: 48px;
+      padding: 8px 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .assurance-icon {
+      width: 32px;
+      height: 32px;
+      flex: 0 0 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: var(--accent-faint);
+      color: var(--accent);
+    }
+    .assurance-icon .icon { width: 17px; height: 17px; }
+    .assurance-copy { min-width: 0; flex: 1; }
+    .assurance-copy strong { display: block; font-size: 11.5px; line-height: 1.3; font-weight: 650; }
+    .assurance-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 9.5px; line-height: 1.35; }
+    .queue-session, .local-security-card {
+      margin-top: 12px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface);
+    }
+    .local-security-card { margin-top: 18px; background: var(--accent-faint); border-color: oklch(88% 0.023 166); }
+    .local-security-card .assurance-icon { background: var(--surface); }
+    .list-item { min-height: 58px; }
+  </style>
+</head>
+<body>
+  <svg class="svg-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-archive" viewBox="0 0 24 24"><path d="M4 8h16v10.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z"/><path d="m3.8 8 1.5-4h13.4l1.5 4M4.5 10.5h15M9.5 13h5"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V7.5Z"/><path d="M3.5 10h17"/></symbol>
+    <symbol id="i-folder-open" viewBox="0 0 24 24"><path d="M3.5 8.5v9.9a1.8 1.8 0 0 0 1.8 1.8h13.4a1.7 1.7 0 0 0 1.6-1.3l1.2-5.2a1.7 1.7 0 0 0-1.7-2.1H8l-2.2-2H5.3a1.8 1.8 0 0 0-1.8 1.8Z"/><path d="M8 10.1 6.2 18.8"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5l-5-5Z"/><path d="M14 3.5v5h5M8.5 13h7M8.5 16.5h5"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.5"/><path d="m4.5 17 4.2-4.2 3.2 3.2 2.2-2.2 5.4 5.2"/></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><rect x="3.5" y="6" width="13" height="12" rx="2.2"/><path d="m16.5 10.2 4-2.4v8.4l-4-2.4"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M14 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5l-5-5Z"/><path d="M14 3.5v5h5M8.5 12h7M8.5 15h7M8.5 18h4"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.1 13.2a7.7 7.7 0 0 0 0-2.4l2-1.5-2-3.4-2.4 1a8 8 0 0 0-2-1.2L14.4 3h-4.8l-.3 2.7a8 8 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.5a7.7 7.7 0 0 0 0 2.4l-2 1.5 2 3.4 2.4-1a8 8 0 0 0 2 1.2l.3 2.7h4.8l.3-2.7a8 8 0 0 0 2-1.2l2.4 1 2-3.4-2-1.5Z"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.2 4L19 7"/></symbol>
+    <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.3 2.5 2.5 5.2-5.6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.4 4.3 2.8 17.5a1.9 1.9 0 0 0 1.6 2.8h15.2a1.9 1.9 0 0 0 1.6-2.8L13.6 4.3a1.8 1.8 0 0 0-3.2 0Z"/><path d="M12 9v4.2M12 16.8h.01"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="18.5" r="1"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10M12 14v2.5"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.8 12s3.2-5.5 9.2-5.5 9.2 5.5 9.2 5.5-3.2 5.5-9.2 5.5S2.8 12 2.8 12Z"/><circle cx="12" cy="12" r="2.6"/></symbol>
+    <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3.5 20.5 21M9.8 6.8A10.4 10.4 0 0 1 12 6.5c6 0 9.2 5.5 9.2 5.5a16 16 0 0 1-2.8 3.5M6.4 8.3A16.2 16.2 0 0 0 2.8 12s3.2 5.5 9.2 5.5c1.2 0 2.3-.2 3.3-.6"/><path d="M10.2 10.3a2.6 2.6 0 0 0 3.4 3.4"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8.5 5.5 10 6.5-10 6.5v-13Z"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M18.2 9A7.5 7.5 0 0 0 5 7.7L4 12M5.8 15A7.5 7.5 0 0 0 19 16.3l1-4.3"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5 19 6v5.3c0 4.4-2.8 7.4-7 9.2-4.2-1.8-7-4.8-7-9.2V6l7-2.5Z"/><path d="m8.8 12 2.1 2.1 4.4-4.5"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M3.5 9a13 13 0 0 1 17 0M6.5 12.4a8.5 8.5 0 0 1 11 0M9.6 15.7a3.8 3.8 0 0 1 4.8 0M12 19h.01"/></symbol>
+    <symbol id="i-signal" viewBox="0 0 24 24"><path d="M5 17v-3M10 17V9M15 17V6M20 17V3"/></symbol>
+    <symbol id="i-battery" viewBox="0 0 24 24"><rect x="3" y="7" width="17" height="10" rx="2"/><path d="M20 10h1.2v4H20M6 10h8v4H6"/></symbol>
+  </svg>
+
+  <main class="board" aria-label="解压 Android 高保真设计画板">
+    <header class="board-head">
+      <div class="brand-lockup">
+        <div class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-archive"/></svg></div>
+        <div>
+          <p class="eyebrow">ANDROID · MATERIAL 3 · LOCAL FIRST</p>
+          <h1 class="board-title">解压</h1>
+          <p class="board-subtitle">干净、可靠、无广告的本地压缩包工具 · 初版高保真界面</p>
+        </div>
+      </div>
+      <div class="board-meta">
+        <span>LIGHT THEME · 393 × 852 DP</span>
+        <strong>6 CORE SCREENS + EMPTY STATE</strong>
+        <span>Deep Teal #0F6B4F / Warm Orange #C4622D</span>
+      </div>
+    </header>
+    <div class="board-rule" aria-hidden="true">
+      <span>CORE FLOW</span>
+      <span>选择压缩包 → 查看内容 → 安全解压 → 完成</span>
+      <span>横向滚动查看 6 屏 →</span>
+    </div>
+
+    <div class="board-row">
+      <article class="shot" aria-labelledby="caption-home">
+        <section class="device" id="home-screen" data-od-id="home-screen" aria-label="首页手机画面">
+          <div class="screen">
+            <div class="statusbar" aria-hidden="true">
+              <span>9:41</span><span class="camera-dot"></span>
+              <span class="sb-icons">
+                <svg class="icon"><use href="#i-signal"/></svg>
+                <svg class="icon"><use href="#i-wifi"/></svg>
+                <svg class="icon"><use href="#i-battery"/></svg>
+              </span>
+            </div>
+            <div class="app-shell">
+              <header class="appbar" data-m3="TopAppBar" data-od-id="home-top-app-bar">
+                <div class="appbar-left">
+                  <h1 class="appbar-title" data-od-id="home-title">解压</h1>
+                  <span class="appbar-subtitle">本机模式</span>
+                </div>
+                <button class="icon-btn" type="button" aria-label="打开设置" title="设置" data-od-id="home-settings-button">
+                  <svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>
+                </button>
+              </header>
+              <main class="content-area home-main" data-od-id="home-content">
+                <p class="home-lede">选一个压缩包，先看清里面是什么，再安全地解出来。</p>
+                <section class="hero-card" data-m3="Card" data-od-id="home-main-action-card">
+                  <div class="hero-card-head">
+                    <div class="archive-tile"><svg class="icon" aria-hidden="true"><use href="#i-archive"/></svg></div>
+                    <div>
+                      <h2>选择压缩包</h2>
+                      <p>支持 ZIP / RAR / 7Z / TAR / GZ 等格式</p>
+                    </div>
+                  </div>
+                  <button class="primary-btn" type="button" data-m3="FilledButton" data-od-id="home-select-archive-button">
+                    <svg class="icon" aria-hidden="true"><use href="#i-folder-open"/></svg>
+                    选择压缩包
+                  </button>
+                  <div class="local-note">
+                    <svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>
+                    文件只在本机处理，不会上传
+                  </div>
+                </section>
+                <div class="format-strip" aria-label="支持的压缩格式" data-od-id="home-format-chips">
+                  <span class="label">格式</span>
+                  <span class="chip">ZIP</span><span class="chip">RAR</span><span class="chip">7Z</span><span class="chip">TAR</span><span class="chip">GZ</span>
+                </div>
+                <div class="section-head">
+                  <h2>最近解压</h2>
+                  <button class="text-link" type="button" data-m3="FilledTonalButton" data-od-id="home-recent-view-all">查看全部</button>
+                </div>
+                <section class="recent-card" aria-label="最近解压记录" data-od-id="home-recent-list">
+                  <div class="recent-row" data-od-id="recent-family-photos">
+                    <div class="file-tile"><svg class="icon" aria-hidden="true"><use href="#i-archive"/></svg></div>
+                    <div class="recent-copy">
+                      <strong>家庭照片_2024.zip</strong>
+                      <div class="recent-meta"><span>1.8 GB</span><span class="meta-dot"></span><span>今天 14:32</span></div>
+                    </div>
+                    <span class="status-chip success"><svg class="icon"><use href="#i-check"/></svg>已完成</span>
+                  </div>
+                  <div class="recent-row" data-od-id="recent-project-files">
+                    <div class="file-tile"><svg class="icon" aria-hidden="true"><use href="#i-archive"/></svg></div>
+                    <div class="recent-copy">
+                      <strong>项目资料.rar</strong>
+                      <div class="recent-meta"><span>248 MB</span><span class="meta-dot"></span><span>昨天 09:18</span></div>
+                    </div>
+                    <span class="status-chip success"><svg class="icon"><use href="#i-check"/></svg>已完成</span>
+                  </div>
+                  <div class="recent-row failed" data-od-id="recent-old-backup">
+                    <div class="file-tile"><svg class="icon" aria-hidden="true"><use href="#i-archive"/></svg></div>
+                    <div class="recent-copy">
+                      <strong>旧备份.7z</strong>
+                      <div class="recent-meta"><span>612 MB</span><span class="meta-dot"></span><span>10月14日</span></div>
+                      <div class="failure-copy">压缩包已损坏，仍可尝试提取部分文件</div>
+                    </div>
+                    <span class="status-chip warning"><svg class="icon"><use href="#i-alert"/></svg>失败</span>
+                  </div>
+                </section>
+                <div class="assurance-band" data-od-id="home-space-assurance">
+                  <span class="assurance-icon"><svg class="icon"><use href="#i-shield"/></svg></span>
+                  <div class="assurance-copy"><strong>解压前检查目标空间</strong><span>空间不足时，不会开始写入文件</span></div>
+                </div>
+              </main>
+              <nav class="bottom-nav" aria-label="主导航" data-m3="NavigationBar" data-od-id="home-navigation-bar">
+                <button class="nav-item active" type="button" aria-current="page">
+                  <span class="nav-indicator"><svg class="icon" aria-hidden="true"><use href="#i-archive"/></svg></span><span>首页</span>
+                </button>
+                <button class="nav-item" type="button">
+                  <span class="nav-indicator"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg></span><span>队列</span>
+                </button>
+                <button class="nav-item" type="button">
+                  <span class="nav-indicator"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg></span><span>设置</span>
+                </button>
+              </nav>
+            </div>
+            <div class="gesture-bar" aria-hidden="true"></div>
+          </div>
+        </section>
+        <div class="phone-caption" id="caption-home">
+          <span class="caption-index">01</span>
+          <div class="caption-copy"><strong>首页</strong><span>主操作、格式能力与最近记录</span></div>
+        </div>
+      </article>
+
+      <article class="shot" aria-labelledby="caption-detail">
+        <section class="device" id="detail-screen" data-od-id="detail-screen" aria-label="压缩包详情手机画面">
+          <div class="screen">
+            <div class="statusbar" aria-hidden="true">
+              <span>9:41</span><span class="camera-dot"></span>
+              <span class="sb-icons">
+                <svg class="icon"><use href="#i-signal"/></svg><svg class="icon"><use href="#i-wifi"/></svg><svg class="icon"><use href="#i-battery"/></svg>
+              </span>
+            </div>
+            <div class="app-shell">
+              <header class="appbar compact" data-m3="TopAppBar" data-od-id="detail-top-app-bar">
+                <div class="appbar-left">
+                  <button class="icon-btn" type="button" aria-label="返回首页" data-od-id="detail-back-button"><svg class="icon"><use href="#i-back"/></svg></button>
+                  <span class="back-title">压缩包详情</span>
+                </div>
+                <button class="icon-btn quiet" type="button" aria-label="更多操作" data-od-id="detail-more-button"><svg class="icon"><use href="#i-more"/></svg></button>
+              </header>
+              <main class="content-area detail-main" data-od-id="detail-content">
+                <section class="summary-card" data-m3="Card" data-od-id="detail-file-summary">
+                  <div class="summary-top">
+                    <div class="summary-icon"><svg class="icon"><use href="#i-archive"/></svg></div>
+                    <div class="summary-title">
+                      <h2>家庭照片_2024.zip</h2>
+                      <p>1.8 GB · 146 项</p>
+                    </div>
+                  </div>
+                  <div class="summary-chips">
+                    <span class="chip">ZIP</span>
+                    <span class="status-chip success"><svg class="icon"><use href="#i-shield"/></svg>未加密</span>
+                  </div>
+                </section>
+                <div class="detail-section-head"><h3>压缩包内容</h3><span>按原始顺序</span></div>
+                <section class="content-list" aria-label="压缩包内容列表" data-od-id="detail-content-list">
+                  <div class="list-item" data-od-id="detail-folder-travel-photos">
+                    <div class="file-tile"><svg class="icon"><use href="#i-folder"/></svg></div>
+                    <div class="list-copy"><strong>旅行照片</strong><span>文件夹 · 24 项</span></div>
+                    <span class="list-size">1.2 GB</span>
+                  </div>
+                  <div class="list-item" data-od-id="detail-file-img-4821">
+                    <div class="file-tile"><svg class="icon"><use href="#i-image"/></svg></div>
+                    <div class="list-copy"><strong>IMG_4821.jpg</strong><span>JPEG 图片</span></div>
+                    <span class="list-size">8.4 MB</span>
+                  </div>
+                  <div class="list-item" data-od-id="detail-file-sunset-video">
+                    <div class="file-tile"><svg class="icon"><use href="#i-video"/></svg></div>
+                    <div class="list-copy"><strong>海边日落.mp4</strong><span>MP4 视频</span></div>
+                    <span class="list-size">426 MB</span>
+                  </div>
+                  <div class="list-item" data-od-id="detail-folder-documents">
+                    <div class="file-tile"><svg class="icon"><use href="#i-folder"/></svg></div>
+                    <div class="list-copy"><strong>证件扫描件</strong><span>文件夹 · 8 项</span></div>
+                    <span class="list-size">42 MB</span>
+                  </div>
+                  <div class="list-item" data-od-id="detail-file-readme">
+                    <div class="file-tile"><svg class="icon"><use href="#i-text"/></svg></div>
+                    <div class="list-copy"><strong>备份清单.txt</strong><span>纯文本</span></div>
+                    <span class="list-size">12 KB</span>
+                  </div>
+                  <div class="list-item" data-od-id="detail-file-cover-preview">
+                    <div class="file-tile"><svg class="icon"><use href="#i-image"/></svg></div>
+                    <div class="list-copy"><strong>封面预览.png</strong><span>PNG 图片</span></div>
+                    <span class="list-size">3.1 MB</span>
+                  </div>
+                  <div class="list-item" data-od-id="detail-file-travel-list">
+                    <div class="file-tile"><svg class="icon"><use href="#i-text"/></svg></div>
+                    <div class="list-copy"><strong>旅行清单.pdf</strong><span>PDF 文档</span></div>
+                    <span class="list-size">2.4 MB</span>
+                  </div>
+                </section>
+              </main>
+              <section class="detail-actions" data-m3="BottomAppBar" data-od-id="detail-bottom-actions">
+                <p class="target-label">解压到</p>
+                <div class="target-row">
+                  <div class="target-path"><svg class="icon"><use href="#i-folder"/></svg><span>内部存储 / Download / 家庭照片</span></div>
+                  <button class="icon-btn quiet" type="button" aria-label="更改目标目录"><svg class="icon"><use href="#i-chevron"/></svg></button>
+                </div>
+                <div class="space-check"><svg class="icon"><use href="#i-shield"/></svg>目标空间充足 · 剩余 42.6 GB</div>
+                <button class="primary-btn" type="button" data-m3="FilledButton" data-od-id="detail-extract-button">
+                  <svg class="icon"><use href="#i-archive"/></svg>解压到此处
+                </button>
+              </section>
+            </div>
+            <div class="gesture-bar" aria-hidden="true"></div>
+          </div>
+        </section>
+        <div class="phone-caption" id="caption-detail">
+          <span class="caption-index">02</span>
+          <div class="caption-copy"><strong>压缩包详情</strong><span>内容预览、加密状态与目标空间检查</span></div>
+        </div>
+      </article>
+
+      <article class="shot" aria-labelledby="caption-progress">
+        <section class="device" id="progress-screen" data-od-id="progress-screen" aria-label="解压进行中手机画面">
+          <div class="screen">
+            <div class="progress-bg" aria-hidden="true">
+              <div class="statusbar"><span>9:41</span><span class="camera-dot"></span></div>
+              <div class="app-shell">
+                <header class="appbar compact"><div class="appbar-left"><button class="icon-btn" type="button" tabindex="-1"><svg class="icon"><use href="#i-back"/></svg></button><span class="back-title">压缩包详情</span></div></header>
+                <div class="detail-main">
+                  <section class="summary-card"><div class="summary-top"><div class="summary-icon"><svg class="icon"><use href="#i-archive"/></svg></div><div class="summary-title"><h2>家庭照片_2024.zip</h2><p>1.8 GB · 146 项</p></div></div></section>
+                  <div class="detail-section-head"><h3>压缩包内容</h3></div>
+                  <section class="content-list"><div class="list-item"><div class="file-tile"><svg class="icon"><use href="#i-folder"/></svg></div><div class="list-copy"><strong>旅行照片</strong><span>文件夹 · 24 项</span></div><span class="list-size">1.2 GB</span></div><div class="list-item"><div class="file-tile"><svg class="icon"><use href="#i-image"/></svg></div><div class="list-copy"><strong>IMG_4821.jpg</strong><span>JPEG 图片</span></div><span class="list-size">8.4 MB</span></div></section>
+                </div>
+              </div>
+            </div>
+            <div class="progress-scrim" aria-hidden="true"></div>
+            <section class="progress-panel" role="dialog" aria-modal="true" aria-labelledby="progress-title" data-m3="Dialog" data-od-id="progress-dialog">
+              <div class="sheet-handle" aria-hidden="true"></div>
+              <p class="progress-kicker">正在解压</p>
+              <div class="ring-wrap" role="progressbar" aria-label="解压进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="62">
+                <svg class="progress-ring" viewBox="0 0 170 170" aria-hidden="true">
+                  <circle class="ring-track" cx="85" cy="85" r="70"/>
+                  <circle class="ring-value" cx="85" cy="85" r="70" stroke-dasharray="439.82" stroke-dashoffset="167.13"/>
+                </svg>
+                <div class="ring-copy"><strong>62<span>%</span></strong><small id="progress-title">正在写入文件</small></div>
+              </div>
+              <div class="current-file">
+                <span>当前文件</span>
+                <strong>海边日落.mp4</strong>
+              </div>
+              <div class="progress-metrics">
+                <div class="metric"><span>已解压 / 总大小</span><strong>1.12 / 1.8 GB</strong></div>
+                <div class="metric"><span>解压速度</span><strong>38.4 MB/s</strong></div>
+                <div class="metric"><span>剩余时间</span><strong>约 34 秒</strong></div>
+                <div class="metric"><span>已完成项</span><strong>89 / 146</strong></div>
+              </div>
+              <button class="cancel-btn" type="button" data-od-id="progress-cancel-button">
+                <svg class="icon"><use href="#i-pause"/></svg>取消解压
+              </button>
+              <p class="background-note">切到其他应用时，解压会在后台继续</p>
+              <div class="gesture-bar" aria-hidden="true"></div>
+            </section>
+          </div>
+        </section>
+        <div class="phone-caption" id="caption-progress">
+          <span class="caption-index">03</span>
+          <div class="caption-copy"><strong>解压进行中</strong><span>环形进度、实时速度与可取消状态</span></div>
+        </div>
+      </article>
+
+      <article class="shot" aria-labelledby="caption-queue">
+        <section class="device" id="queue-screen" data-od-id="queue-screen" aria-label="批量队列手机画面">
+          <div class="screen">
+            <div class="statusbar" aria-hidden="true">
+              <span>9:41</span><span class="camera-dot"></span>
+              <span class="sb-icons"><svg class="icon"><use href="#i-signal"/></svg><svg class="icon"><use href="#i-wifi"/></svg><svg class="icon"><use href="#i-battery"/></svg></span>
+            </div>
+            <div class="app-shell">
+              <header class="appbar" data-m3="TopAppBar" data-od-id="queue-top-app-bar">
+                <div class="appbar-left">
+                  <button class="icon-btn" type="button" aria-label="返回首页"><svg class="icon"><use href="#i-back"/></svg></button>
+                  <h1 class="appbar-title">批量队列</h1>
+                </div>
+                <button class="icon-btn quiet" type="button" aria-label="队列设置"><svg class="icon"><use href="#i-settings"/></svg></button>
+              </header>
+              <main class="content-area queue-main" data-od-id="queue-content">
+                <section class="queue-summary" data-m3="Card" data-od-id="queue-summary-card">
+                  <div class="summary-stat running"><strong id="queue-running">2</strong><span>进行中</span></div>
+                  <div class="summary-stat"><strong id="queue-waiting">3</strong><span>等待</span></div>
+                  <div class="summary-stat done"><strong>8</strong><span>已完成</span></div>
+                </section>
+                <div class="section-head queue-head">
+                  <h3>最近任务</h3>
+                  <span>自动按添加顺序处理</span>
+                </div>
+                <section class="queue-card" aria-label="解压任务列表" data-od-id="queue-task-list">
+                  <div class="queue-row" data-queue-origin="running" data-od-id="queue-travel-videos">
+                    <div class="file-tile"><svg class="icon"><use href="#i-archive"/></svg></div>
+                    <div class="queue-copy">
+                      <div class="queue-title-line"><strong>旅行视频合集.zip</strong><span class="queue-status running">解压中</span></div>
+                      <div class="linear-progress" data-m3="LinearProgressIndicator" aria-label="进度 48%"><span style="width:48%"></span></div>
+                      <div class="queue-foot"><span>48% · 862 MB / 1.7 GB</span><span>约 22 秒</span></div>
+                    </div>
+                    <button class="task-toggle" type="button" data-od-id="queue-pause-travel-videos" data-state="running" aria-label="暂停旅行视频合集"><svg class="icon"><use href="#i-pause"/></svg></button>
+                  </div>
+                  <div class="queue-row" data-queue-origin="running" data-od-id="queue-work-files">
+                    <div class="file-tile"><svg class="icon"><use href="#i-archive"/></svg></div>
+                    <div class="queue-copy">
+                      <div class="queue-title-line"><strong>工作资料.rar</strong><span class="queue-status running">解压中</span></div>
+                      <div class="linear-progress" data-m3="LinearProgressIndicator" aria-label="进度 21%"><span style="width:21%"></span></div>
+                      <div class="queue-foot"><span>21% · 126 MB / 604 MB</span><span>约 18 秒</span></div>
+                    </div>
+                    <button class="task-toggle" type="button" data-od-id="queue-pause-work-files" data-state="running" aria-label="暂停工作资料"><svg class="icon"><use href="#i-pause"/></svg></button>
+                  </div>
+                  <div class="queue-row" data-queue-origin="waiting" data-od-id="queue-phone-backup">
+                    <div class="file-tile"><svg class="icon"><use href="#i-archive"/></svg></div>
+                    <div class="queue-copy">
+                      <div class="queue-title-line"><strong>手机相册备份.zip</strong><span class="queue-status waiting">等待</span></div>
+                      <div class="linear-progress" data-m3="LinearProgressIndicator" aria-label="等待中，尚未开始"><span style="width:0%"></span></div>
+                      <div class="queue-foot"><span>9.4 GB</span><span>排在 1 个任务后</span></div>
+                    </div>
+                    <button class="task-toggle" type="button" data-od-id="queue-start-phone-backup" data-state="waiting" aria-label="立即开始手机相册备份"><svg class="icon"><use href="#i-play"/></svg></button>
+                  </div>
+                  <div class="queue-row is-done" data-od-id="queue-study-files">
+                    <div class="file-tile"><svg class="icon"><use href="#i-archive"/></svg></div>
+                    <div class="queue-copy">
+                      <div class="queue-title-line"><strong>学习资料.7z</strong><span class="queue-status done">已完成</span></div>
+                      <div class="linear-progress" data-m3="LinearProgressIndicator" aria-label="进度 100%"><span style="width:100%"></span></div>
+                      <div class="queue-foot"><span>100% · 312 MB</span><span>今天 09:26</span></div>
+                    </div>
+                    <button class="task-toggle complete" type="button" aria-label="学习资料已完成" tabindex="-1"><svg class="icon"><use href="#i-check-circle"/></svg></button>
+                  </div>
+                  <div class="queue-row is-failed" data-od-id="queue-old-drive">
+                    <div class="file-tile"><svg class="icon"><use href="#i-archive"/></svg></div>
+                    <div class="queue-copy">
+                      <div class="queue-title-line"><strong>旧磁盘备份.tar.gz</strong><span class="queue-status failed">失败</span></div>
+                      <div class="linear-progress" data-m3="LinearProgressIndicator" aria-label="失败前进度 67%"><span style="width:67%"></span></div>
+                      <div class="queue-foot"><span class="failure-note">压缩包已损坏，可尝试部分提取</span></div>
+                    </div>
+                    <button class="task-toggle retry" type="button" aria-label="重试旧磁盘备份"><svg class="icon"><use href="#i-refresh"/></svg></button>
+                  </div>
+                </section>
+                <div class="queue-session" data-od-id="queue-background-assurance">
+                  <span class="assurance-icon"><svg class="icon"><use href="#i-clock"/></svg></span>
+                  <div class="assurance-copy"><strong>后台继续处理</strong><span>离开队列页不会中断任务，返回后可继续查看</span></div>
+                </div>
+              </main>
+              <nav class="bottom-nav" aria-label="主导航" data-m3="NavigationBar" data-od-id="queue-navigation-bar">
+                <button class="nav-item" type="button"><span class="nav-indicator"><svg class="icon"><use href="#i-archive"/></svg></span><span>首页</span></button>
+                <button class="nav-item active" type="button" aria-current="page"><span class="nav-indicator"><svg class="icon"><use href="#i-clock"/></svg></span><span>队列</span></button>
+                <button class="nav-item" type="button"><span class="nav-indicator"><svg class="icon"><use href="#i-settings"/></svg></span><span>设置</span></button>
+              </nav>
+            </div>
+            <div class="gesture-bar" aria-hidden="true"></div>
+          </div>
+        </section>
+        <div class="phone-caption" id="caption-queue">
+          <span class="caption-index">04</span>
+          <div class="caption-copy"><strong>批量队列</strong><span>统计、逐个进度与暂停 / 继续控制</span></div>
+        </div>
+      </article>
+
+      <article class="shot" aria-labelledby="caption-password">
+        <section class="device" id="password-screen" data-od-id="password-screen" aria-label="密码输入手机画面">
+          <div class="screen">
+            <div class="progress-bg password-backdrop" aria-hidden="true">
+              <div class="statusbar"><span>9:41</span><span class="camera-dot"></span></div>
+              <div class="app-shell">
+                <header class="appbar compact"><div class="appbar-left"><button class="icon-btn" type="button" tabindex="-1"><svg class="icon"><use href="#i-back"/></svg></button><span class="back-title">压缩包详情</span></div></header>
+                <div class="detail-main">
+                  <section class="summary-card"><div class="summary-top"><div class="summary-icon"><svg class="icon"><use href="#i-archive"/></svg></div><div class="summary-title"><h2>旅行照片_加密.7z</h2><p>824 MB · 92 项</p></div></div><div class="summary-chips"><span class="chip">7Z</span><span class="status-chip warning"><svg class="icon"><use href="#i-lock"/></svg>已加密</span></div></section>
+                  <div class="detail-section-head"><h3>压缩包内容</h3></div>
+                  <section class="content-list"><div class="list-item"><div class="file-tile"><svg class="icon"><use href="#i-folder"/></svg></div><div class="list-copy"><strong>旅行照片</strong><span>文件夹 · 92 项</span></div><span class="list-size">824 MB</span></div></section>
+                </div>
+              </div>
+            </div>
+            <div class="progress-scrim password-scrim" aria-hidden="true"></div>
+            <section class="password-sheet" role="dialog" aria-modal="true" aria-labelledby="password-title" data-m3="ModalBottomSheet" data-od-id="password-bottom-sheet">
+              <div class="sheet-handle" aria-hidden="true"></div>
+              <div class="sheet-icon"><svg class="icon"><use href="#i-lock"/></svg></div>
+              <h2 id="password-title">此压缩包已加密</h2>
+              <p class="sheet-file"><strong>旅行照片_加密.7z</strong> · 输入密码后将在本机解压。</p>
+              <label class="field-label" for="password-field">密码</label>
+              <div class="password-field">
+                <svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>
+                <input id="password-field" type="password" value="family2024" autocomplete="off" aria-invalid="true" aria-describedby="password-error">
+                <button class="password-toggle" type="button" aria-label="显示密码" aria-pressed="false" data-od-id="password-visibility-toggle"><svg class="icon"><use href="#i-eye"/></svg></button>
+              </div>
+              <p class="error-text" id="password-error"><svg class="icon"><use href="#i-alert"/></svg>密码不正确，请重新输入</p>
+              <div class="space-check sheet-space"><svg class="icon"><use href="#i-shield"/></svg>目标空间充足 · 剩余 42.6 GB</div>
+              <button class="primary-btn" type="button" data-m3="FilledButton" data-od-id="password-unlock-button"><svg class="icon"><use href="#i-lock"/></svg>解锁并解压</button>
+              <button class="sheet-cancel" type="button" data-od-id="password-cancel-button">返回详情</button>
+              <div class="gesture-bar" aria-hidden="true"></div>
+            </section>
+          </div>
+        </section>
+        <div class="phone-caption" id="caption-password">
+          <span class="caption-index">05</span>
+          <div class="caption-copy"><strong>密码输入</strong><span>ModalBottomSheet 与具体错误状态</span></div>
+        </div>
+      </article>
+
+      <article class="shot" aria-labelledby="caption-settings">
+        <section class="device" id="settings-screen" data-od-id="settings-screen" aria-label="设置手机画面">
+          <div class="screen">
+            <div class="statusbar" aria-hidden="true">
+              <span>9:41</span><span class="camera-dot"></span>
+              <span class="sb-icons"><svg class="icon"><use href="#i-signal"/></svg><svg class="icon"><use href="#i-wifi"/></svg><svg class="icon"><use href="#i-battery"/></svg></span>
+            </div>
+            <div class="app-shell">
+              <header class="appbar" data-m3="TopAppBar" data-od-id="settings-top-app-bar">
+                <div class="appbar-left">
+                  <button class="icon-btn" type="button" aria-label="返回首页"><svg class="icon"><use href="#i-back"/></svg></button>
+                  <h1 class="appbar-title">设置</h1>
+                </div>
+              </header>
+              <main class="content-area settings-main" data-od-id="settings-content">
+                <section class="settings-section" data-od-id="settings-storage-section">
+                  <h2>保存与解压</h2>
+                  <div class="settings-card" data-m3="Card">
+                    <button class="settings-row" type="button" data-m3="ListItem" data-od-id="settings-default-location">
+                      <span class="settings-icon"><svg class="icon"><use href="#i-folder"/></svg></span>
+                      <span class="settings-copy"><strong>默认解压位置</strong><span>选择保存解压文件的位置</span></span>
+                      <span class="settings-value">Download</span>
+                      <svg class="icon settings-chevron"><use href="#i-chevron"/></svg>
+                    </button>
+                    <button class="settings-row" type="button" data-m3="ListItem" data-od-id="settings-conflict-policy">
+                      <span class="settings-icon"><svg class="icon"><use href="#i-file"/></svg></span>
+                      <span class="settings-copy"><strong>同名文件处理</strong><span>安全保留已有文件</span></span>
+                      <span class="settings-value">重命名</span>
+                      <svg class="icon settings-chevron"><use href="#i-chevron"/></svg>
+                    </button>
+                    <button class="settings-row" type="button" data-m3="ListItem" data-od-id="settings-filename-encoding">
+                      <span class="settings-icon"><svg class="icon"><use href="#i-text"/></svg></span>
+                      <span class="settings-copy"><strong>文件名编码</strong><span>自动识别中文文件名</span></span>
+                      <span class="settings-value">自动</span>
+                      <svg class="icon settings-chevron"><use href="#i-chevron"/></svg>
+                    </button>
+                  </div>
+                </section>
+                <section class="settings-section" data-od-id="settings-interface-section">
+                  <h2>界面</h2>
+                  <div class="settings-card" data-m3="Card">
+                    <div class="settings-row" data-m3="ListItem" data-od-id="settings-dark-mode">
+                      <span class="settings-icon"><svg class="icon"><use href="#i-clock"/></svg></span>
+                      <span class="settings-copy"><strong>深色模式</strong><span>当前跟随浅色主题</span></span>
+                      <button class="switch" type="button" role="switch" aria-checked="false" aria-label="深色模式" data-od-id="settings-dark-mode-switch"></button>
+                    </div>
+                  </div>
+                </section>
+                <section class="settings-section" data-od-id="settings-about-section">
+                  <h2>其他</h2>
+                  <div class="settings-card" data-m3="Card">
+                    <button class="settings-row" type="button" data-m3="ListItem" data-od-id="settings-about">
+                      <span class="settings-icon"><svg class="icon"><use href="#i-shield"/></svg></span>
+                      <span class="settings-copy"><strong>关于「解压」</strong><span>隐私说明与开源许可</span></span>
+                      <span class="settings-value">版本 1.0.0</span>
+                      <svg class="icon settings-chevron"><use href="#i-chevron"/></svg>
+                    </button>
+                  </div>
+                </section>
+                <section class="local-security-card" aria-label="本地处理说明" data-od-id="settings-local-privacy-note">
+                  <span class="assurance-icon"><svg class="icon"><use href="#i-shield"/></svg></span>
+                  <div class="assurance-copy"><strong>文件与密码只在本机处理</strong><span>不上传压缩包内容，也不需要账号</span></div>
+                </section>
+                <div class="settings-footnote"><span>无广告 · 无账号 · 文件仅在本机处理</span><span>LOCAL / 1.0</span></div>
+              </main>
+            </div>
+            <div class="gesture-bar" aria-hidden="true"></div>
+          </div>
+        </section>
+        <div class="phone-caption" id="caption-settings">
+          <span class="caption-index">06</span>
+          <div class="caption-copy"><strong>设置</strong><span>位置、冲突策略、编码与深色模式</span></div>
+        </div>
+      </article>
+
+      <aside class="appendix" aria-labelledby="caption-empty">
+        <div class="appendix-label">SUPPLEMENTARY STATE · 首页空状态</div>
+        <div class="mini-device" data-od-id="home-empty-state">
+          <div class="mini-appbar">
+            <strong>解压</strong>
+            <button class="icon-btn quiet" type="button" aria-label="设置" tabindex="-1"><svg class="icon"><use href="#i-settings"/></svg></button>
+          </div>
+          <div class="mini-main">
+            <section class="mini-hero">
+              <div class="mini-hero-head">
+                <div class="archive-tile"><svg class="icon"><use href="#i-archive"/></svg></div>
+                <div><strong>从手机中选择压缩包</strong><small>支持 ZIP / RAR / 7Z / TAR / GZ</small></div>
+              </div>
+              <button class="mini-cta" type="button">选择压缩包</button>
+            </section>
+            <div class="mini-section"><span>最近解压</span><span>暂无记录</span></div>
+            <section class="mini-empty">
+              <div class="empty-icon"><svg class="icon"><use href="#i-archive"/></svg></div>
+              <strong>还没有解压记录</strong>
+              <p>选择一个压缩包，完成后会显示在这里。</p>
+              <button class="text-btn" type="button">查看格式说明</button>
+            </section>
+          </div>
+        </div>
+        <div class="phone-caption" id="caption-empty">
+          <span class="caption-index">＋</span>
+          <div class="caption-copy"><strong>首页 · 空状态</strong><span>无最近记录时的引导小样</span></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      const passwordInput = document.getElementById("password-field");
+      const passwordToggle = document.querySelector(".password-toggle");
+      if (passwordInput && passwordToggle) {
+        passwordToggle.addEventListener("click", function () {
+          const shouldShow = passwordInput.type === "password";
+          passwordInput.type = shouldShow ? "text" : "password";
+          passwordToggle.setAttribute("aria-label", shouldShow ? "隐藏密码" : "显示密码");
+          passwordToggle.setAttribute("aria-pressed", String(shouldShow));
+          passwordToggle.querySelector("use").setAttribute("href", shouldShow ? "#i-eye-off" : "#i-eye");
+        });
+      }
+
+      const runningCount = document.getElementById("queue-running");
+      const waitingCount = document.getElementById("queue-waiting");
+      let runningTotal = Number(runningCount ? runningCount.textContent : 2);
+      let waitingTotal = Number(waitingCount ? waitingCount.textContent : 3);
+
+      document.querySelectorAll(".task-toggle[data-state]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          const row = button.closest(".queue-row");
+          const current = button.dataset.state;
+          const isRunning = current === "running";
+          const next = isRunning ? "paused" : "running";
+          button.dataset.state = next;
+          row.classList.toggle("is-paused", next === "paused");
+          const status = row.querySelector(".queue-status");
+          status.className = "queue-status " + (isRunning ? "paused" : "running");
+          status.textContent = isRunning ? "已暂停" : "解压中";
+          button.setAttribute("aria-label", isRunning ? "继续" + row.querySelector(".queue-title-line strong").textContent : "暂停" + row.querySelector(".queue-title-line strong").textContent);
+          button.querySelector("use").setAttribute("href", isRunning ? "#i-play" : "#i-pause");
+          runningTotal += isRunning ? -1 : 1;
+          waitingTotal += isRunning ? 1 : -1;
+          if (runningCount) runningCount.textContent = String(Math.max(0, runningTotal));
+          if (waitingCount) waitingCount.textContent = String(Math.max(0, waitingTotal));
+        });
+      });
+
+      document.querySelectorAll(".switch").forEach(function (toggle) {
+        toggle.addEventListener("click", function () {
+          const isOn = toggle.getAttribute("aria-checked") === "true";
+          toggle.setAttribute("aria-checked", String(!isOn));
+          const description = toggle.closest(".settings-row").querySelector(".settings-copy span");
+          if (description) description.textContent = isOn ? "当前跟随浅色主题" : "已开启，下次启动时应用";
+        });
+      });
+
+      try {
+        const savedPosition = Number(localStorage.getItem("decompress-board-x") || 0);
+        if (savedPosition > 0) requestAnimationFrame(function () { window.scrollTo(savedPosition, 0); });
+        let scrollTimer;
+        window.addEventListener("scroll", function () {
+          clearTimeout(scrollTimer);
+          scrollTimer = setTimeout(function () {
+            localStorage.setItem("decompress-board-x", String(window.scrollX));
+          }, 120);
+        }, { passive: true });
+      } catch (error) {
+        /* Preview sandboxes can disable storage; the board remains fully usable. */
+      }
+    })();
+  </script>
+</body>
+</html>

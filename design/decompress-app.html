@@ -1,0 +1,2501 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#F6F7F5">
+  <title>Zippest</title>
+  <script>
+    try {
+      const savedTheme = localStorage.getItem("decompress-theme");
+      if (savedTheme === "dark") document.documentElement.dataset.theme = "dark";
+    } catch (error) {}
+  </script>
+  <style>
+    :root { --bg: oklch(97.48% 0.0028 128.49); --surface: oklch(100% 0 0); --surface-2: oklch(98.15% 0.004 150); --surface-3: oklch(95.7% 0.007 150); --fg: oklch(24.05% 0.0104 163.95); --muted: oklch(48.67% 0.0137 161.64); --border: oklch(91.18% 0.0110 149.85); --control-border: oklch(59% 0.012 158); --accent: oklch(47.03% 0.0926 166.26); --accent-hover: oklch(41.2% 0.086 166.26); --accent-soft: oklch(94.4% 0.025 166.26); --accent-faint: oklch(96.8% 0.012 166.26); --on-accent: oklch(100% 0 0); --warning: oklch(60.45% 0.1414 46.33); --warning-ink: oklch(49.13% 0.1278 42.97); --warning-soft: oklch(95.4% 0.029 46.33); --success: oklch(52% 0.09 157); --success-soft: oklch(95.4% 0.023 157); --desk: oklch(91.2% 0.008 150); --shadow: 0 18px 44px oklch(18% 0.012 160 / 0.14); --font: "Noto Sans SC", "Roboto", "PingFang SC", "Microsoft YaHei", sans-serif; --mono: "Roboto Mono", "SFMono-Regular", Consolas, monospace; --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px); --topbar: 64px; --toolbar: 78px; } html[data-theme="dark"] { --bg: oklch(20.4% 0.009 160); --surface: oklch(24.7% 0.010 160); --surface-2: oklch(27.5% 0.010 160); --surface-3: oklch(30.5% 0.011 160); --fg: oklch(94.2% 0.006 150); --muted: oklch(72.5% 0.009 150); --border: oklch(34.5% 0.012 160); --control-border: oklch(61% 0.012 158); --accent: oklch(74% 0.09 166.26); --accent-hover: oklch(79% 0.082 166.26); --accent-soft: oklch(31.5% 0.036 166.26); --accent-faint: oklch(27.5% 0.021 166.26); --on-accent: oklch(17.5% 0.012 160); --warning: oklch(70% 0.13 46.33); --warning-ink: oklch(82% 0.095 46.33); --warning-soft: oklch(29.5% 0.046 46.33); --success: oklch(79% 0.09 157); --success-soft: oklch(29.5% 0.030 157); --desk: oklch(14.5% 0.006 160); --shadow: 0 20px 48px oklch(5% 0.008 160 / 0.44); } * { box-sizing: border-box; } html, body { height: 100%; } body { margin: 0; display: grid; place-items: center; overflow: hidden; background: var(--desk); color: var(--fg); font-family: var(--font); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; } button, input { font: inherit; } button { cursor: pointer; touch-action: manipulation; } [hidden] { display: none !important; } .icon { width: 24px; height: 24px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; } .sprite { position: absolute; width: 0; height: 0; overflow: hidden; } :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; } .app { position: relative; width: 393px; height: 852px; max-height: 100dvh; display: flex; flex-direction: column; isolation: isolate; overflow: hidden; border: 1px solid var(--border); border-radius: 30px; background: var(--bg); box-shadow: var(--shadow); } .statusbar { position: relative; z-index: 60; height: calc(32px + var(--safe-top)); padding: var(--safe-top) 20px 0; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; color: var(--fg); font-size: 12px; line-height: 1; font-weight: 650; } .camera-dot { position: absolute; top: calc(10px + var(--safe-top)); left: 50%; width: 10px; height: 10px; border-radius: 50%; background: oklch(18% 0.01 160); transform: translateX(-50%); box-shadow: inset 0 0 0 2px oklch(27% 0.012 160); } html[data-theme="dark"] .camera-dot { background: oklch(8% 0.006 160); box-shadow: inset 0 0 0 2px oklch(18% 0.01 160); } .status-icons { display: flex; align-items: center; gap: 5px; } .status-icons .icon { width: 14px; height: 14px; } .app-main { position: relative; min-height: 0; flex: 1; overflow: hidden; } .browser { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--bg); } .appbar { height: var(--topbar); padding: 0 4px 0 4px; display: flex; align-items: center; gap: 2px; flex: 0 0 auto; background: var(--bg); } .icon-button { width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; flex: 0 0 48px; background: transparent; color: var(--fg); transition: background-color 150ms ease, transform 120ms ease; } .icon-button:hover { background: color-mix(in oklch, var(--fg) 8%, transparent); } .icon-button:active { transform: scale(0.96); } .icon-button:disabled { opacity: 0.35; cursor: default; pointer-events: none; } .title-block { min-width: 0; flex: 1; padding: 0 4px; } .title-line { display: flex; align-items: center; gap: 7px; min-width: 0; } .title-line h1 { min-width: 0; margin: 0; overflow: hidden; font-size: 20px; line-height: 1.25; font-weight: 720; letter-spacing: -0.02em; text-overflow: ellipsis; white-space: nowrap; } .title-block p { margin: 2px 0 0; overflow: hidden; color: var(--muted); font-size: 12px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; } .lock-badge { min-height: 24px; padding: 0 7px; display: inline-flex; align-items: center; gap: 3px; flex: 0 0 auto; border-radius: 999px; background: var(--warning-soft); color: var(--warning-ink); font-size: 12px; line-height: 1; font-weight: 650; } .lock-badge .icon { width: 13px; height: 13px; } .toolbar-icon-row { display: flex; align-items: center; flex: 0 0 auto; } .text-action { min-width: 48px; min-height: 48px; padding: 0 10px; border: 0; border-radius: 12px; background: transparent; color: var(--accent); font-size: 12px; font-weight: 700; } .text-action:hover { background: var(--accent-soft); } .searchbar { height: 64px; padding: 0 4px; display: flex; align-items: center; gap: 3px; flex: 0 0 auto; background: var(--bg); } .search-field { min-width: 0; height: 48px; flex: 1; padding: 0 4px 0 12px; display: flex; align-items: center; gap: 8px; border-radius: 16px; background: var(--surface); border: 1px solid transparent; } .search-field:focus-within { border-color: var(--accent); outline: 2px solid color-mix(in oklch, var(--accent) 26%, transparent); } .search-field .icon { width: 20px; height: 20px; color: var(--muted); } .search-field input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--fg); font-size: 14px; } .search-field input::placeholder { color: var(--muted); } .breadcrumb { min-height: 48px; padding: 0 8px; display: flex; align-items: center; flex: 0 0 auto; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--bg); white-space: nowrap; } .breadcrumb::-webkit-scrollbar { display: none; } .crumb { min-width: 48px; min-height: 48px; padding: 0 7px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-size: 12px; line-height: 1; font-weight: 600; } .crumb:hover { background: var(--surface-2); color: var(--fg); } .crumb.current { color: var(--fg); font-weight: 700; } .crumb-sep { width: 14px; height: 14px; flex: 0 0 14px; color: var(--control-border); } .file-area { position: relative; min-height: 0; flex: 1; overflow: hidden; padding: 8px 12px 0; } .file-scroll { height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; } .file-scroll::-webkit-scrollbar { display: none; } .file-list { min-height: 100%; overflow: hidden; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); } .file-row { position: relative; min-height: 66px; padding: 0 10px 0 0; display: flex; align-items: center; gap: 3px; color: var(--fg); background: var(--surface); outline: none; cursor: pointer; transition: background-color 120ms ease; } .file-row + .file-row { border-top: 1px solid var(--border); } .file-row:hover { background: color-mix(in oklch, var(--accent) 4.5%, var(--surface)); } .file-row.selected { background: var(--accent-faint); } .file-row.selected:hover { background: color-mix(in oklch, var(--accent) 10%, var(--surface)); } .file-row.pressing { background: var(--surface-3); } .check-button { width: 48px; height: 66px; padding: 0; border: 0; display: grid; place-items: center; flex: 0 0 48px; background: transparent; } .checkbox { width: 20px; height: 20px; border: 1.8px solid var(--control-border); border-radius: 6px; display: grid; place-items: center; background: transparent; color: transparent; transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease; } .checkbox .icon { width: 14px; height: 14px; stroke-width: 2.2; } .file-row.selected .checkbox { background: var(--accent); border-color: var(--accent); color: var(--on-accent); } .file-icon { width: 38px; height: 38px; flex: 0 0 38px; display: grid; place-items: center; border-radius: 11px; background: var(--surface-2); color: var(--muted); } .file-icon.folder { background: var(--accent-faint); color: var(--accent); } .file-icon.archive { background: var(--surface-3); color: var(--fg); } .file-icon .icon { width: 21px; height: 21px; } .file-copy { min-width: 0; flex: 1; align-self: stretch; padding: 12px 4px 11px 9px; display: flex; flex-direction: column; justify-content: center; } .file-name-line { min-width: 0; display: flex; align-items: center; gap: 7px; } .file-name { min-width: 0; overflow: hidden; font-size: 14px; line-height: 1.35; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; } .file-type { flex: 0 0 auto; color: var(--muted); font-family: var(--mono); font-size: 12px; line-height: 1.1; } .file-meta { margin-top: 4px; overflow: hidden; color: var(--muted); font-size: 12px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; } .file-meta .encrypted { color: var(--warning-ink); font-weight: 650; } .row-chevron { width: 18px; height: 18px; flex: 0 0 18px; color: var(--muted); } .empty-state { position: absolute; inset: 8px 12px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; background: var(--bg); } .empty-icon { width: 56px; height: 56px; border-radius: 18px; display: grid; place-items: center; background: var(--accent-faint); color: var(--accent); } .empty-icon .icon { width: 27px; height: 27px; } .empty-state strong { margin-top: 14px; font-size: 16px; line-height: 1.35; } .empty-state p { max-width: 240px; margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; } .empty-state button { margin-top: 15px; } .bottom-toolbar { height: calc(var(--toolbar) + var(--safe-bottom)); padding: 5px 6px calc(8px + var(--safe-bottom)); display: flex; align-items: flex-start; justify-content: space-around; flex: 0 0 auto; border-top: 1px solid var(--border); background: var(--surface); } .tool-item { min-width: 48px; min-height: 60px; padding: 3px 0; border: 0; border-radius: 13px; display: grid; place-items: center; align-content: start; gap: 3px; flex: 1; background: transparent; color: var(--muted); } .tool-item:hover { background: var(--surface-2); color: var(--fg); } .tool-item .icon { width: 23px; height: 23px; } .tool-item span { font-size: 12px; line-height: 1.15; font-weight: 600; white-space: nowrap; } .tool-item.accent { color: var(--accent); } .multi-tool .tool-item { padding-left: 0; padding-right: 0; } .browser.task-mode .bottom-toolbar { display: none; } .menu { position: absolute; z-index: 55; top: 58px; right: 8px; width: 224px; padding: 6px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); box-shadow: 0 12px 30px oklch(14% 0.012 160 / 0.18); } .menu-label { padding: 8px 10px 5px; color: var(--muted); font-size: 11px; line-height: 1.2; font-weight: 650; letter-spacing: 0.04em; } .menu-item { width: 100%; min-height: 48px; padding: 0 10px; border: 0; border-radius: 11px; display: flex; align-items: center; gap: 10px; background: transparent; color: var(--fg); text-align: left; font-size: 14px; line-height: 1.25; } .menu-item:hover { background: var(--surface-2); } .menu-item .icon { width: 20px; height: 20px; color: var(--muted); } .menu-item .shortcut { margin-left: auto; color: var(--muted); font-size: 11px; } .menu-item.active { background: var(--accent-soft); color: var(--accent); } .menu-item.active .icon { color: var(--accent); } .menu-divider { height: 1px; margin: 5px 6px; background: var(--border); } .settings-view { position: absolute; inset: 0; z-index: 45; display: flex; flex-direction: column; background: var(--bg); transform: translateX(100%); visibility: hidden; transition: transform 280ms cubic-bezier(.2, 0, 0, 1), visibility 0s 280ms; } .settings-view.open { transform: translateX(0); visibility: visible; transition-delay: 0s; } .settings-scroll { min-height: 0; flex: 1; overflow-y: auto; padding: 4px 20px calc(24px + var(--safe-bottom)); scrollbar-width: none; } .settings-scroll::-webkit-scrollbar { display: none; } .settings-section + .settings-section { margin-top: 20px; } .settings-section h2 { margin: 0 0 8px 2px; color: var(--muted); font-size: 12px; line-height: 1.2; font-weight: 700; } .settings-card { overflow: hidden; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); } .settings-row { width: 100%; min-height: 68px; padding: 8px 13px; border: 0; display: flex; align-items: center; gap: 11px; background: var(--surface); color: var(--fg); text-align: left; } button.settings-row:hover { background: var(--surface-2); } .settings-row + .settings-row { border-top: 1px solid var(--border); } .settings-icon { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-2); color: var(--muted); } .settings-icon .icon { width: 20px; height: 20px; } .settings-copy { min-width: 0; flex: 1; } .settings-copy strong { display: block; font-size: 14px; line-height: 1.3; font-weight: 650; } .settings-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; line-height: 1.3; } .settings-value { max-width: 128px; color: var(--muted); font-size: 12px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .settings-chevron { width: 18px; height: 18px; color: var(--muted); } .switch { width: 56px; height: 48px; padding: 0; border: 0; flex: 0 0 56px; display: grid; place-items: center; background: transparent; } .switch-track { position: relative; width: 52px; height: 32px; border: 1.5px solid var(--control-border); border-radius: 999px; background: var(--surface-2); transition: background-color 160ms ease, border-color 160ms ease; } .switch-thumb { position: absolute; left: 4px; top: 4px; width: 21px; height: 21px; border-radius: 50%; background: var(--muted); transition: transform 160ms cubic-bezier(.2, 0, 0, 1), background-color 160ms ease; } .switch[aria-checked="true"] .switch-track { background: var(--accent); border-color: var(--accent); } .switch[aria-checked="true"] .switch-thumb { background: var(--on-accent); transform: translateX(20px); } .privacy-note { margin-top: 18px; padding: 13px 14px; display: flex; align-items: center; gap: 11px; border: 1px solid var(--border); border-radius: 18px; background: var(--accent-faint); } .privacy-note strong { display: block; font-size: 14px; line-height: 1.35; } .privacy-note p { margin: 3px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; } .drawer-scrim { position: absolute; inset: 0; z-index: 34; border: 0; background: oklch(10% 0.008 160 / 0.34); opacity: 0; transition: opacity 180ms ease; } .drawer-scrim.show { opacity: 1; } .task-drawer { position: absolute; z-index: 40; left: 0; right: 0; bottom: 0; height: calc(190px + var(--safe-bottom)); padding: 0 16px calc(11px + var(--safe-bottom)); display: flex; flex-direction: column; overflow: hidden; border-radius: 24px 24px 0 0; background: var(--surface); box-shadow: 0 -14px 34px oklch(10% 0.01 160 / 0.2); transition: height 280ms cubic-bezier(.2, 0, 0, 1); } .task-drawer.expanded { height: min(466px, calc(100% - 70px)); } .drawer-handle { width: 100%; height: 28px; padding: 0; border: 0; display: grid; place-items: center; flex: 0 0 28px; background: transparent; } .drawer-handle::before { content: ""; width: 36px; height: 5px; border-radius: 99px; background: var(--control-border); } .drawer-header { min-height: 44px; display: flex; align-items: center; gap: 6px; flex: 0 0 auto; } .drawer-heading { min-width: 0; flex: 1; } .drawer-heading strong { display: block; font-size: 16px; line-height: 1.3; font-weight: 700; } .drawer-heading span { display: block; margin-top: 1px; color: var(--muted); font-size: 11px; line-height: 1.25; } .drawer-icon-button { width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: transparent; color: var(--muted); } .drawer-icon-button:hover { background: var(--surface-2); color: var(--fg); } .drawer-current { min-height: 86px; padding: 8px 10px 9px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface-2); flex: 0 0 auto; } .drawer-task-line { display: flex; align-items: center; gap: 8px; } .drawer-task-line strong { min-width: 0; flex: 1; overflow: hidden; font-size: 14px; line-height: 1.3; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; } .task-state { flex: 0 0 auto; color: var(--accent); font-size: 12px; line-height: 1.2; font-weight: 650; } .task-state.paused, .task-state.waiting { color: var(--muted); } .task-state.completed { color: var(--success); } .task-toggle { width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: transparent; color: var(--accent); } .task-toggle:hover { background: var(--accent-soft); } .task-toggle .icon { width: 21px; height: 21px; } .task-toggle.complete { color: var(--success); pointer-events: none; } .linear-progress { position: relative; height: 5px; margin-top: 7px; overflow: hidden; border-radius: 99px; background: var(--border); } .linear-progress span { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--accent); transition: width 140ms linear; } .drawer-current.paused .linear-progress span { opacity: 0.55; } .drawer-current.completed .linear-progress span { background: var(--success); } .drawer-current-meta { margin-top: 6px; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 11.5px; line-height: 1.25; } .drawer-current-meta span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .drawer-current-meta span:last-child { flex: 0 0 auto; text-align: right; } .drawer-body { min-height: 0; flex: 1; padding-top: 10px; } .queue-stats { min-height: 52px; padding: 5px 4px; display: grid; grid-template-columns: repeat(3, 1fr); border-radius: 14px; background: var(--surface-2); } .queue-stat { display: grid; place-content: center; justify-items: center; gap: 1px; } .queue-stat strong { font-family: var(--mono); font-size: 17px; line-height: 1; font-weight: 700; } .queue-stat span { color: var(--muted); font-size: 11px; line-height: 1.2; } .queue-list { margin-top: 8px; overflow-y: auto; scrollbar-width: none; } .queue-list::-webkit-scrollbar { display: none; } .queue-row { min-height: 66px; padding: 5px 0; display: grid; grid-template-columns: minmax(0, 1fr) 48px; gap: 8px; align-items: center; } .queue-row + .queue-row { border-top: 1px solid var(--border); } .queue-row-copy { min-width: 0; } .queue-row-title { display: flex; align-items: center; gap: 7px; } .queue-row-title strong { min-width: 0; flex: 1; overflow: hidden; font-size: 13px; line-height: 1.3; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; } .queue-row .linear-progress { height: 4px; margin-top: 6px; } .queue-row-meta { margin-top: 4px; display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 11px; line-height: 1.2; } .queue-row-meta span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .modal-layer { position: absolute; inset: 0; z-index: 80; display: flex; align-items: flex-end; } .modal-scrim { position: absolute; inset: 0; border: 0; background: oklch(8% 0.008 160 / 0.52); opacity: 0; transition: opacity 200ms ease; } .bottom-sheet { position: relative; z-index: 1; width: 100%; max-height: calc(100% - 24px - var(--safe-top)); overflow-y: auto; padding: 12px 24px calc(22px + var(--safe-bottom)); border-radius: 28px 28px 0 0; background: var(--surface); color: var(--fg); box-shadow: 0 -16px 40px oklch(8% 0.008 160 / 0.26); transform: translateY(102%); transition: transform 280ms cubic-bezier(.2, 0, 0, 1); scrollbar-width: none; } .bottom-sheet::-webkit-scrollbar { display: none; } .modal-layer.open .modal-scrim { opacity: 1; } .modal-layer.open .bottom-sheet { transform: translateY(0); } .sheet-handle { width: 36px; height: 5px; margin: 0 auto; border-radius: 99px; background: var(--control-border); } .sheet-head { display: flex; align-items: flex-start; gap: 12px; margin-top: 15px; } .sheet-icon { width: 46px; height: 46px; flex: 0 0 46px; display: grid; place-items: center; border-radius: 15px; background: var(--accent-soft); color: var(--accent); } .sheet-icon .icon { width: 24px; height: 24px; } .sheet-title-wrap { min-width: 0; flex: 1; } .sheet-title { margin: 0; font-size: 22px; line-height: 1.3; font-weight: 720; letter-spacing: -0.025em; } .sheet-subtitle { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; } .sheet-section { margin-top: 17px; } .sheet-section-title { margin: 0 0 7px 1px; color: var(--muted); font-size: 12px; line-height: 1.2; font-weight: 650; } .field-button, .field-input { width: 100%; min-height: 52px; padding: 0 13px; border: 1px solid var(--control-border); border-radius: 14px; display: flex; align-items: center; gap: 9px; background: var(--surface); color: var(--fg); font-size: 14px; text-align: left; } .field-button { justify-content: space-between; } .field-button span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .field-button .icon { width: 19px; height: 19px; color: var(--muted); } .field-input:focus { border-color: var(--accent); outline: 2px solid color-mix(in oklch, var(--accent) 24%, transparent); } .target-menu { margin-top: 6px; padding: 5px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); } .target-option { width: 100%; min-height: 48px; padding: 0 10px; border: 0; border-radius: 10px; display: flex; align-items: center; gap: 8px; background: transparent; color: var(--fg); text-align: left; font-size: 13px; } .target-option:hover { background: var(--surface); } .target-option .icon { width: 18px; height: 18px; color: var(--accent); } .segment-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; } .segment { min-height: 48px; padding: 0 6px; border: 1px solid var(--control-border); border-radius: 13px; background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 650; } .segment:hover { background: var(--surface-2); color: var(--fg); } .segment.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); } .password-wrap { min-height: 52px; padding: 0 4px 0 12px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--control-border); border-radius: 14px; background: var(--surface); } .password-wrap:focus-within { border-color: var(--accent); } .password-wrap.has-error { border-color: var(--warning); } .password-wrap .icon { width: 18px; height: 18px; color: var(--muted); } .password-wrap input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--fg); font-family: var(--mono); font-size: 14px; } .password-eye { width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: transparent; color: var(--muted); } .password-eye:hover { background: var(--surface-2); color: var(--fg); } .field-error { margin: 6px 0 0; display: flex; align-items: center; gap: 5px; color: var(--warning-ink); font-size: 12px; line-height: 1.35; } .field-error .icon { width: 14px; height: 14px; } .space-line { margin-top: 13px; padding: 10px 11px; display: flex; align-items: center; gap: 6px; border-radius: 12px; background: var(--accent-faint); color: var(--accent); font-size: 12px; line-height: 1.35; font-weight: 600; } .space-line .icon { width: 16px; height: 16px; } .sheet-actions { display: flex; gap: 8px; margin-top: 16px; } .sheet-actions .primary-button { flex: 1; } .primary-button, .secondary-button, .danger-button { min-height: 52px; padding: 0 16px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; line-height: 1; font-weight: 700; transition: background-color 150ms ease, border-color 150ms ease, transform 120ms ease; } .primary-button { border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); } .primary-button:hover { background: var(--accent-hover); border-color: var(--accent-hover); } .primary-button:active, .secondary-button:active, .danger-button:active { transform: scale(0.985); } .secondary-button { border: 1px solid var(--control-border); background: var(--surface); color: var(--fg); } .secondary-button:hover { background: var(--surface-2); } .danger-button { border: 1px solid var(--warning); background: var(--warning-soft); color: var(--warning-ink); } .danger-button:hover { background: color-mix(in oklch, var(--warning) 15%, var(--surface)); } .info-list { margin-top: 16px; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; } .info-row { min-height: 52px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 13px; } .info-row + .info-row { border-top: 1px solid var(--border); } .info-row span { color: var(--muted); } .info-row strong { max-width: 210px; overflow: hidden; text-align: right; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; } .about-block { padding: 22px 12px 10px; display: grid; justify-items: center; text-align: center; } .about-block .sheet-icon { width: 58px; height: 58px; flex-basis: 58px; border-radius: 18px; } .about-block h3 { margin: 14px 0 0; font-size: 18px; line-height: 1.3; } .about-block p { max-width: 270px; margin: 7px 0 0; color: var(--muted); font-size: 13px; line-height: 1.65; } .snackbar { position: absolute; z-index: 100; left: 16px; right: 16px; bottom: calc(18px + var(--safe-bottom)); min-height: 48px; padding: 12px 15px; border-radius: 14px; background: oklch(28% 0.012 160); color: oklch(97% 0.004 150); box-shadow: 0 8px 22px oklch(8% 0.01 160 / 0.25); font-size: 13px; line-height: 1.4; opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity 160ms ease, transform 200ms cubic-bezier(.2, 0, 0, 1); } .snackbar.show { opacity: 1; transform: translateY(0); } .gesture-bar { position: absolute; z-index: 110; left: 50%; bottom: calc(6px + var(--safe-bottom)); width: 112px; height: 4px; border-radius: 99px; background: color-mix(in oklch, var(--fg) 82%, transparent); transform: translateX(-50%); pointer-events: none; } @media (max-width: 480px) { body { display: block; } .app { width: 100vw; height: 100dvh; max-height: none; border: 0; border-radius: 0; box-shadow: none; } } @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; } }
+    .file-icon .icon, .tool-item .icon, .menu-item .icon, .settings-icon .icon, .task-toggle .icon, .password-eye .icon { width: 24px; height: 24px; }
+    :root { --topbar: 56px; --toolbar: 64px; --folder-ink: oklch(57% 0.13 70); --file-ink: oklch(49% 0.045 240); }
+    html[data-theme="dark"] { --folder-ink: oklch(77% 0.13 72); --file-ink: oklch(72% 0.045 240); }
+    .volume-switch { min-width: 0; height: 48px; padding: 0 8px; border: 0; border-radius: 12px; display: flex; align-items: center; gap: 7px; flex: 1; background: transparent; color: var(--fg); }
+    .volume-switch:hover { background: var(--surface-2); }
+    .volume-switch span { min-width: 0; overflow: hidden; font-size: 18px; line-height: 1.25; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .volume-folder { color: var(--folder-ink); }
+    .volume-chevron { width: 20px; height: 20px; color: var(--muted); }
+    .title-block h1 { font-size: 18px; }
+    .searchbar { height: 56px; }
+    .storage-meter { flex: 0 0 auto; padding: 8px 20px 9px; border-bottom: 1px solid var(--border); background: var(--bg); }
+    .storage-meter-copy { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; line-height: 1.25; }
+    .storage-meter-copy strong { color: var(--fg); font-weight: 650; text-align: right; white-space: nowrap; }
+    .storage-track { height: 5px; margin-top: 8px; overflow: hidden; border-radius: 99px; background: var(--border); }
+    .storage-track span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width 220ms ease; }
+    .breadcrumb { min-height: 48px; padding: 0 4px; gap: 0; align-items: center; overflow: hidden; }
+    .crumb-up { width: 48px; height: 48px; padding: 0; border: 0; border-radius: 10px; display: grid; place-items: center; flex: 0 0 48px; background: transparent; color: var(--fg); }
+    .crumb-up:hover { background: var(--surface-2); }
+    .crumb-up:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+    .crumb-up .icon { width: 20px; height: 20px; }
+    .crumb-trail { min-width: 0; height: 48px; display: flex; align-items: center; flex: 1; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; white-space: nowrap; }
+    .crumb-trail::-webkit-scrollbar { display: none; }
+    .menu.storage-menu { left: 8px; right: auto; top: 52px; width: 220px; }
+    .file-area { padding: 0; background: var(--surface); }
+    .file-scroll { background: var(--surface); }
+    .file-list { min-height: 100%; border: 0; border-radius: 0; background: var(--surface); }
+    .file-row { min-height: 58px; height: 58px; padding: 0 12px 0 2px; }
+    .file-row + .file-row { border-top: 0; border-bottom: 1px solid var(--border); }
+    .file-row:last-child { border-bottom: 0; }
+    .check-button { height: 58px; }
+    .file-icon, .file-icon.archive, .file-icon.folder { width: 36px; height: 36px; flex-basis: 36px; border-radius: 0; background: transparent; color: var(--file-ink); }
+    .file-icon.folder { color: var(--folder-ink); }
+    .file-icon .icon { width: 24px; height: 24px; }
+    .file-copy { padding: 6px 4px 6px 9px; }
+    .row-chevron { width: 20px; height: 20px; flex-basis: 20px; }
+    .empty-state { inset: 0; background: var(--surface); }
+    .bottom-toolbar { height: calc(64px + var(--safe-bottom)); padding: 2px 2px calc(4px + var(--safe-bottom)); align-items: center; }
+    .tool-item { min-height: 56px; padding: 2px 0; }
+    .tool-item:not(:disabled) { color: var(--fg); }
+    .tool-item.accent:not(:disabled) { color: var(--accent); }
+    .tool-item:disabled { color: var(--muted); opacity: 0.46; cursor: default; pointer-events: none; }
+  </style>
+  <style>
+    .menu.bottom-menu { top: auto; right: 10px; bottom: calc(var(--toolbar) + var(--safe-bottom) + 10px); }
+    .volume-switch { padding: 0 4px; gap: 2px; }
+    .volume-switch #folderTitle { flex: 0 1 auto; max-width: 145px; font-size: 15px; font-weight: 650; letter-spacing: -0.01em; }
+    .volume-chevron { width: 20px; height: 20px; }
+    #storageMenu { left: 52px; right: auto; }
+    .top-new { color: var(--fg); }
+    .top-new .icon { width: 26px; height: 26px; }
+    .tool-item:not(:disabled) { color: var(--fg); }
+    .select-all-check { width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; flex: 0 0 48px; background: transparent; }
+    .select-all-check:hover { background: var(--surface-2); }
+    .select-all-check[aria-pressed="true"] .checkbox { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+    .app { touch-action: pan-y; }
+    .gesture-home-zone { position: absolute; z-index: 110; left: 50%; bottom: 0; width: 220px; height: calc(30px + var(--safe-bottom)); padding: 0 0 calc(6px + var(--safe-bottom)); border: 0; background: transparent; transform: translateX(-50%); display: flex; align-items: flex-end; justify-content: center; touch-action: none; }
+    .gesture-home-zone .gesture-bar { position: static; width: 112px; height: 4px; transform: none; pointer-events: none; }
+    .storage-meter { border-top: 1px solid var(--border); border-bottom: 0; padding: 8px 20px calc(18px + var(--safe-bottom)); background: var(--bg); }
+    .file-thumb { position: relative; width: 46px; height: 46px; flex: 0 0 46px; overflow: hidden; border-radius: 12px; background: var(--surface-2); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--fg) 7%, transparent); }
+    .file-thumb .thumb-art { position: absolute; inset: 0; background: linear-gradient(145deg, var(--t1), var(--t2)); }
+    .file-thumb.photo .thumb-art::before { content: ""; position: absolute; top: 7px; right: 7px; width: 11px; height: 11px; border-radius: 50%; background: oklch(96% 0.06 90 / 0.92); }
+    .file-thumb.photo .thumb-art::after { content: ""; position: absolute; left: -5px; right: -5px; bottom: -7px; height: 28px; background: oklch(48% 0.07 155 / 0.76); clip-path: polygon(0 62%, 24% 30%, 42% 58%, 62% 22%, 84% 52%, 100% 38%, 100% 100%, 0 100%); }
+    .file-thumb.gif .thumb-art::before { content: ""; position: absolute; top: -7px; left: -7px; width: 27px; height: 27px; border-radius: 50%; background: oklch(88% 0.11 70 / 0.55); }
+    .file-thumb.gif .thumb-art::after { content: ""; position: absolute; right: -8px; bottom: -8px; width: 25px; height: 25px; border-radius: 50%; background: oklch(78% 0.12 330 / 0.55); }
+    .file-thumb.video .thumb-art { background: linear-gradient(150deg, var(--t1), oklch(18% 0.012 160)); }
+    .thumb-play { position: absolute; top: 50%; left: 50%; width: 18px; height: 18px; padding-left: 1px; border-radius: 50%; display: grid; place-items: center; background: oklch(8% 0.01 160 / 0.64); color: white; font-size: 8px; line-height: 1; transform: translate(-50%, -50%); }
+    .thumb-play svg { width: 10px; height: 10px; display: block; }
+    .thumb-duration { position: absolute; right: 3px; bottom: 3px; padding: 1px 3px; border-radius: 4px; background: oklch(8% 0.01 160 / 0.62); color: white; font-family: var(--mono); font-size: 8px; line-height: 1.2; }
+    .thumb-gif { position: absolute; left: 3px; bottom: 3px; padding: 1px 3px; border-radius: 4px; background: oklch(8% 0.01 160 / 0.64); color: white; font-size: 8px; line-height: 1.2; font-weight: 750; letter-spacing: 0.04em; }
+    .destination-list { display: grid; gap: 8px; }
+    .destination-option { width: 100%; min-height: 56px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 14px; display: flex; align-items: center; gap: 10px; background: var(--surface); color: var(--fg); text-align: left; }
+    .destination-option.active { border-color: var(--accent); background: var(--accent-faint); }
+    .radio-dot { width: 20px; height: 20px; flex: 0 0 20px; border: 1.8px solid var(--control-border); border-radius: 50%; display: grid; place-items: center; }
+    .radio-dot::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: transparent; }
+    .destination-option.active .radio-dot { border-color: var(--accent); }
+    .destination-option.active .radio-dot::after { background: var(--accent); }
+    .dest-copy { min-width: 0; flex: 1; display: grid; gap: 2px; }
+    .dest-copy strong { font-size: 14px; line-height: 1.3; font-weight: 650; }
+    .dest-copy small { overflow: hidden; color: var(--muted); font-size: 12px; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+    .custom-target { margin-top: 8px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    .clipboard-row { width: 100%; min-height: 44px; margin-top: 8px; padding: 0 8px; border: 0; border-radius: 12px; display: flex; align-items: center; gap: 6px; background: var(--accent-faint); color: var(--muted); font-size: 12px; text-align: left; }
+    .clipboard-row:hover { background: var(--accent-soft); }
+    .clipboard-row .icon { width: 16px; height: 16px; color: var(--accent); }
+    .clipboard-row strong { min-width: 0; flex: 1; overflow: hidden; color: var(--fg); font-weight: 600; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+    .clipboard-row .clipboard-chevron { width: 18px; height: 18px; margin-left: auto; color: var(--muted); transition: transform 160ms ease; }
+    .clipboard-row[aria-expanded="true"] .clipboard-chevron { transform: rotate(180deg); }
+    .clipboard-panel { margin-top: 8px; padding: 6px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); }
+    .clipboard-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 6px 6px; color: var(--muted); font-size: 11px; font-weight: 650; }
+    .clipboard-close { min-height: 44px; padding: 0 8px; border: 0; background: transparent; color: var(--muted); font-size: 11px; font-weight: 650; }
+    .clipboard-item { width: 100%; min-height: 44px; padding: 8px 9px; border: 0; border-radius: 10px; display: flex; align-items: center; gap: 8px; background: transparent; color: var(--fg); text-align: left; font-size: 13px; }
+    .clipboard-item:hover { background: var(--surface); }
+    .clipboard-item .icon { width: 16px; height: 16px; color: var(--muted); }
+    .clipboard-item span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .same-password-row { width: 100%; min-height: 56px; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 14px; display: flex; align-items: center; gap: 10px; background: var(--surface); color: var(--fg); text-align: left; }
+    .same-password-row[aria-checked="true"] { border-color: var(--accent); background: var(--accent-faint); }
+    .same-password-row[aria-checked="true"] .checkbox { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+    .same-password-copy { min-width: 0; flex: 1; display: grid; gap: 2px; }
+    .same-password-copy strong { font-size: 14px; line-height: 1.3; font-weight: 650; }
+    .same-password-copy small { color: var(--muted); font-size: 12px; line-height: 1.3; }
+    .folder-picker { position: absolute; top: calc(32px + var(--safe-top)); left: 0; right: 0; bottom: 0; z-index: 105; display: flex; flex-direction: column; background: var(--bg); transform: translateY(100%); visibility: hidden; transition: transform 260ms cubic-bezier(.2, 0, 0, 1), visibility 0s 260ms; }
+    .folder-picker.open { transform: translateY(0); visibility: visible; transition-delay: 0s; }
+    .picker-volumes { display: flex; gap: 6px; padding: 4px 12px 8px; overflow-x: auto; border-bottom: 1px solid var(--border); background: var(--bg); scrollbar-width: none; }
+    .picker-volumes::-webkit-scrollbar { display: none; }
+    .picker-volume { min-height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 650; white-space: nowrap; }
+    .picker-volume.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+    .folder-picker-list { min-height: 0; flex: 1; overflow-y: auto; padding: 6px 12px; scrollbar-width: none; }
+    .folder-picker-list::-webkit-scrollbar { display: none; }
+    .folder-picker-row { width: 100%; min-height: 56px; padding: 0 6px; border: 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 11px; background: transparent; color: var(--fg); text-align: left; }
+    .folder-picker-row:hover { background: var(--surface-2); }
+    .folder-picker-row .file-icon { width: 36px; height: 36px; flex-basis: 36px; border-radius: 11px; }
+    .folder-picker-row .file-icon .icon { width: 20px; height: 20px; }
+    .folder-picker-copy { min-width: 0; flex: 1; }
+    .folder-picker-copy strong { display: block; overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .folder-picker-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; }
+    .folder-picker-empty { padding: 40px 20px; color: var(--muted); font-size: 13px; text-align: center; }
+    .folder-picker-actions { flex: 0 0 auto; padding: 10px 16px calc(16px + var(--safe-bottom)); border-top: 1px solid var(--border); background: var(--surface); }
+    .bottom-sheet.extract-sheet { padding-bottom: 0; }
+    .bottom-sheet.extract-sheet .sheet-actions { position: sticky; bottom: 0; z-index: 3; margin-top: 12px; padding: 10px 0 calc(12px + var(--safe-bottom)); background: var(--surface); }
+  </style>
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 4 4"/></symbol>
+    <symbol id="i-sort" viewBox="0 0 24 24"><path d="M5 7h12M5 12h9M5 17h6M18 14v6M15.5 17.5 18 20l2.5-2.5"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="18.5" r="1"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.2 4L19 7"/></symbol>
+    <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.3 2.5 2.5 5.2-5.6"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V7.5Z"/><path d="M3.5 10h17"/></symbol>
+    <symbol id="i-folder-open" viewBox="0 0 24 24"><path d="M3.5 8.5v9.9a1.8 1.8 0 0 0 1.8 1.8h13.4a1.7 1.7 0 0 0 1.6-1.3l1.2-5.2a1.7 1.7 0 0 0-1.7-2.1H8l-2.2-2H5.3a1.8 1.8 0 0 0-1.8 1.8Z"/><path d="M8 10.1 6.2 18.8"/></symbol>
+    <symbol id="i-archive" viewBox="0 0 24 24"><path d="M4 8h16v10.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z"/><path d="m3.8 8 1.5-4h13.4l1.5 4M4.5 10.5h15M9.5 13h5"/></symbol>
+    <symbol id="i-archive-plus" viewBox="0 0 24 24"><path d="M4 9h14v9.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9Z"/><path d="m3.8 9 1.5-4h10.2l1.5 4M4.5 11.5h13M9.5 14H12M20 4v6M17 7h6"/></symbol>
+    <symbol id="i-unarchive" viewBox="0 0 24 24"><path d="M4 10h16v7.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10Z"/><path d="m3.8 10 1.5-4h13.4l1.5 4M12 8V2.5M9 5l3-2.5L15 5"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5l-5-5Z"/><path d="M14 3.5v5h5M8.5 13h7M8.5 16.5h5"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.5"/><path d="m4.5 17 4.2-4.2 3.2 3.2 2.2-2.2 5.4 5.2"/></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><rect x="3.5" y="6" width="13" height="12" rx="2.2"/><path d="m16.5 10.2 4-2.4v8.4l-4-2.4"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M14 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5l-5-5Z"/><path d="M14 3.5v5h5M8.5 12h7M8.5 15h7M8.5 18h4"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h2"/></symbol>
+    <symbol id="i-move" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3 9.5 5.5M12 3l2.5 2.5M12 21l-2.5-2.5M12 21l2.5-2.5M3 12l2.5-2.5M3 12l2.5 2.5M21 12l-2.5-2.5M21 12l-2.5 2.5"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9.5 11v6M14.5 11v6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-task" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2M5.5 5.5l2 2M18.5 5.5l-2 2"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.1 13.2a7.7 7.7 0 0 0 0-2.4l2-1.5-2-3.4-2.4 1a8 8 0 0 0-2-1.2L14.4 3h-4.8l-.3 2.7a8 8 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.5a7.7 7.7 0 0 0 0 2.4l-2 1.5 2 3.4 2.4-1a8 8 0 0 0 2 1.2l.3 2.7h4.8l.3-2.7a8 8 0 0 0 2-1.2l2.4 1 2-3.4-2-1.5Z"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 10.5v5M12 7.5h.01"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10M12 14v2.5"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.8 12s3.2-5.5 9.2-5.5 9.2 5.5 9.2 5.5-3.2 5.5-9.2 5.5S2.8 12 2.8 12Z"/><circle cx="12" cy="12" r="2.6"/></symbol>
+    <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3.5 20.5 21M9.8 6.8A10.4 10.4 0 0 1 12 6.5c6 0 9.2 5.5 9.2 5.5a16 16 0 0 1-2.8 3.5M6.4 8.3A16.2 16.2 0 0 0 2.8 12s3.2 5.5 9.2 5.5c1.2 0 2.3-.2 3.3-.6"/><path d="M10.2 10.3a2.6 2.6 0 0 0 3.4 3.4"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8.5 5.5 10 6.5-10 6.5v-13Z"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5 19 6v5.3c0 4.4-2.8 7.4-7 9.2-4.2-1.8-7-4.8-7-9.2V6l7-2.5Z"/><path d="m8.8 12 2.1 2.1 4.4-4.5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.4 4.3 2.8 17.5a1.9 1.9 0 0 0 1.6 2.8h15.2a1.9 1.9 0 0 0 1.6-2.8L13.6 4.3a1.8 1.8 0 0 0-3.2 0Z"/><path d="M12 9v4.2M12 16.8h.01"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2M5.5 5.5 7 7M17 17l1.5 1.5M18.5 5.5 17 7M7 17l-1.5 1.5"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M19.5 14.2A7.8 7.8 0 0 1 9.8 4.5 8.4 8.4 0 1 0 19.5 14.2Z"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M3.5 9a13 13 0 0 1 17 0M6.5 12.4a8.5 8.5 0 0 1 11 0M9.6 15.7a3.8 3.8 0 0 1 4.8 0M12 19h.01"/></symbol>
+    <symbol id="i-signal" viewBox="0 0 24 24"><path d="M5 17v-3M10 17V9M15 17V6M20 17V3"/></symbol>
+        <symbol id="i-battery" viewBox="0 0 24 24"><rect x="3" y="7" width="17" height="10" rx="2"/><path d="M20 10h1.2v4H20M6 10h8v4H6"/></symbol>
+        <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.3M8.2 13.2l7.6 4.3"/></symbol>
+        <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 7"/><path d="M20 4v7h-7"/></symbol>
+        <symbol id="i-clipboard" viewBox="0 0 24 24"><rect x="7" y="5" width="11" height="16" rx="2"/><path d="M9 5V3.5h7V5M10 9h5M10 12h5M10 15h3"/></symbol>
+  </svg>
+
+  <div class="app" id="app" data-od-id="decompress-app">
+    <div class="statusbar" aria-label="Android 系统状态栏">
+      <span id="systemTime">9:41</span>
+      <span class="camera-dot" aria-hidden="true"></span>
+      <span class="status-icons" aria-hidden="true">
+        <svg class="icon"><use href="#i-signal"/></svg>
+        <svg class="icon"><use href="#i-wifi"/></svg>
+        <svg class="icon"><use href="#i-battery"/></svg>
+      </span>
+    </div>
+
+    <main class="app-main" id="appMain">
+      <section class="browser" id="browserView" aria-label="文件浏览器">
+        <header class="appbar" id="normalAppbar" data-m3="TopAppBar">
+          <button class="icon-button" id="topBackButton" type="button" aria-label="返回上一级" data-od-id="top-back-button">
+            <svg class="icon"><use href="#i-back"/></svg>
+          </button>
+          <button class="volume-switch" id="storageSwitchButton" type="button" aria-haspopup="menu" aria-expanded="false" data-od-id="storage-switch-button">
+            <span id="folderTitle">内部存储</span>
+            <svg class="icon volume-chevron" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+          </button>
+          <div class="toolbar-icon-row">
+            <button class="icon-button" id="searchButton" type="button" aria-label="搜索当前目录" data-od-id="file-search-button">
+              <svg class="icon"><use href="#i-search"/></svg>
+            </button>
+            <button class="icon-button" id="sortButton" type="button" aria-label="排序" aria-haspopup="menu" data-od-id="file-sort-button">
+              <svg class="icon"><use href="#i-sort"/></svg>
+            </button>
+            <button class="icon-button top-new" id="topNewButton" type="button" aria-label="新建" data-od-id="top-new-button">
+              <svg class="icon"><use href="#i-plus"/></svg>
+            </button>
+            <button class="icon-button" id="moreButton" type="button" aria-label="更多操作" aria-haspopup="menu" data-od-id="file-more-button">
+              <svg class="icon"><use href="#i-more"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <header class="appbar" id="selectionAppbar" hidden data-m3="TopAppBar">
+          <button class="icon-button" id="selectionClose" type="button" aria-label="退出多选">
+            <svg class="icon"><use href="#i-close"/></svg>
+          </button>
+          <div class="title-block">
+            <div class="title-line"><h1 id="selectionTitle">已选 1 项</h1></div>
+            <p id="selectionStats">当前目录</p>
+          </div>
+          <button class="select-all-check" id="selectAllButton" type="button" aria-label="全选" aria-pressed="false">
+            <span class="checkbox"><svg class="icon"><use href="#i-check"/></svg></span>
+          </button>
+        </header>
+
+        <header class="searchbar" id="searchAppbar" hidden data-m3="SearchBar">
+          <button class="icon-button" id="searchBack" type="button" aria-label="退出搜索">
+            <svg class="icon"><use href="#i-back"/></svg>
+          </button>
+          <label class="search-field" for="searchInput">
+            <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+            <input id="searchInput" type="search" enterkeyhint="search" placeholder="搜索当前目录" autocomplete="off">
+          </label>
+          <button class="icon-button" id="searchClear" type="button" aria-label="清除搜索">
+            <svg class="icon"><use href="#i-close"/></svg>
+          </button>
+        </header>
+
+        <div class="file-area">
+          <div class="file-scroll" id="fileScroll">
+            <div class="file-list" id="fileList" role="list" aria-label="当前目录文件" data-od-id="file-list"></div>
+          </div>
+          <div class="empty-state" id="emptyState" hidden>
+            <div class="empty-icon"><svg class="icon"><use href="#i-search"/></svg></div>
+            <strong id="emptyTitle">没有匹配的项目</strong>
+            <p id="emptyDescription">换个关键词，或清除搜索后重试。</p>
+            <button class="secondary-button" id="emptyAction" type="button">清除搜索</button>
+          </div>
+        </div>
+
+        <section class="storage-meter" id="storageMeter" aria-label="存储空间" data-od-id="storage-meter">
+          <div class="storage-meter-copy"><span id="storageUsage">已用 63.8 GB / 128 GB</span><strong id="storageAvailable">可用 64.2 GB</strong></div>
+          <div class="storage-track" aria-hidden="true"><span id="storageFill" style="width:49.84%"></span></div>
+        </section>
+
+        <footer class="bottom-toolbar" id="defaultToolbar" data-od-id="file-toolbar">
+          <button class="tool-item" id="defaultExtract" type="button" disabled><svg class="icon"><use href="#i-unarchive"/></svg><span>解压</span></button>
+          <button class="tool-item" id="defaultCopy" type="button" disabled><svg class="icon"><use href="#i-copy"/></svg><span>复制</span></button>
+          <button class="tool-item" id="defaultMove" type="button" disabled><svg class="icon"><use href="#i-move"/></svg><span>移动</span></button>
+          <button class="tool-item" id="defaultDelete" type="button" disabled><svg class="icon"><use href="#i-trash"/></svg><span>删除</span></button>
+          <button class="tool-item" id="defaultMore" type="button"><svg class="icon"><use href="#i-more"/></svg><span>更多</span></button>
+        </footer>
+
+        <footer class="bottom-toolbar" id="archiveToolbar" hidden data-od-id="archive-toolbar">
+          <button class="tool-item accent" id="archiveExtract" type="button"><svg class="icon"><use href="#i-unarchive"/></svg><span>解压</span></button>
+          <button class="tool-item" id="archiveTest" type="button"><svg class="icon"><use href="#i-shield"/></svg><span>测试</span></button>
+          <button class="tool-item" id="archiveInfo" type="button"><svg class="icon"><use href="#i-info"/></svg><span>信息</span></button>
+        </footer>
+      </section>
+
+      <section class="settings-view" id="settingsView" aria-label="设置" aria-hidden="true" inert data-od-id="settings-view">
+        <header class="appbar" data-m3="TopAppBar">
+          <button class="icon-button" id="settingsBack" type="button" aria-label="返回文件浏览">
+            <svg class="icon"><use href="#i-back"/></svg>
+          </button>
+          <div class="title-block"><div class="title-line"><h1>设置</h1></div><p>文件处理偏好</p></div>
+        </header>
+        <div class="settings-scroll">
+          <section class="settings-section">
+            <h2>外观</h2>
+            <div class="settings-card" data-m3="ListItem">
+              <div class="settings-row">
+                <span class="settings-icon" id="themeIcon"><svg class="icon"><use href="#i-sun"/></svg></span>
+                <span class="settings-copy"><strong>深色模式</strong><span id="themeDescription">当前使用浅色主题</span></span>
+                <button class="switch" id="themeSwitch" type="button" role="switch" aria-checked="false" aria-label="深色模式" data-m3="Switch">
+                  <span class="switch-track"><span class="switch-thumb"></span></span>
+                </button>
+              </div>
+            </div>
+          </section>
+          <section class="settings-section">
+            <h2>解压默认值</h2>
+            <div class="settings-card">
+              <button class="settings-row" type="button" data-setting="encoding" data-m3="ListItem">
+                <span class="settings-icon"><svg class="icon"><use href="#i-text"/></svg></span>
+                <span class="settings-copy"><strong>默认文件名编码</strong><span>自动识别不可用时使用</span></span>
+                <span class="settings-value" id="settingsEncoding">自动</span>
+                <svg class="icon settings-chevron"><use href="#i-chevron"/></svg>
+              </button>
+              <button class="settings-row" type="button" data-setting="conflict" data-m3="ListItem">
+                <span class="settings-icon"><svg class="icon"><use href="#i-copy"/></svg></span>
+                <span class="settings-copy"><strong>同名文件策略</strong><span>新解压任务的默认行为</span></span>
+                <span class="settings-value" id="settingsConflict">重命名</span>
+                <svg class="icon settings-chevron"><use href="#i-chevron"/></svg>
+              </button>
+            </div>
+          </section>
+          <section class="settings-section">
+            <h2>文件与任务</h2>
+            <div class="settings-card">
+              <div class="settings-row" data-m3="ListItem">
+                <span class="settings-icon"><svg class="icon"><use href="#i-archive"/></svg></span>
+                <span class="settings-copy"><strong>文件关联</strong><span>记住使用「Zippest」打开压缩包</span></span>
+                <button class="switch" id="associationSwitch" type="button" role="switch" aria-checked="true" aria-label="文件关联" data-m3="Switch">
+                  <span class="switch-track"><span class="switch-thumb"></span></span>
+                </button>
+              </div>
+              <button class="settings-row" id="openTaskQueueButton" type="button" data-m3="ListItem">
+                <span class="settings-icon"><svg class="icon"><use href="#i-task"/></svg></span>
+                <span class="settings-copy"><strong>任务队列</strong><span id="settingsTaskSummary">查看进度与等待任务</span></span>
+                <svg class="icon settings-chevron"><use href="#i-chevron"/></svg>
+              </button>
+            </div>
+          </section>
+          <section class="settings-section">
+            <h2>其他</h2>
+            <div class="settings-card">
+              <button class="settings-row" id="settingsAbout" type="button" data-m3="ListItem">
+                <span class="settings-icon"><svg class="icon"><use href="#i-info"/></svg></span>
+                <span class="settings-copy"><strong>关于 Zippest</strong><span>本地处理与版本信息</span></span>
+                <span class="settings-value">1.0.0</span>
+                <svg class="icon settings-chevron"><use href="#i-chevron"/></svg>
+              </button>
+            </div>
+          </section>
+          <div class="privacy-note">
+            <span class="settings-icon"><svg class="icon"><use href="#i-shield"/></svg></span>
+            <div><strong>文件与密码只在本机处理</strong><p>不会上传压缩包内容，也不需要账号。</p></div>
+          </div>
+        </div>
+      </section>
+
+      <button class="drawer-scrim" id="drawerScrim" type="button" aria-label="收起任务抽屉" hidden></button>
+      <section class="task-drawer" id="taskDrawer" aria-label="解压任务" hidden data-od-id="task-drawer">
+        <button class="drawer-handle" id="drawerHandle" type="button" aria-label="展开或收起任务队列"></button>
+        <div class="drawer-header">
+          <div class="drawer-heading"><strong>解压任务</strong><span id="drawerSummary">1 进行中 · 1 等待 · 1 已完成</span></div>
+          <button class="drawer-icon-button" id="drawerExpand" type="button" aria-label="展开任务队列" aria-expanded="false">
+            <svg class="icon"><use href="#i-chevron-up"/></svg>
+          </button>
+          <button class="drawer-icon-button" id="drawerClose" type="button" aria-label="关闭任务抽屉">
+            <svg class="icon"><use href="#i-close"/></svg>
+          </button>
+        </div>
+        <div class="drawer-current" id="drawerCurrent">
+          <div class="drawer-task-line">
+            <strong id="currentTaskName">工作资料.zip</strong>
+            <span class="task-state" id="currentTaskState">解压中</span>
+            <button class="task-toggle" id="currentTaskToggle" type="button" aria-label="暂停当前任务">
+              <svg class="icon"><use href="#i-pause"/></svg>
+            </button>
+          </div>
+          <div class="linear-progress" data-m3="LinearProgressIndicator" aria-label="当前任务进度"><span id="currentTaskProgress" style="width:36%"></span></div>
+          <div class="drawer-current-meta"><span id="currentTaskLeft">18.6 MB/s · 剩余 18 秒</span><span id="currentTaskRight">Download / 解压</span></div>
+        </div>
+        <div class="drawer-body" id="drawerBody" hidden>
+          <div class="queue-stats">
+            <div class="queue-stat"><strong id="taskRunning">1</strong><span>进行中</span></div>
+            <div class="queue-stat"><strong id="taskWaiting">1</strong><span>等待</span></div>
+            <div class="queue-stat"><strong id="taskComplete">1</strong><span>已完成</span></div>
+          </div>
+          <div class="queue-list" id="queueList"></div>
+        </div>
+      </section>
+
+      <div class="menu storage-menu" id="storageMenu" role="menu" aria-label="常用位置" hidden data-od-id="storage-menu">
+        <div class="menu-label">常用位置</div>
+        <button class="menu-item" type="button" data-location="home"><svg class="icon"><use href="#i-folder"/></svg>目录首页<span class="shortcut" data-location-check="home"></span></button>
+        <button class="menu-item" type="button" data-location="download"><svg class="icon"><use href="#i-file"/></svg>下载<span class="shortcut" data-location-check="download"></span></button>
+        <button class="menu-item" type="button" data-location="album"><svg class="icon"><use href="#i-image"/></svg>相册<span class="shortcut" data-location-check="album"></span></button>
+        <button class="menu-item" type="button" data-location="documents"><svg class="icon"><use href="#i-text"/></svg>文档<span class="shortcut" data-location-check="documents"></span></button>
+        <button class="menu-item" type="button" data-location="wechat"><svg class="icon"><use href="#i-folder"/></svg>微信<span class="shortcut" data-location-check="wechat"></span></button>
+      </div>
+
+      <div class="menu" id="sortMenu" role="menu" aria-label="排序方式" hidden data-od-id="sort-menu">
+        <div class="menu-label">排序方式</div>
+        <button class="menu-item" type="button" data-sort-key="name"><svg class="icon"><use href="#i-text"/></svg>名称<span class="shortcut" data-sort-check="name"></span></button>
+        <button class="menu-item" type="button" data-sort-key="size"><svg class="icon"><use href="#i-file"/></svg>大小<span class="shortcut" data-sort-check="size"></span></button>
+        <button class="menu-item" type="button" data-sort-key="date"><svg class="icon"><use href="#i-task"/></svg>日期<span class="shortcut" data-sort-check="date"></span></button>
+        <div class="menu-divider"></div>
+        <button class="menu-item" id="sortDirection" type="button"><svg class="icon"><use href="#i-sort"/></svg><span id="sortDirectionLabel">升序</span></button>
+      </div>
+
+      <div class="menu" id="moreMenu" role="menu" aria-label="更多操作" hidden data-od-id="more-menu">
+        <div class="menu-label">当前目录</div>
+        <button class="menu-item" type="button" data-more-action="tasks"><svg class="icon"><use href="#i-task"/></svg>任务队列</button>
+        <div class="menu-divider"></div>
+        <button class="menu-item" type="button" data-more-action="settings"><svg class="icon"><use href="#i-settings"/></svg>设置</button>
+        <button class="menu-item" type="button" data-more-action="about"><svg class="icon"><use href="#i-info"/></svg>关于</button>
+      </div>
+
+      <div class="menu bottom-menu" id="fileActionsMenu" role="menu" aria-label="文件操作" hidden data-od-id="file-actions-menu">
+        <div class="menu-label">文件操作</div>
+        <button class="menu-item" type="button" data-file-action="rename"><svg class="icon"><use href="#i-text"/></svg>重命名</button>
+        <button class="menu-item" type="button" data-file-action="share"><svg class="icon"><use href="#i-share"/></svg>分享</button>
+        <button class="menu-item" type="button" data-file-action="properties"><svg class="icon"><use href="#i-info"/></svg>属性</button>
+      </div>
+    </main>
+
+    <section class="folder-picker" id="folderPicker" role="dialog" aria-modal="true" aria-label="选择文件夹" aria-hidden="true">
+      <header class="appbar" data-m3="TopAppBar">
+        <button class="icon-button" id="folderPickerBack" type="button" aria-label="返回上一级">
+          <svg class="icon"><use href="#i-back"/></svg>
+        </button>
+        <div class="title-block">
+          <div class="title-line"><h1 id="folderPickerTitle">内部存储</h1></div>
+          <p id="folderPickerPath">内部存储</p>
+        </div>
+        <button class="icon-button" id="folderPickerClose" type="button" aria-label="关闭">
+          <svg class="icon"><use href="#i-close"/></svg>
+        </button>
+      </header>
+      <div class="picker-volumes" id="folderPickerVolumes" aria-label="存储卷">
+        <button class="picker-volume active" type="button" data-picker-volume="internal">内部存储</button>
+        <button class="picker-volume" type="button" data-picker-volume="sd">SD 卡</button>
+        <button class="picker-volume" type="button" data-picker-volume="otg">OTG</button>
+      </div>
+      <div class="folder-picker-list" id="folderPickerList"></div>
+      <footer class="folder-picker-actions">
+        <button class="primary-button" id="folderPickerSelect" type="button">选择此文件夹</button>
+      </footer>
+    </section>
+
+    <button class="gesture-home-zone" id="gestureHomeButton" type="button" aria-label="回到目录首页">
+      <span class="gesture-bar" aria-hidden="true"></span>
+    </button>
+    <div class="snackbar" id="snackbar" role="status" aria-live="polite"></div>
+
+    <div class="modal-layer" id="sheetLayer" hidden data-od-id="bottom-sheet-layer">
+      <button class="modal-scrim" type="button" id="sheetScrim" aria-label="关闭面板"></button>
+      <section class="bottom-sheet" id="sheetPanel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+        <div id="sheetContent"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const app = document.getElementById("app");
+      const appMain = document.getElementById("appMain");
+      const browserView = document.getElementById("browserView");
+      const fileList = document.getElementById("fileList");
+      const fileScroll = document.getElementById("fileScroll");
+      const normalAppbar = document.getElementById("normalAppbar");
+      const selectionAppbar = document.getElementById("selectionAppbar");
+      const searchAppbar = document.getElementById("searchAppbar");
+      const defaultToolbar = document.getElementById("defaultToolbar");
+      const archiveToolbar = document.getElementById("archiveToolbar");
+      const emptyState = document.getElementById("emptyState");
+      const storageMenu = document.getElementById("storageMenu");
+      const sortMenu = document.getElementById("sortMenu");
+      const moreMenu = document.getElementById("moreMenu");
+      const fileActionsMenu = document.getElementById("fileActionsMenu");
+      const settingsView = document.getElementById("settingsView");
+      const sheetLayer = document.getElementById("sheetLayer");
+      const sheetContent = document.getElementById("sheetContent");
+      const sheetPanel = document.getElementById("sheetPanel");
+      const taskDrawer = document.getElementById("taskDrawer");
+      const drawerScrim = document.getElementById("drawerScrim");
+      const snackbar = document.getElementById("snackbar");
+      const searchInput = document.getElementById("searchInput");
+      const folderPicker = document.getElementById("folderPicker");
+      const folderPickerList = document.getElementById("folderPickerList");
+      const folderPickerTitle = document.getElementById("folderPickerTitle");
+      const folderPickerPath = document.getElementById("folderPickerPath");
+      const folderPickerVolumes = document.getElementById("folderPickerVolumes");
+      const folderPickerSelect = document.getElementById("folderPickerSelect");
+
+      let uid = 1;
+      const nextUid = (prefix) => prefix + "-" + (++uid);
+      const nowStamp = Date.now();
+
+      const dirs = {
+        storage: { name: "内部存储", parent: null, entries: ["androidDir", "dcimDir", "downloadDir", "documentsDir", "moviesDir", "musicDir", "picturesDir", "podcastsDir", "ringtonesDir", "alarmsDir", "notificationsDir", "wechatDir", "tencentDir", "newFolderDir"] },
+        sdRoot: { name: "SD 卡", parent: null, entries: ["sdDcimDir", "sdDownloadDir", "sdMoviesDir", "sdMusicDir", "sdPicturesDir", "sdBackupDir"] },
+        otgRoot: { name: "OTG", parent: null, entries: ["otgPhotosDir", "otgDocsDir", "otgExportDir"] },
+        android: { name: "Android", parent: "storage", entries: ["androidDataDir", "androidObbDir"] },
+        androidData: { name: "data", parent: "android", entries: [] },
+        androidObb: { name: "obb", parent: "android", entries: [] },
+        dcim: { name: "DCIM", parent: "storage", entries: ["dcimCameraDir", "dcimScreenshotsDir", "dcimAlbumDir"] },
+        dcimCamera: { name: "Camera", parent: "dcim", entries: ["camera1Jpg", "camera2Jpg", "funGif", "shortVideo"] },
+        dcimScreenshots: { name: "Screenshots", parent: "dcim", entries: ["screen1Png", "screen2Png"] },
+        dcimAlbum: { name: "相册精选", parent: "dcim", entries: ["dcimAlbumJpg"] },
+        download: { name: "Download", parent: "storage", entries: ["materialsDir", "sampleZip", "assetsRar", "backup7z", "readmeTxt", "photoBundle"] },
+        documents: { name: "Documents", parent: "storage", entries: ["workZip", "projectDoc", "notesTxt"] },
+        movies: { name: "Movies", parent: "storage", entries: ["movieFile1", "movieFile2"] },
+        music: { name: "Music", parent: "storage", entries: ["musicFile1", "musicFile2"] },
+        pictures: { name: "Pictures", parent: "storage", entries: ["cameraDir", "screenshotsDir"] },
+        podcasts: { name: "Podcasts", parent: "storage", entries: ["podcastFile1"] },
+        ringtones: { name: "Ringtones", parent: "storage", entries: ["ringtoneFile1"] },
+        alarms: { name: "Alarms", parent: "storage", entries: ["alarmFile1"] },
+        notifications: { name: "Notifications", parent: "storage", entries: ["notificationFile1"] },
+        wechat: { name: "微信", parent: "storage", entries: ["wechatImagesDir", "wechatDocsDir"] },
+        wechatImages: { name: "Images", parent: "wechat", entries: ["wechatImage1"] },
+        wechatDocs: { name: "Documents", parent: "wechat", entries: ["wechatDoc1"] },
+        tencent: { name: "腾讯", parent: "storage", entries: ["tencentFilesDir", "tencentDownloadDir"] },
+        tencentFiles: { name: "QQ文件", parent: "tencent", entries: ["qqFile1"] },
+        tencentDownload: { name: "QQ下载", parent: "tencent", entries: ["qqDownload1"] },
+        newFolder: { name: "新建文件夹", parent: "storage", entries: [] },
+        materials: { name: "素材", parent: "download", entries: ["imagesDir", "fontsDir", "archivesDir", "brandZip", "designRar", "materialNotes"] },
+        archives: { name: "压缩包", parent: "materials", entries: ["docBackupZip", "photoArchive7z", "oldProjectRar"] },
+        images: { name: "图片", parent: "materials", entries: ["coverJpg", "bannerPng", "iconsSvg"] },
+        fonts: { name: "字体", parent: "materials", entries: ["notoFont", "robotoFont"] },
+        camera: { name: "Camera", parent: "pictures", entries: ["camera1Jpg", "camera2Jpg"] },
+        screenshots: { name: "Screenshots", parent: "pictures", entries: ["screen1Png", "screen2Png"] },
+        sdDcim: { name: "DCIM", parent: "sdRoot", entries: ["sdCameraDir"] },
+        sdCamera: { name: "Camera", parent: "sdDcim", entries: ["sdCameraJpg"] },
+        sdDownload: { name: "Download", parent: "sdRoot", entries: ["sdMovieFile", "sdArchiveFile"] },
+        sdMovies: { name: "Movies", parent: "sdRoot", entries: ["sdMovieFile2"] },
+        sdMusic: { name: "Music", parent: "sdRoot", entries: ["sdMusicFile1"] },
+        sdPictures: { name: "Pictures", parent: "sdRoot", entries: ["sdPicture1", "sdPicture2"] },
+        sdBackup: { name: "备份", parent: "sdRoot", entries: ["sdBackupZip"] },
+        otgPhotos: { name: "DCIM", parent: "otgRoot", entries: ["otgPhoto1", "otgPhoto2"] },
+        otgDocs: { name: "Documents", parent: "otgRoot", entries: ["otgDoc1"] },
+        otgExport: { name: "导出", parent: "otgRoot", entries: ["otgArchive1"] }
+      };
+
+      const entries = {
+        downloadDir: { id: "downloadDir", kind: "folder", name: "Download", childDir: "download", modified: Date.parse("2026-10-18T14:32:00") },
+        documentsDir: { id: "documentsDir", kind: "folder", name: "Documents", childDir: "documents", modified: Date.parse("2026-10-17T09:18:00") },
+        picturesDir: { id: "picturesDir", kind: "folder", name: "Pictures", childDir: "pictures", modified: Date.parse("2026-10-16T18:06:00") },
+        materialsDir: { id: "materialsDir", kind: "folder", name: "素材", childDir: "materials", modified: Date.parse("2026-10-18T13:48:00") },
+        archivesDir: { id: "archivesDir", kind: "folder", name: "压缩包", childDir: "archives", modified: Date.parse("2026-10-18T11:20:00") },
+        imagesDir: { id: "imagesDir", kind: "folder", name: "图片", childDir: "images", modified: Date.parse("2026-10-18T10:10:00") },
+        fontsDir: { id: "fontsDir", kind: "folder", name: "字体", childDir: "fonts", modified: Date.parse("2026-10-17T16:40:00") },
+        cameraDir: { id: "cameraDir", kind: "folder", name: "Camera", childDir: "camera", modified: Date.parse("2026-10-16T18:02:00") },
+        screenshotsDir: { id: "screenshotsDir", kind: "folder", name: "Screenshots", childDir: "screenshots", modified: Date.parse("2026-10-16T17:56:00") },
+        sampleZip: { id: "sampleZip", kind: "archive", name: "sample.zip", sizeBytes: 26004684, format: "ZIP", archiveKey: "sample", modified: Date.parse("2026-10-18T14:21:00") },
+        assetsRar: { id: "assetsRar", kind: "archive", name: "assets.rar", sizeBytes: 163577856, format: "RAR", archiveKey: "assets", encrypted: true, modified: Date.parse("2026-10-16T19:04:00") },
+        backup7z: { id: "backup7z", kind: "archive", name: "backup.7z", sizeBytes: 1288490188, format: "7Z", archiveKey: "backup", modified: Date.parse("2026-10-14T22:12:00") },
+        readmeTxt: { id: "readmeTxt", kind: "file", name: "下载说明.txt", sizeBytes: 9421, ext: "txt", modified: Date.parse("2026-10-12T08:36:00") },
+        photoBundle: { id: "photoBundle", kind: "archive", name: "照片备份.zip", sizeBytes: 864026624, format: "ZIP", archiveKey: "photos", modified: Date.parse("2026-10-15T20:25:00") },
+        brandZip: { id: "brandZip", kind: "archive", name: "品牌素材.zip", sizeBytes: 48234496, format: "ZIP", archiveKey: "brand", modified: Date.parse("2026-10-18T10:08:00") },
+        designRar: { id: "designRar", kind: "archive", name: "旧版设计.rar", sizeBytes: 89335318, format: "RAR", archiveKey: "oldDesign", modified: Date.parse("2026-10-10T15:22:00") },
+        materialNotes: { id: "materialNotes", kind: "file", name: "素材清单.txt", sizeBytes: 18342, ext: "txt", modified: Date.parse("2026-10-11T11:45:00") },
+        docBackupZip: { id: "docBackupZip", kind: "archive", name: "文档备份.zip", sizeBytes: 59244544, format: "ZIP", archiveKey: "docBackup", modified: Date.parse("2026-10-17T23:10:00") },
+        photoArchive7z: { id: "photoArchive7z", kind: "archive", name: "照片归档.7z", sizeBytes: 245366784, format: "7Z", archiveKey: "photoArchive", modified: Date.parse("2026-10-13T09:28:00") },
+        oldProjectRar: { id: "oldProjectRar", kind: "archive", name: "旧项目.rar", sizeBytes: 378535936, format: "RAR", archiveKey: "oldProject", modified: Date.parse("2026-09-29T14:18:00") },
+        workZip: { id: "workZip", kind: "archive", name: "工作资料.zip", sizeBytes: 633339904, format: "ZIP", archiveKey: "work", modified: Date.parse("2026-10-17T09:18:00") },
+        projectDoc: { id: "projectDoc", kind: "file", name: "项目记录.pdf", sizeBytes: 2826240, ext: "pdf", modified: Date.parse("2026-10-15T13:55:00") },
+        notesTxt: { id: "notesTxt", kind: "file", name: "说明.txt", sizeBytes: 12024, ext: "txt", modified: Date.parse("2026-10-09T10:31:00") },
+        coverJpg: { id: "coverJpg", kind: "file", name: "封面.jpg", sizeBytes: 4823040, ext: "jpg", modified: Date.parse("2026-10-18T10:09:00") },
+        bannerPng: { id: "bannerPng", kind: "file", name: "横版海报.png", sizeBytes: 6739842, ext: "png", modified: Date.parse("2026-10-18T10:10:00") },
+        iconsSvg: { id: "iconsSvg", kind: "file", name: "图标集.svg", sizeBytes: 425984, ext: "svg", modified: Date.parse("2026-10-17T16:31:00") },
+        notoFont: { id: "notoFont", kind: "file", name: "NotoSansSC-Regular.otf", sizeBytes: 10695475, ext: "otf", modified: Date.parse("2026-10-17T16:38:00") },
+        robotoFont: { id: "robotoFont", kind: "file", name: "Roboto-Medium.ttf", sizeBytes: 5283840, ext: "ttf", modified: Date.parse("2026-10-17T16:40:00") },
+        camera1Jpg: { id: "camera1Jpg", kind: "file", name: "IMG_4821.jpg", sizeBytes: 8734208, ext: "jpg", modified: Date.parse("2026-10-16T18:01:00") },
+        camera2Jpg: { id: "camera2Jpg", kind: "file", name: "IMG_4822.jpg", sizeBytes: 7938048, ext: "jpg", modified: Date.parse("2026-10-16T18:02:00") },
+        funGif: { id: "funGif", kind: "file", name: "动图_01.gif", sizeBytes: 3512345, ext: "gif", modified: Date.parse("2026-10-16T18:03:00") },
+        shortVideo: { id: "shortVideo", kind: "file", name: "短视频_01.mp4", sizeBytes: 18234567, ext: "mp4", modified: Date.parse("2026-10-16T18:04:00") },
+        screen1Png: { id: "screen1Png", kind: "file", name: "Screenshot_01.png", sizeBytes: 2411725, ext: "png", modified: Date.parse("2026-10-16T17:54:00") },
+        screen2Png: { id: "screen2Png", kind: "file", name: "Screenshot_02.png", sizeBytes: 2181038, ext: "png", modified: Date.parse("2026-10-16T17:56:00") },
+        androidDir: { id: "androidDir", kind: "folder", name: "Android", childDir: "android", modified: Date.parse("2026-10-18T14:40:00") },
+        dcimDir: { id: "dcimDir", kind: "folder", name: "DCIM", childDir: "dcim", modified: Date.parse("2026-10-18T14:12:00") },
+        moviesDir: { id: "moviesDir", kind: "folder", name: "Movies", childDir: "movies", modified: Date.parse("2026-10-18T11:20:00") },
+        musicDir: { id: "musicDir", kind: "folder", name: "Music", childDir: "music", modified: Date.parse("2026-10-17T20:35:00") },
+        podcastsDir: { id: "podcastsDir", kind: "folder", name: "Podcasts", childDir: "podcasts", modified: Date.parse("2026-10-17T09:22:00") },
+        ringtonesDir: { id: "ringtonesDir", kind: "folder", name: "Ringtones", childDir: "ringtones", modified: Date.parse("2026-10-15T18:10:00") },
+        alarmsDir: { id: "alarmsDir", kind: "folder", name: "Alarms", childDir: "alarms", modified: Date.parse("2026-10-14T07:40:00") },
+        notificationsDir: { id: "notificationsDir", kind: "folder", name: "Notifications", childDir: "notifications", modified: Date.parse("2026-10-13T21:06:00") },
+        wechatDir: { id: "wechatDir", kind: "folder", name: "微信", childDir: "wechat", modified: Date.parse("2026-10-18T14:28:00") },
+        tencentDir: { id: "tencentDir", kind: "folder", name: "腾讯", childDir: "tencent", modified: Date.parse("2026-10-17T22:16:00") },
+        newFolderDir: { id: "newFolderDir", kind: "folder", name: "新建文件夹", childDir: "newFolder", modified: Date.parse("2026-10-18T15:02:00") },
+        androidDataDir: { id: "androidDataDir", kind: "folder", name: "data", childDir: "androidData", modified: Date.parse("2026-10-18T14:40:00") },
+        androidObbDir: { id: "androidObbDir", kind: "folder", name: "obb", childDir: "androidObb", modified: Date.parse("2026-10-16T12:18:00") },
+        dcimCameraDir: { id: "dcimCameraDir", kind: "folder", name: "Camera", childDir: "dcimCamera", modified: Date.parse("2026-10-18T14:12:00") },
+        dcimScreenshotsDir: { id: "dcimScreenshotsDir", kind: "folder", name: "Screenshots", childDir: "dcimScreenshots", modified: Date.parse("2026-10-17T21:44:00") },
+        dcimAlbumDir: { id: "dcimAlbumDir", kind: "folder", name: "相册精选", childDir: "dcimAlbum", modified: Date.parse("2026-10-15T16:20:00") },
+        dcimAlbumJpg: { id: "dcimAlbumJpg", kind: "file", name: "精选_01.jpg", sizeBytes: 6523138, ext: "jpg", modified: Date.parse("2026-10-15T16:20:00") },
+        movieFile1: { id: "movieFile1", kind: "file", name: "旅行记录.mp4", sizeBytes: 486539264, ext: "mp4", modified: Date.parse("2026-10-18T11:20:00") },
+        movieFile2: { id: "movieFile2", kind: "file", name: "家庭视频.mp4", sizeBytes: 72876032, ext: "mp4", modified: Date.parse("2026-10-16T19:38:00") },
+        musicFile1: { id: "musicFile1", kind: "file", name: "夜间电台.mp3", sizeBytes: 8465920, ext: "mp3", modified: Date.parse("2026-10-17T20:35:00") },
+        musicFile2: { id: "musicFile2", kind: "file", name: "轻音乐合集.mp3", sizeBytes: 12648448, ext: "mp3", modified: Date.parse("2026-10-12T10:08:00") },
+        podcastFile1: { id: "podcastFile1", kind: "file", name: "科技播客_102.mp3", sizeBytes: 38273024, ext: "mp3", modified: Date.parse("2026-10-17T09:22:00") },
+        ringtoneFile1: { id: "ringtoneFile1", kind: "file", name: "清晨.ogg", sizeBytes: 428032, ext: "ogg", modified: Date.parse("2026-10-15T18:10:00") },
+        alarmFile1: { id: "alarmFile1", kind: "file", name: "工作日.ogg", sizeBytes: 312320, ext: "ogg", modified: Date.parse("2026-10-14T07:40:00") },
+        notificationFile1: { id: "notificationFile1", kind: "file", name: "提示音.ogg", sizeBytes: 184320, ext: "ogg", modified: Date.parse("2026-10-13T21:06:00") },
+        wechatImagesDir: { id: "wechatImagesDir", kind: "folder", name: "Images", childDir: "wechatImages", modified: Date.parse("2026-10-18T14:28:00") },
+        wechatDocsDir: { id: "wechatDocsDir", kind: "folder", name: "Documents", childDir: "wechatDocs", modified: Date.parse("2026-10-17T10:12:00") },
+        wechatImage1: { id: "wechatImage1", kind: "file", name: "IMG_20261018.jpg", sizeBytes: 2842624, ext: "jpg", modified: Date.parse("2026-10-18T14:28:00") },
+        wechatDoc1: { id: "wechatDoc1", kind: "file", name: "会议纪要.pdf", sizeBytes: 682391, ext: "pdf", modified: Date.parse("2026-10-17T10:12:00") },
+        tencentFilesDir: { id: "tencentFilesDir", kind: "folder", name: "QQ文件", childDir: "tencentFiles", modified: Date.parse("2026-10-17T22:16:00") },
+        tencentDownloadDir: { id: "tencentDownloadDir", kind: "folder", name: "QQ下载", childDir: "tencentDownload", modified: Date.parse("2026-10-16T09:40:00") },
+        qqFile1: { id: "qqFile1", kind: "file", name: "共享文档.docx", sizeBytes: 1282048, ext: "docx", modified: Date.parse("2026-10-17T22:16:00") },
+        qqDownload1: { id: "qqDownload1", kind: "file", name: "安装包.apk", sizeBytes: 48234496, ext: "apk", modified: Date.parse("2026-10-16T09:40:00") },
+        sdDcimDir: { id: "sdDcimDir", kind: "folder", name: "DCIM", childDir: "sdDcim", modified: Date.parse("2026-10-18T16:12:00") },
+        sdCameraDir: { id: "sdCameraDir", kind: "folder", name: "Camera", childDir: "sdCamera", modified: Date.parse("2026-10-18T16:12:00") },
+        sdCameraJpg: { id: "sdCameraJpg", kind: "file", name: "IMG_5201.jpg", sizeBytes: 7241728, ext: "jpg", modified: Date.parse("2026-10-18T16:12:00") },
+        sdDownloadDir: { id: "sdDownloadDir", kind: "folder", name: "Download", childDir: "sdDownload", modified: Date.parse("2026-10-18T12:06:00") },
+        sdMovieFile: { id: "sdMovieFile", kind: "file", name: "离线电影.mp4", sizeBytes: 1073741824, ext: "mp4", modified: Date.parse("2026-10-18T12:06:00") },
+        sdArchiveFile: { id: "sdArchiveFile", kind: "archive", name: "SD备份.zip", sizeBytes: 268435456, format: "ZIP", archiveKey: "sdBackup", modified: Date.parse("2026-10-17T08:30:00") },
+        sdMoviesDir: { id: "sdMoviesDir", kind: "folder", name: "Movies", childDir: "sdMovies", modified: Date.parse("2026-10-17T19:25:00") },
+        sdMovieFile2: { id: "sdMovieFile2", kind: "file", name: "纪录片.mkv", sizeBytes: 1572864000, ext: "mkv", modified: Date.parse("2026-10-17T19:25:00") },
+        sdMusicDir: { id: "sdMusicDir", kind: "folder", name: "Music", childDir: "sdMusic", modified: Date.parse("2026-10-16T08:20:00") },
+        sdMusicFile1: { id: "sdMusicFile1", kind: "file", name: "车载歌单.mp3", sizeBytes: 52428800, ext: "mp3", modified: Date.parse("2026-10-16T08:20:00") },
+        sdPicturesDir: { id: "sdPicturesDir", kind: "folder", name: "Pictures", childDir: "sdPictures", modified: Date.parse("2026-10-15T20:42:00") },
+        sdPicture1: { id: "sdPicture1", kind: "file", name: "旅行_01.jpg", sizeBytes: 5947392, ext: "jpg", modified: Date.parse("2026-10-15T20:42:00") },
+        sdPicture2: { id: "sdPicture2", kind: "file", name: "旅行_02.jpg", sizeBytes: 6134169, ext: "jpg", modified: Date.parse("2026-10-15T20:43:00") },
+        sdBackupDir: { id: "sdBackupDir", kind: "folder", name: "备份", childDir: "sdBackup", modified: Date.parse("2026-10-14T10:15:00") },
+        sdBackupZip: { id: "sdBackupZip", kind: "archive", name: "手机备份.zip", sizeBytes: 734003200, format: "ZIP", archiveKey: "phoneBackup", modified: Date.parse("2026-10-14T10:15:00") },
+        otgPhotosDir: { id: "otgPhotosDir", kind: "folder", name: "DCIM", childDir: "otgPhotos", modified: Date.parse("2026-10-18T17:22:00") },
+        otgPhoto1: { id: "otgPhoto1", kind: "file", name: "OTG_001.jpg", sizeBytes: 4928307, ext: "jpg", modified: Date.parse("2026-10-18T17:22:00") },
+        otgPhoto2: { id: "otgPhoto2", kind: "file", name: "OTG_002.jpg", sizeBytes: 5200937, ext: "jpg", modified: Date.parse("2026-10-18T17:23:00") },
+        otgDocsDir: { id: "otgDocsDir", kind: "folder", name: "Documents", childDir: "otgDocs", modified: Date.parse("2026-10-17T14:08:00") },
+        otgDoc1: { id: "otgDoc1", kind: "file", name: "移动硬盘清单.pdf", sizeBytes: 1832960, ext: "pdf", modified: Date.parse("2026-10-17T14:08:00") },
+        otgExportDir: { id: "otgExportDir", kind: "folder", name: "导出", childDir: "otgExport", modified: Date.parse("2026-10-16T11:42:00") },
+        otgArchive1: { id: "otgArchive1", kind: "archive", name: "项目导出.zip", sizeBytes: 157286400, format: "ZIP", archiveKey: "otgProject", modified: Date.parse("2026-10-16T11:42:00") }
+      };
+
+      function internalEntry(id, name, kind, sizeBytes, modified, extra) {
+        return Object.assign({ id, name, kind, sizeBytes, modified, ext: name.split(".").pop() }, extra || {});
+      }
+
+      function buildFallbackArchive(name, sizeBytes, format) {
+        return {
+          name,
+          sizeBytes,
+          format,
+          modified: Date.parse("2026-10-16T12:00:00"),
+          encrypted: false,
+          unpackedBytes: Math.round(sizeBytes * 1.7),
+          totalItems: 84,
+          folders: {
+            "": [
+              internalEntry("af-images", "images", "folder", 0, Date.parse("2026-10-16T11:20:00"), { folderKey: "images", itemCount: 48 }),
+              internalEntry("af-docs", "documents", "folder", 0, Date.parse("2026-10-16T11:10:00"), { folderKey: "documents", itemCount: 32 }),
+              internalEntry("af-readme", "README.txt", "file", 8422, Date.parse("2026-10-16T11:00:00"))
+            ],
+            images: [
+              internalEntry("af-image-1", "cover.jpg", "file", 3824000, Date.parse("2026-10-16T11:18:00")),
+              internalEntry("af-image-2", "preview.png", "file", 1842000, Date.parse("2026-10-16T11:19:00"))
+            ],
+            documents: [
+              internalEntry("af-doc-1", "清单.pdf", "file", 1328000, Date.parse("2026-10-16T11:05:00"))
+            ]
+          }
+        };
+      }
+
+      const archiveData = {
+        sample: {
+          name: "sample.zip",
+          sizeBytes: 26004684,
+          format: "ZIP",
+          modified: Date.parse("2026-10-18T14:21:00"),
+          encrypted: false,
+          unpackedBytes: 40475033,
+          totalItems: 128,
+          folders: {
+            "": [
+              internalEntry("s-images", "images", "folder", 0, Date.parse("2026-10-18T14:18:00"), { folderKey: "images", itemCount: 64 }),
+              internalEntry("s-assets", "assets", "folder", 0, Date.parse("2026-10-18T14:17:00"), { folderKey: "assets", itemCount: 42 }),
+              internalEntry("s-spec", "产品规格.pdf", "file", 2202009, Date.parse("2026-10-18T14:10:00")),
+              internalEntry("s-readme", "README.txt", "file", 4096, Date.parse("2026-10-18T14:08:00")),
+              internalEntry("s-preview", "preview.jpg", "file", 1258291, Date.parse("2026-10-18T14:12:00"))
+            ],
+            images: [
+              internalEntry("s-cover", "banner.png", "file", 3250586, Date.parse("2026-10-18T14:16:00")),
+              internalEntry("s-photo", "sample-photo.jpg", "file", 7843348, Date.parse("2026-10-18T14:17:00")),
+              internalEntry("s-thumb", "thumbnail.jpg", "file", 482304, Date.parse("2026-10-18T14:18:00"))
+            ],
+            assets: [
+              internalEntry("s-logo", "logo.svg", "file", 24576, Date.parse("2026-10-18T14:09:00")),
+              internalEntry("s-icons", "icons.png", "file", 638976, Date.parse("2026-10-18T14:10:00"))
+            ]
+          }
+        },
+        assets: {
+          name: "assets.rar",
+          sizeBytes: 163577856,
+          format: "RAR",
+          modified: Date.parse("2026-10-16T19:04:00"),
+          encrypted: true,
+          unpackedBytes: 217055232,
+          totalItems: 342,
+          folders: {
+            "": [
+              internalEntry("a-fonts", "fonts", "folder", 0, Date.parse("2026-10-16T18:58:00"), { folderKey: "fonts", itemCount: 18 }),
+              internalEntry("a-icons", "icons", "folder", 0, Date.parse("2026-10-16T18:54:00"), { folderKey: "icons", itemCount: 248 }),
+              internalEntry("a-layout", "layout.fig", "file", 61027123, Date.parse("2026-10-16T19:00:00")),
+              internalEntry("a-tokens", "design-tokens.json", "file", 47104, Date.parse("2026-10-16T18:52:00")),
+              internalEntry("a-preview", "preview.jpg", "file", 8808038, Date.parse("2026-10-16T19:02:00"))
+            ],
+            fonts: [
+              internalEntry("a-noto", "NotoSansSC-Regular.otf", "file", 10695475, Date.parse("2026-10-16T18:56:00")),
+              internalEntry("a-roboto", "Roboto-Medium.ttf", "file", 5283840, Date.parse("2026-10-16T18:58:00"))
+            ],
+            icons: [
+              internalEntry("a-nav", "navigation.svg", "file", 38912, Date.parse("2026-10-16T18:52:00")),
+              internalEntry("a-action", "actions.svg", "file", 56320, Date.parse("2026-10-16T18:54:00"))
+            ]
+          }
+        },
+        backup: {
+          name: "backup.7z",
+          sizeBytes: 1288490188,
+          format: "7Z",
+          modified: Date.parse("2026-10-14T22:12:00"),
+          encrypted: false,
+          unpackedBytes: 1811939328,
+          totalItems: 587,
+          folders: {
+            "": [
+              internalEntry("b-photos", "photos", "folder", 0, Date.parse("2026-10-14T22:08:00"), { folderKey: "photos", itemCount: 386 }),
+              internalEntry("b-docs", "documents", "folder", 0, Date.parse("2026-10-14T22:06:00"), { folderKey: "documents", itemCount: 194 }),
+              internalEntry("b-db", "backup.db", "file", 67108864, Date.parse("2026-10-14T22:10:00")),
+              internalEntry("b-manifest", "manifest.xml", "file", 38912, Date.parse("2026-10-14T22:11:00")),
+              internalEntry("b-sha", "checksums.sha256", "file", 6144, Date.parse("2026-10-14T22:12:00"))
+            ],
+            photos: [
+              internalEntry("b-img1", "IMG_4821.jpg", "file", 8734208, Date.parse("2026-10-14T21:42:00")),
+              internalEntry("b-img2", "IMG_4822.jpg", "file", 7938048, Date.parse("2026-10-14T21:44:00"))
+            ],
+            documents: [
+              internalEntry("b-pdf", "项目资料.pdf", "file", 4728000, Date.parse("2026-10-14T21:50:00"))
+            ]
+          }
+        }
+      };
+
+      const settings = {
+        theme: document.documentElement.dataset.theme === "dark" ? "dark" : "light",
+        encoding: "自动",
+        conflict: "重命名",
+        fileAssociation: true
+      };
+
+      try {
+        const storedSettings = JSON.parse(localStorage.getItem("decompress-settings-v3") || "{}");
+        if (["自动", "GBK", "UTF-8"].includes(storedSettings.encoding)) settings.encoding = storedSettings.encoding;
+        if (["覆盖", "跳过", "重命名"].includes(storedSettings.conflict)) settings.conflict = storedSettings.conflict;
+        if (typeof storedSettings.fileAssociation === "boolean") settings.fileAssociation = storedSettings.fileAssociation;
+      } catch (error) {}
+
+      function saveSettings() {
+        try {
+          localStorage.setItem("decompress-settings-v3", JSON.stringify({
+            encoding: settings.encoding,
+            conflict: settings.conflict,
+            fileAssociation: settings.fileAssociation
+          }));
+        } catch (error) {}
+      }
+
+      const volumes = {
+        internal: { name: "内部存储", root: "storage", used: 63.8, total: 128 },
+        sd: { name: "SD 卡", root: "sdRoot", used: 38.2, total: 64 },
+        otg: { name: "OTG", root: "otgRoot", used: 12.4, total: 32 }
+      };
+      const quickLocations = {
+        home: ["storage"],
+        download: ["storage", "download"],
+        album: ["storage", "dcim", "dcimCamera"],
+        documents: ["storage", "documents"],
+        wechat: ["storage", "wechat"]
+      };
+      const rootOrder = new Map(["Android", "DCIM", "Download", "Documents", "Movies", "Music", "Pictures", "Podcasts", "Ringtones", "Alarms", "Notifications", "微信", "腾讯", "新建文件夹"].map((name, index) => [name, index]));
+
+      const state = {
+        volume: "internal",
+        mode: "files",
+        dirPath: ["storage"],
+        archiveKey: null,
+        archivePath: [],
+        searchMode: false,
+        query: "",
+        sortKey: "name",
+        sortDirection: 1,
+        sortExplicit: false,
+        selectionMode: false,
+        selected: new Set(),
+        sheetType: null,
+        sheetData: null,
+        sheetFocus: null,
+        drawerVisible: false,
+        drawerExpanded: false,
+        currentTaskId: null,
+        suppressClick: null,
+        toastTimer: 0
+      };
+      let clipboardItems = ["Unzip@2026", "rar-password-8899", "压缩包备份"];
+      let lastClipboardText = clipboardItems[0];
+      const pickerState = { volume: "internal", path: ["storage"], purpose: "extract", actionMode: null };
+
+      function clipboardItemsHTML() {
+        return clipboardItems.map((text) => '<button class="clipboard-item" type="button" data-clipboard-value="' + escapeHTML(text) + '">' + icon("i-clipboard") + '<span>' + escapeHTML(text) + '</span></button>').join("");
+      }
+      function setLastClipboard(text) {
+        if (!text) return;
+        lastClipboardText = text;
+        clipboardItems = [text, ...clipboardItems.filter((item) => item !== text)].slice(0, 6);
+        const preview = document.getElementById("lastClipboardPreview");
+        if (preview) preview.textContent = text;
+        const list = document.getElementById("extractClipboardItems");
+        if (list) list.innerHTML = clipboardItemsHTML();
+      }
+      async function refreshClipboardFromSystem() {
+        if (!navigator.clipboard || typeof navigator.clipboard.readText !== "function") return;
+        try {
+          const text = (await navigator.clipboard.readText()).trim();
+          if (text) setLastClipboard(text);
+        } catch (error) {}
+      }
+
+      const tasks = [
+        { id: "seed-work", name: "工作资料.zip", progress: 36, status: "running", duration: 90000, lastTick: performance.now(), speed: "18.6 MB/s", target: "Download / 解压", completedTarget: "Download / 解压 / 工作资料" },
+        { id: "seed-photo", name: "照片归档.7z", progress: 0, status: "waiting", duration: 22000, lastTick: 0, speed: "—", target: "Download / 照片归档", completedTarget: "" },
+        { id: "seed-study", name: "学习资料.rar", progress: 100, status: "completed", duration: 4000, lastTick: 0, speed: "已完成", target: "Download / 学习资料", completedTarget: "Download / 学习资料", finishedAt: nowStamp }
+      ];
+
+      function icon(id) { return '<svg class="icon" aria-hidden="true"><use href="#' + id + '"/></svg>'; }
+      function escapeHTML(value) {
+        return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+      }
+      function formatBytes(bytes) {
+        if (!bytes) return "0 KB";
+        if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(1) + " GB";
+        if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + " MB";
+        if (bytes >= 1024) return Math.round(bytes / 1024) + " KB";
+        return bytes + " B";
+      }
+      function formatDate(stamp) {
+        const date = new Date(stamp);
+        return (date.getMonth() + 1) + "月" + date.getDate() + "日";
+      }
+      function showToast(message) {
+        snackbar.textContent = message;
+        snackbar.classList.add("show");
+        clearTimeout(state.toastTimer);
+        state.toastTimer = setTimeout(() => snackbar.classList.remove("show"), 2400);
+      }
+      function folderItemCount(dirId) { return (dirs[dirId] && dirs[dirId].entries.length) || 0; }
+      function currentDirId() { return state.dirPath[state.dirPath.length - 1]; }
+      function currentArchive() { return state.archiveKey ? archiveData[state.archiveKey] : null; }
+      function currentArchiveFolderKey() { return state.archivePath.join("/"); }
+      function currentArchiveFolderName() {
+        if (!state.archivePath.length) return currentArchive().name;
+        return state.archivePath[state.archivePath.length - 1];
+      }
+
+      function currentEntries() {
+        if (state.mode === "archive") {
+          const archive = currentArchive();
+          return (archive.folders[currentArchiveFolderKey()] || []).slice();
+        }
+        return (dirs[currentDirId()].entries || []).map((id) => entries[id]).filter(Boolean);
+      }
+
+      function visibleEntries() {
+        const query = state.query.trim().toLocaleLowerCase("zh-CN");
+        const list = currentEntries().filter((entry) => !query || entry.name.toLocaleLowerCase("zh-CN").includes(query));
+        return list.sort((a, b) => {
+          const folderA = a.kind === "folder" ? 0 : 1;
+          const folderB = b.kind === "folder" ? 0 : 1;
+          if (folderA !== folderB) return folderA - folderB;
+          let valueA;
+          let valueB;
+          if (state.sortKey === "size") {
+            valueA = a.kind === "folder" ? (a.itemCount ?? folderItemCount(a.childDir)) : (a.sizeBytes || 0);
+            valueB = b.kind === "folder" ? (b.itemCount ?? folderItemCount(b.childDir)) : (b.sizeBytes || 0);
+          } else if (state.sortKey === "date") {
+            valueA = a.modified || 0;
+            valueB = b.modified || 0;
+          } else {
+            valueA = a.name.toLocaleLowerCase("zh-CN");
+            valueB = b.name.toLocaleLowerCase("zh-CN");
+          }
+          if (!state.sortExplicit && state.sortKey === "name" && state.mode === "files" && state.dirPath.length === 1 && rootOrder.has(a.name) && rootOrder.has(b.name)) {
+            return (rootOrder.get(a.name) - rootOrder.get(b.name)) * state.sortDirection;
+          }
+          if (typeof valueA === "string") return valueA.localeCompare(valueB, "zh-CN") * state.sortDirection;
+          return (valueA - valueB) * state.sortDirection;
+        });
+      }
+
+      function fileIcon(entry) {
+        if (entry.kind === "folder") return "i-folder";
+        if (entry.kind === "archive") return "i-archive";
+        const ext = (entry.ext || "").toLowerCase();
+        if (["jpg", "jpeg", "png", "webp", "gif", "svg"].includes(ext)) return "i-image";
+        if (["mp4", "mov", "mkv", "webm"].includes(ext)) return "i-video";
+        if (["txt", "md", "json", "xml", "pdf"].includes(ext)) return "i-text";
+        return "i-file";
+      }
+
+      const thumbPalettes = [
+        ["oklch(82% 0.10 78)", "oklch(55% 0.10 155)"],
+        ["oklch(78% 0.09 220)", "oklch(48% 0.11 255)"],
+        ["oklch(84% 0.08 340)", "oklch(57% 0.11 300)"],
+        ["oklch(86% 0.07 105)", "oklch(50% 0.08 160)"],
+        ["oklch(80% 0.11 35)", "oklch(45% 0.09 20)"]
+      ];
+      function mediaKind(entry) {
+        if (entry.kind !== "file") return null;
+        const ext = (entry.ext || "").toLowerCase();
+        if (ext === "gif") return "gif";
+        if (["jpg", "jpeg", "png", "webp", "bmp", "heic", "svg"].includes(ext)) return "photo";
+        if (["mp4", "mov", "mkv", "webm", "avi"].includes(ext)) return "video";
+        return null;
+      }
+      function thumbnailPalette(entry) {
+        const key = entry.id + entry.name;
+        let hash = 0;
+        for (let index = 0; index < key.length; index++) {
+          hash = (hash * 31 + key.charCodeAt(index)) >>> 0;
+        }
+        return thumbPalettes[hash % thumbPalettes.length];
+      }
+      function mediaThumbnail(entry) {
+        const kind = mediaKind(entry);
+        if (!kind) return "";
+        const [t1, t2] = thumbnailPalette(entry);
+        const badge = kind === "video"
+          ? '<span class="thumb-play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4.5v7l5-3.5-5-3.5Z" fill="currentColor"/></svg></span><span class="thumb-duration">0:18</span>'
+          : kind === "gif" ? '<span class="thumb-gif">GIF</span>' : "";
+        return '<span class="file-thumb ' + kind + '" aria-hidden="true">' +
+          '<span class="thumb-art" style="--t1:' + t1 + ';--t2:' + t2 + '"></span>' + badge + '</span>';
+      }
+
+      function renderTopbar() {
+        normalAppbar.hidden = state.searchMode || state.selectionMode;
+        selectionAppbar.hidden = !state.selectionMode;
+        searchAppbar.hidden = !state.searchMode;
+        if (state.selectionMode) {
+          document.getElementById("selectionTitle").textContent = "已选 " + state.selected.size + " 项";
+          document.getElementById("selectionStats").textContent = state.selected.size
+            ? "点击项目继续选择"
+            : "取消选择以返回";
+          const visible = visibleEntries();
+          const allSelected = visible.length > 0 && visible.every((entry) => state.selected.has(entry.id));
+          const selectAllButton = document.getElementById("selectAllButton");
+          selectAllButton.setAttribute("aria-pressed", String(allSelected));
+          selectAllButton.setAttribute("aria-label", allSelected ? "取消全选" : "全选");
+          return;
+        }
+        const currentName = state.mode === "archive"
+          ? currentArchive().name
+          : dirs[currentDirId()].name;
+        document.getElementById("folderTitle").textContent = currentName;
+        renderStorageMeter();
+        document.getElementById("topBackButton").disabled = state.mode === "files" && state.dirPath.length <= 1;
+        document.getElementById("topNewButton").disabled = state.mode === "archive";
+      }
+
+      function renderStorageMeter() {
+        const volume = volumes[state.volume];
+        const free = volume.total - volume.used;
+        document.getElementById("storageUsage").textContent = "已用 " + volume.used.toFixed(1) + " GB / " + volume.total + " GB";
+        document.getElementById("storageAvailable").textContent = "可用 " + free.toFixed(1) + " GB";
+        document.getElementById("storageFill").style.width = (volume.used / volume.total * 100).toFixed(2) + "%";
+      }
+
+      function renderFileList() {
+        const list = visibleEntries();
+        fileList.innerHTML = list.map((entry) => {
+          const selected = state.selected.has(entry.id);
+          let meta;
+          if (entry.kind === "folder") {
+            meta = (entry.itemCount || folderItemCount(entry.childDir)) + " 项 · " + formatDate(entry.modified);
+          } else {
+            meta = formatBytes(entry.sizeBytes) + " · " + formatDate(entry.modified);
+          }
+          if (entry.encrypted) meta += ' · <span class="encrypted">已加密</span>';
+          return '<div class="file-row ' + (selected ? "selected " : "") + '" role="button" tabindex="0" data-m3="ListItem" aria-pressed="' + selected + '" data-row-id="' + entry.id + '" aria-label="' + escapeHTML((entry.kind === "folder" ? "打开文件夹 " : entry.kind === "archive" ? "打开压缩包 " : "查看 ") + entry.name) + '">' +
+            (state.mode === "files" && state.selectionMode ? '<button class="check-button" type="button" data-check-id="' + entry.id + '" aria-label="选择 ' + escapeHTML(entry.name) + '" aria-pressed="' + selected + '"><span class="checkbox">' + icon("i-check") + '</span></button>' : "") +
+            (mediaKind(entry) ? mediaThumbnail(entry) : '<span class="file-icon ' + entry.kind + '">' + icon(fileIcon(entry)) + '</span>') +
+            '<span class="file-copy"><span class="file-name-line"><span class="file-name">' + escapeHTML(entry.name) + '</span>' +
+            (entry.kind === "archive" ? '<span class="file-type">' + escapeHTML(entry.format || "") + '</span>' : "") +
+            '</span><span class="file-meta">' + meta + '</span></span>' +
+            (entry.kind === "folder" || entry.kind === "archive" ? '<svg class="icon row-chevron"><use href="#i-chevron"/></svg>' : "") +
+            '</div>';
+        }).join("");
+        const noResults = list.length === 0;
+        emptyState.hidden = !noResults;
+        fileScroll.hidden = noResults;
+        if (noResults) {
+          const searching = Boolean(state.query.trim());
+          document.getElementById("emptyTitle").textContent = searching ? "没有匹配的项目" : "此文件夹为空";
+          document.getElementById("emptyDescription").textContent = searching ? "换个关键词，或清除搜索后重试。" : "新建文件夹或压缩包后会显示在这里。";
+          document.getElementById("emptyAction").textContent = searching ? "清除搜索" : "新建文件夹";
+        }
+        renderTopbar();
+      }
+
+      function renderToolbars() {
+        const archiveMode = state.mode === "archive";
+        const hasSelection = state.selected.size > 0;
+        defaultToolbar.hidden = archiveMode || !hasSelection;
+        archiveToolbar.hidden = !archiveMode;
+        document.getElementById("storageMeter").hidden = archiveMode || hasSelection || state.drawerVisible;
+        ["defaultExtract", "defaultCopy", "defaultMove", "defaultDelete"].forEach((id) => {
+          document.getElementById(id).disabled = !hasSelection;
+        });
+        browserView.classList.toggle("task-mode", state.drawerVisible);
+      }
+
+      function renderAll() {
+        renderTopbar();
+        renderFileList();
+        renderToolbars();
+        renderSortMenuState();
+        renderLocationMenuState();
+        renderTaskDrawer();
+      }
+
+      function clearSelection() {
+        state.selectionMode = false;
+        state.selected.clear();
+      }
+      function enterSelection(id) {
+        if (state.mode !== "files") {
+          showToast("包内浏览暂不支持多选");
+          return;
+        }
+        state.selectionMode = true;
+        state.selected.add(id);
+        closeMenus();
+        renderTopbar();
+        renderFileList();
+        renderToolbars();
+      }
+      function toggleSelection(id) {
+        if (state.mode !== "files") return;
+        if (!state.selectionMode) state.selectionMode = true;
+        if (state.selected.has(id)) state.selected.delete(id);
+        else state.selected.add(id);
+        if (state.selected.size === 0) state.selectionMode = false;
+        renderTopbar();
+        renderFileList();
+        renderToolbars();
+      }
+
+      function activateEntry(entry) {
+        if (!entry) return;
+        if (state.selectionMode) {
+          toggleSelection(entry.id);
+          return;
+        }
+        if (entry.kind === "folder") {
+          clearSelection();
+          if (state.mode === "archive") {
+            if (!entry.folderKey) {
+              showToast("此文件夹没有可浏览的内容");
+              return;
+            }
+            state.archivePath.push(entry.folderKey);
+          } else {
+            state.dirPath.push(entry.childDir);
+          }
+          state.searchMode = false;
+          state.query = "";
+          searchInput.value = "";
+          renderAll();
+          fileScroll.scrollTop = 0;
+          return;
+        }
+        if (entry.kind === "archive") {
+          openArchive(entry);
+          return;
+        }
+        openInfo("文件信息", [
+          ["名称", entry.name],
+          ["大小", formatBytes(entry.sizeBytes)],
+          ["修改日期", new Date(entry.modified).toLocaleString("zh-CN", { hour12: false })],
+          ["位置", state.dirPath.map((id) => dirs[id].name).join(" / ")]
+        ], "文件");
+      }
+
+      function openArchive(entry) {
+        if (!entry.archiveKey) return;
+        if (!archiveData[entry.archiveKey]) {
+          archiveData[entry.archiveKey] = buildFallbackArchive(entry.name, entry.sizeBytes, entry.format);
+        }
+        clearSelection();
+        state.mode = "archive";
+        state.archiveKey = entry.archiveKey;
+        state.archivePath = [];
+        state.searchMode = false;
+        state.query = "";
+        searchInput.value = "";
+        renderAll();
+        fileScroll.scrollTop = 0;
+      }
+
+      function goBack() {
+        if (state.mode === "archive") {
+          if (state.archivePath.length) {
+            state.archivePath.pop();
+            renderAll();
+            fileScroll.scrollTop = 0;
+          } else {
+            state.mode = "files";
+            state.archiveKey = null;
+            renderAll();
+            fileScroll.scrollTop = 0;
+          }
+          return;
+        }
+        if (state.selectionMode) {
+          clearSelection();
+          renderAll();
+          return;
+        }
+        if (state.searchMode) {
+          closeSearch();
+          return;
+        }
+        if (state.dirPath.length > 1) {
+          state.dirPath.pop();
+          renderAll();
+          fileScroll.scrollTop = 0;
+        }
+      }
+
+      function closeSearch() {
+        state.searchMode = false;
+        state.query = "";
+        searchInput.value = "";
+        renderTopbar();
+        renderFileList();
+      }
+
+      function openSearch() {
+        closeMenus();
+        state.searchMode = true;
+        searchInput.value = state.query;
+        renderTopbar();
+        setTimeout(() => searchInput.focus(), 50);
+      }
+
+      function performBackGesture() {
+        if (folderPicker.classList.contains("open")) {
+          if (pickerState.path.length > 1) {
+            pickerState.path.pop();
+            renderFolderPicker();
+          } else {
+            closeFolderPicker();
+          }
+          return;
+        }
+        if (!sheetLayer.hidden) {
+          closeSheet();
+          return;
+        }
+        if (settingsView.classList.contains("open")) {
+          closeSettings();
+          return;
+        }
+        if (!taskDrawer.hidden) {
+          closeTaskDrawer();
+          return;
+        }
+        goBack();
+      }
+      function performHomeGesture() {
+        if (folderPicker.classList.contains("open")) closeFolderPicker();
+        if (!sheetLayer.hidden) closeSheet();
+        if (settingsView.classList.contains("open")) closeSettings(false);
+        closeTaskDrawer();
+        closeMenus();
+        clearSelection();
+        state.volume = "internal";
+        state.mode = "files";
+        state.dirPath = ["storage"];
+        state.archiveKey = null;
+        state.archivePath = [];
+        state.searchMode = false;
+        state.query = "";
+        searchInput.value = "";
+        renderAll();
+        fileScroll.scrollTop = 0;
+      }
+      let edgeGesture = null;
+      const gestureApp = document.getElementById("app");
+      gestureApp.addEventListener("pointerdown", (event) => {
+        if (event.button > 0) return;
+        const rect = gestureApp.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        let mode = null;
+        if (x <= 24 || x >= rect.width - 24) mode = "back";
+        else if (y >= rect.height - 20) mode = "home";
+        if (!mode) return;
+        edgeGesture = { mode, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY };
+        if (mode === "back") {
+          try { gestureApp.setPointerCapture(event.pointerId); } catch (error) {}
+        }
+      });
+      gestureApp.addEventListener("pointerup", (event) => {
+        if (!edgeGesture || event.pointerId !== edgeGesture.pointerId) return;
+        const { mode, startX, startY } = edgeGesture;
+        edgeGesture = null;
+        const dx = event.clientX - startX;
+        const dy = event.clientY - startY;
+        if (mode === "back" && Math.abs(dx) >= 70 && Math.abs(dy) <= 70) performBackGesture();
+        else if (mode === "home" && dy <= -70 && Math.abs(dx) <= 90) performHomeGesture();
+      });
+      gestureApp.addEventListener("pointercancel", () => { edgeGesture = null; });
+      document.getElementById("gestureHomeButton").addEventListener("click", performHomeGesture);
+
+      function renderSortMenuState() {
+        document.querySelectorAll("[data-sort-key]").forEach((button) => {
+          const active = button.dataset.sortKey === state.sortKey;
+          button.classList.toggle("active", active);
+          const check = button.querySelector("[data-sort-check]");
+          if (check) check.innerHTML = active ? icon("i-check") : "";
+        });
+        document.getElementById("sortDirectionLabel").textContent = state.sortDirection === 1 ? "升序" : "降序";
+      }
+
+      function closeMenus() {
+        storageMenu.hidden = true;
+        sortMenu.hidden = true;
+        moreMenu.hidden = true;
+        fileActionsMenu.hidden = true;
+        document.getElementById("storageSwitchButton").setAttribute("aria-expanded", "false");
+      }
+
+      // Long press and row interactions
+      let pressTimer = 0;
+      let pressStart = null;
+      let pressRow = null;
+      fileList.addEventListener("pointerdown", (event) => {
+        const row = event.target.closest("[data-row-id]");
+        if (!row || event.button > 0 || event.target.closest("[data-check-id]") || state.mode !== "files") return;
+        pressStart = { x: event.clientX, y: event.clientY };
+        pressRow = row;
+        row.classList.add("pressing");
+        clearTimeout(pressTimer);
+        pressTimer = setTimeout(() => {
+          const id = row.dataset.rowId;
+          state.suppressClick = id;
+          if (!state.selectionMode) enterSelection(id);
+          else toggleSelection(id);
+          setTimeout(() => {
+            if (state.suppressClick === id) state.suppressClick = null;
+          }, 900);
+        }, 470);
+      });
+      fileList.addEventListener("pointermove", (event) => {
+        if (!pressStart) return;
+        if (Math.abs(event.clientX - pressStart.x) > 9 || Math.abs(event.clientY - pressStart.y) > 9) {
+          clearTimeout(pressTimer);
+          if (pressRow) pressRow.classList.remove("pressing");
+          pressStart = null;
+        }
+      });
+      const endPress = () => {
+        clearTimeout(pressTimer);
+        if (pressRow) pressRow.classList.remove("pressing");
+        pressRow = null;
+        pressStart = null;
+      };
+      ["pointerup", "pointercancel", "pointerleave"].forEach((type) => fileList.addEventListener(type, endPress));
+      fileList.addEventListener("contextmenu", (event) => {
+        const row = event.target.closest("[data-row-id]");
+        if (!row || state.mode !== "files") return;
+        event.preventDefault();
+        if (!state.selectionMode) enterSelection(row.dataset.rowId);
+        else toggleSelection(row.dataset.rowId);
+      });
+      fileList.addEventListener("click", (event) => {
+        const check = event.target.closest("[data-check-id]");
+        if (check) {
+          event.stopPropagation();
+          toggleSelection(check.dataset.checkId);
+          return;
+        }
+        const row = event.target.closest("[data-row-id]");
+        if (!row) return;
+        if (state.suppressClick === row.dataset.rowId) {
+          state.suppressClick = null;
+          return;
+        }
+        if (state.selectionMode) {
+          toggleSelection(row.dataset.rowId);
+          return;
+        }
+        const entry = currentEntries().find((item) => item.id === row.dataset.rowId);
+        activateEntry(entry);
+      });
+      fileList.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        if (event.target.closest("[data-check-id]")) return;
+        const row = event.target.closest("[data-row-id]");
+        if (!row) return;
+        event.preventDefault();
+        const entry = currentEntries().find((item) => item.id === row.dataset.rowId);
+        activateEntry(entry);
+      });
+
+      // Topbar tools
+      document.getElementById("topBackButton").addEventListener("click", goBack);
+      document.getElementById("searchButton").addEventListener("click", openSearch);
+      document.getElementById("searchBack").addEventListener("click", closeSearch);
+      document.getElementById("searchClear").addEventListener("click", () => {
+        searchInput.value = "";
+        state.query = "";
+        renderFileList();
+        searchInput.focus();
+      });
+      searchInput.addEventListener("input", () => {
+        state.query = searchInput.value;
+        renderFileList();
+      });
+      document.getElementById("emptyAction").addEventListener("click", () => {
+        if (state.query.trim()) {
+          searchInput.value = "";
+          state.query = "";
+          renderFileList();
+        } else {
+          openCreateSheet("folder");
+        }
+      });
+
+      function currentLocationKey() {
+        if (state.mode !== "files") return "";
+        const current = state.dirPath.join("/");
+        return Object.keys(quickLocations).find((key) => quickLocations[key].join("/") === current) || "";
+      }
+      function renderLocationMenuState() {
+        const activeLocation = currentLocationKey();
+        storageMenu.querySelectorAll("[data-location]").forEach((button) => {
+          const active = button.dataset.location === activeLocation;
+          button.classList.toggle("active", active);
+          button.querySelector("[data-location-check]").innerHTML = active ? icon("i-check") : "";
+        });
+      }
+      function goToLocation(locationKey) {
+        const path = quickLocations[locationKey];
+        if (!path) return;
+        state.volume = "internal";
+        state.mode = "files";
+        state.dirPath = [...path];
+        state.archiveKey = null;
+        state.archivePath = [];
+        state.searchMode = false;
+        state.query = "";
+        searchInput.value = "";
+        clearSelection();
+        closeMenus();
+        renderAll();
+        fileScroll.scrollTop = 0;
+      }
+      document.getElementById("storageSwitchButton").addEventListener("click", (event) => {
+        event.stopPropagation();
+        sortMenu.hidden = true;
+        moreMenu.hidden = true;
+        fileActionsMenu.hidden = true;
+        const open = storageMenu.hidden;
+        storageMenu.hidden = !open;
+        document.getElementById("storageSwitchButton").setAttribute("aria-expanded", String(open));
+        if (open) renderLocationMenuState();
+      });
+      storageMenu.addEventListener("click", (event) => {
+        const option = event.target.closest("[data-location]");
+        if (option) goToLocation(option.dataset.location);
+      });
+
+      document.getElementById("sortButton").addEventListener("click", (event) => {
+        event.stopPropagation();
+        storageMenu.hidden = true;
+        document.getElementById("storageSwitchButton").setAttribute("aria-expanded", "false");
+        moreMenu.hidden = true;
+        sortMenu.hidden = !sortMenu.hidden;
+        renderSortMenuState();
+      });
+      function toggleMoreMenu(event) {
+        event.stopPropagation();
+        storageMenu.hidden = true;
+        document.getElementById("storageSwitchButton").setAttribute("aria-expanded", "false");
+        sortMenu.hidden = true;
+        fileActionsMenu.hidden = true;
+        const willOpen = moreMenu.hidden;
+        moreMenu.hidden = !willOpen;
+      }
+      function toggleFileActionsMenu(event) {
+        event.stopPropagation();
+        storageMenu.hidden = true;
+        document.getElementById("storageSwitchButton").setAttribute("aria-expanded", "false");
+        sortMenu.hidden = true;
+        moreMenu.hidden = true;
+        fileActionsMenu.hidden = !fileActionsMenu.hidden;
+      }
+      document.getElementById("moreButton").addEventListener("click", toggleMoreMenu);
+      document.getElementById("defaultMore").addEventListener("click", toggleFileActionsMenu);
+      document.addEventListener("click", (event) => {
+        if (!event.target.closest(".menu") && !event.target.closest("#storageSwitchButton") && !event.target.closest("#sortButton") && !event.target.closest("#moreButton") && !event.target.closest("#defaultMore")) closeMenus();
+      });
+      sortMenu.querySelectorAll("[data-sort-key]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const key = button.dataset.sortKey;
+          if (state.sortKey === key) state.sortDirection *= -1;
+          else {
+            state.sortKey = key;
+            state.sortDirection = key === "name" ? 1 : -1;
+          }
+          state.sortExplicit = true;
+          renderSortMenuState();
+          renderFileList();
+          closeMenus();
+        });
+      });
+      document.getElementById("sortDirection").addEventListener("click", () => {
+        state.sortDirection *= -1;
+        state.sortExplicit = true;
+        renderSortMenuState();
+        renderFileList();
+        closeMenus();
+      });
+
+      moreMenu.addEventListener("click", (event) => {
+        const item = event.target.closest("[data-more-action]");
+        if (!item) return;
+        closeMenus();
+        const action = item.dataset.moreAction;
+        if (action === "tasks") openTaskDrawer(true);
+        else if (action === "settings") openSettings();
+        else if (action === "about") openAbout();
+      });
+
+      fileActionsMenu.addEventListener("click", (event) => {
+        const item = event.target.closest("[data-file-action]");
+        if (!item) return;
+        closeMenus();
+        const action = item.dataset.fileAction;
+        if (action === "rename") openRenameSheet();
+        else if (action === "share") shareSelected();
+        else if (action === "properties") openPropertiesSheet();
+      });
+
+      function selectAllVisible() {
+        if (state.mode !== "files") return;
+        const ids = visibleEntries().map((entry) => entry.id);
+        state.selectionMode = true;
+        ids.forEach((id) => state.selected.add(id));
+        renderTopbar();
+        renderFileList();
+        renderToolbars();
+      }
+      document.getElementById("selectionClose").addEventListener("click", () => {
+        clearSelection();
+        renderAll();
+      });
+      document.getElementById("selectAllButton").addEventListener("click", () => {
+        const visible = visibleEntries();
+        const allSelected = visible.length > 0 && visible.every((entry) => state.selected.has(entry.id));
+        if (allSelected) {
+          state.selected.clear();
+        } else {
+          state.selectionMode = true;
+          visible.forEach((entry) => state.selected.add(entry.id));
+        }
+        renderTopbar();
+        renderFileList();
+        renderToolbars();
+      });
+
+      // Toolbar actions
+      document.getElementById("topNewButton").addEventListener("click", openNewItemSheet);
+      document.getElementById("defaultExtract").addEventListener("click", () => {
+        const selected = selectedEntries().filter((entry) => entry.kind === "archive");
+        if (!selected.length) showToast("所选项目中没有压缩包");
+        else openExtractSheet(selected.map(archiveSourceFromEntry));
+      });
+      document.getElementById("defaultCopy").addEventListener("click", () => openDestinationSheet("copy"));
+      document.getElementById("defaultMove").addEventListener("click", () => openDestinationSheet("move"));
+      document.getElementById("defaultDelete").addEventListener("click", openDeleteConfirm);
+      document.getElementById("archiveExtract").addEventListener("click", () => openExtractSheet([archiveSourceFromCurrent()]));
+      document.getElementById("archiveTest").addEventListener("click", () => {
+        if (currentArchive().encrypted) showToast("加密压缩包，请先输入密码再测试");
+        else showToast("完整性测试通过 · 未发现损坏");
+      });
+      document.getElementById("archiveInfo").addEventListener("click", openArchiveInfo);
+
+      function selectedEntries() {
+        return currentEntries().filter((entry) => state.selected.has(entry.id));
+      }
+      function archiveSourceFromEntry(entry) {
+        const data = archiveData[entry.archiveKey] || buildFallbackArchive(entry.name, entry.sizeBytes, entry.format);
+        return { name: data.name, sizeBytes: data.sizeBytes, unpackedBytes: data.unpackedBytes, encrypted: Boolean(data.encrypted), format: data.format };
+      }
+      function archiveSourceFromCurrent() {
+        const archive = currentArchive();
+        return { name: archive.name, sizeBytes: archive.sizeBytes, unpackedBytes: archive.unpackedBytes, encrypted: Boolean(archive.encrypted), format: archive.format };
+      }
+
+      // Settings
+      function setTheme(theme) {
+        settings.theme = theme;
+        document.documentElement.dataset.theme = theme;
+        const dark = theme === "dark";
+        document.getElementById("themeSwitch").setAttribute("aria-checked", String(dark));
+        document.getElementById("themeDescription").textContent = dark ? "当前使用深色主题" : "当前使用浅色主题";
+        document.querySelector("#themeIcon use").setAttribute("href", dark ? "#i-moon" : "#i-sun");
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#1D2421" : "#F6F7F5");
+        try { localStorage.setItem("decompress-theme", theme); } catch (error) {}
+      }
+      function renderSettings() {
+        document.getElementById("settingsEncoding").textContent = settings.encoding;
+        document.getElementById("settingsConflict").textContent = settings.conflict;
+        document.getElementById("associationSwitch").setAttribute("aria-checked", String(settings.fileAssociation));
+        const counts = taskCounts();
+        document.getElementById("settingsTaskSummary").textContent = counts.running + " 进行中 · " + counts.waiting + " 等待";
+      }
+      function openSettings() {
+        closeMenus();
+        closeTaskDrawer();
+        renderSettings();
+        settingsView.classList.add("open");
+        settingsView.removeAttribute("aria-hidden");
+        settingsView.removeAttribute("inert");
+        browserView.inert = true;
+        setTimeout(() => document.getElementById("settingsBack").focus(), 100);
+      }
+      function closeSettings(restoreFocus = true) {
+        settingsView.classList.remove("open");
+        settingsView.setAttribute("aria-hidden", "true");
+        settingsView.setAttribute("inert", "");
+        browserView.inert = false;
+        if (restoreFocus) document.getElementById("moreButton").focus();
+      }
+      function openOptionsSheet(title, description, options, selectedValue, onSelect) {
+        openSheet("options", { title, description, options, selectedValue, onSelect });
+      }
+      function openAbout() {
+        openSheet("info", {
+          title: "关于 Zippest",
+          iconName: "i-archive",
+          about: "干净、可靠的本地压缩包工具。无广告，无需账号，压缩包与密码都只在设备上处理。",
+          rows: [["版本", "1.0.0"], ["本地处理", "始终开启"]]
+        });
+      }
+      document.getElementById("settingsBack").addEventListener("click", closeSettings);
+      document.getElementById("themeSwitch").addEventListener("click", () => setTheme(settings.theme === "dark" ? "light" : "dark"));
+      document.getElementById("associationSwitch").addEventListener("click", () => {
+        settings.fileAssociation = !settings.fileAssociation;
+        saveSettings();
+        renderSettings();
+        showToast(settings.fileAssociation ? "已记住压缩包打开偏好" : "已关闭文件关联偏好");
+      });
+      document.getElementById("settingsAbout").addEventListener("click", openAbout);
+      document.getElementById("openTaskQueueButton").addEventListener("click", () => {
+        closeSettings(false);
+        openTaskDrawer(true);
+      });
+      document.querySelectorAll("[data-setting]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const kind = button.dataset.setting;
+          if (kind === "encoding") {
+            openOptionsSheet("默认文件名编码", "仅在压缩包没有可用编码标记时使用。", ["自动", "GBK", "UTF-8"], settings.encoding, (value) => {
+              settings.encoding = value;
+              saveSettings();
+              renderSettings();
+              showToast("默认编码已设为 " + value);
+            });
+          } else {
+            openOptionsSheet("同名文件策略", "解压时遇到同名文件将使用该策略。", ["覆盖", "跳过", "重命名"], settings.conflict, (value) => {
+              settings.conflict = value;
+              saveSettings();
+              renderSettings();
+              showToast("同名文件策略已设为「" + value + "」");
+            });
+          }
+        });
+      });
+
+      // Bottom sheet manager
+      let sheetCloseTimer = 0;
+      function fitExtractSheetHeight() {
+        if (state.sheetType !== "extract") return;
+        const sections = sheetContent.querySelectorAll(".sheet-section");
+        const conflict = sections[2];
+        const actions = sheetContent.querySelector(".sheet-actions");
+        if (!conflict) return;
+        const conflictBottom = conflict.offsetTop + conflict.offsetHeight;
+        const actionsHeight = actions ? actions.offsetHeight : 0;
+        const target = Math.min(conflictBottom + actionsHeight + 8, window.innerHeight - 24);
+        sheetPanel.style.maxHeight = Math.max(320, target) + "px";
+      }
+      function openSheet(type, data, focusSelector) {
+        closeMenus();
+        clearTimeout(sheetCloseTimer);
+        state.sheetType = type;
+        state.sheetData = data || {};
+        state.sheetFocus = document.activeElement;
+        sheetPanel.classList.toggle("extract-sheet", type === "extract");
+        sheetPanel.style.maxHeight = "";
+        renderSheet();
+        sheetLayer.hidden = false;
+        requestAnimationFrame(() => {
+          sheetLayer.classList.add("open");
+          if (type === "extract") fitExtractSheetHeight();
+        });
+        appMain.inert = true;
+        setTimeout(() => {
+          const target = document.getElementById("sheetContent").querySelector(focusSelector || "button, input");
+          if (target) target.focus();
+        }, 220);
+      }
+      function closeSheet() {
+        if (sheetLayer.hidden) return;
+        sheetLayer.classList.remove("open");
+        state.sheetType = null;
+        state.sheetData = null;
+        appMain.inert = false;
+        clearTimeout(sheetCloseTimer);
+        sheetCloseTimer = setTimeout(() => { sheetLayer.hidden = true; }, 280);
+        if (state.sheetFocus && state.sheetFocus.focus) state.sheetFocus.focus();
+      }
+      document.getElementById("sheetScrim").addEventListener("click", closeSheet);
+
+      function sheetHeader(iconName, title, subtitle) {
+        return '<div class="sheet-handle"></div><div class="sheet-head">' +
+          '<div class="sheet-icon">' + icon(iconName) + '</div>' +
+          '<div class="sheet-title-wrap"><h2 class="sheet-title" id="sheetTitle">' + escapeHTML(title) + '</h2>' +
+          '<p class="sheet-subtitle">' + escapeHTML(subtitle) + '</p></div></div>';
+      }
+      function renderSheet() {
+        const data = state.sheetData || {};
+        if (state.sheetType === "extract") {
+          const required = data.sources.some((source) => source.encrypted);
+          const total = data.sources.reduce((sum, source) => sum + source.unpackedBytes, 0);
+          const destMode = data.destMode || "new-folder";
+          const sourceFolder = data.sourceFolder || state.dirPath.map((id) => dirs[id].name).join(" / ");
+          const folderName = data.folderName || "解压文件";
+          const customTarget = data.customTarget || sourceFolder + " / 解压";
+          const destinations = [
+            { value: "same-folder", title: "当前文件夹", detail: sourceFolder },
+            { value: "new-folder", title: "新建同名文件夹", detail: sourceFolder + " / " + folderName },
+            { value: "custom", title: "选择其他位置", detail: customTarget }
+          ];
+          const samePasswordRow = data.sources.length > 1
+            ? '<button class="same-password-row" id="samePasswordToggle" type="button" role="checkbox" aria-checked="' + Boolean(data.samePassword) + '">' +
+              '<span class="checkbox">' + icon("i-check") + '</span><span class="same-password-copy"><strong>使用相同密码</strong><small id="samePasswordHint">' + (data.samePassword ? "对本次选择的 " + data.sources.length + " 个压缩包复用此密码" : "关闭时，将逐个输入密码") + '</small></span></button>'
+            : "";
+          sheetContent.innerHTML =
+            '<div class="sheet-handle"></div><h2 class="sr-only" id="sheetTitle">解压设置</h2>' +
+            '<div class="sheet-section" style="margin-top:10px"><p class="sheet-section-title">密码' + (required ? "（必填）" : "") + '</p>' +
+            '<div class="password-wrap" id="extractPasswordWrap">' + icon("i-lock") + '<input id="extractPassword" type="password" autocomplete="off" placeholder="' + (required ? "输入压缩包密码" : "压缩包加密时填写") + '">' +
+            '<button class="password-eye" id="extractPasswordEye" type="button" aria-label="显示密码" aria-pressed="false">' + icon("i-eye") + '</button></div>' +
+            '<p class="field-error" id="extractPasswordError" hidden>' + icon("i-alert") + '密码不正确，请重新输入（至少 4 位）</p>' +
+            '<button class="clipboard-row" id="extractClipboardButton" type="button" aria-label="打开剪贴板" aria-expanded="false">' + icon("i-clipboard") + '<strong id="lastClipboardPreview">' + escapeHTML(lastClipboardText) + '</strong><svg class="icon clipboard-chevron"><use href="#i-chevron-down"/></svg></button>' +
+            '<div class="clipboard-panel" id="extractClipboardPanel" hidden><div class="clipboard-panel-head"><span>剪贴板</span><button class="clipboard-close" type="button" data-sheet-action="close-clipboard">收起</button></div><div id="extractClipboardItems">' + clipboardItemsHTML() + '</div></div>' + samePasswordRow + '</div>' +
+            '<div class="sheet-section"><p class="sheet-section-title">解压到</p><div class="destination-list">' +
+            destinations.map((option) => '<button class="destination-option ' + (option.value === destMode ? "active" : "") + '" type="button" data-dest-mode="' + option.value + '" aria-pressed="' + (option.value === destMode) + '">' +
+              '<span class="radio-dot"></span><span class="dest-copy"><strong>' + option.title + '</strong><small>' + escapeHTML(option.detail) + '</small></span></button>').join("") +
+            '</div></div>' +
+            '<div class="sheet-section"><p class="sheet-section-title">同名文件</p><div class="segment-row" data-segment-group="conflict">' +
+            ["覆盖", "跳过", "重命名"].map((value) => '<button class="segment ' + (value === (data.conflict || settings.conflict) ? "active" : "") + '" type="button" aria-pressed="' + (value === (data.conflict || settings.conflict)) + '" data-segment="conflict" data-value="' + value + '">' + value + '</button>').join("") +
+            '</div></div>' +
+            '<div class="sheet-section"><p class="sheet-section-title">文件名编码</p><div class="segment-row">' +
+            ["自动", "GBK", "UTF-8"].map((value) => '<button class="segment ' + (value === (data.encoding || settings.encoding) ? "active" : "") + '" type="button" aria-pressed="' + (value === (data.encoding || settings.encoding)) + '" data-segment="encoding" data-value="' + value + '">' + value + '</button>').join("") +
+            '</div></div>' +
+            '<div class="space-line">' + icon("i-shield") + '预计需要 ' + formatBytes(total) + ' · 目标剩余 42.6 GB</div>' +
+            '<div class="sheet-actions"><button class="secondary-button" type="button" data-sheet-action="close">取消</button><button class="primary-button" type="button" data-sheet-action="start-extract">' + icon("i-unarchive") + '开始解压</button></div>';
+        } else if (state.sheetType === "options") {
+          sheetContent.innerHTML = sheetHeader("i-settings", data.title, data.description) +
+            '<div class="info-list">' + data.options.map((option) => {
+              const value = typeof option === "string" ? option : option.value;
+              const label = typeof option === "string" ? option : option.label;
+              const sublabel = typeof option === "string" ? "" : option.sublabel;
+              return '<button class="inventory-option" type="button" data-option-value="' + escapeHTML(value) + '" style="width:100%;min-height:56px;padding:8px 13px;border:0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--surface);color:var(--fg);text-align:left">' +
+                '<span style="min-width:0;flex:1"><strong style="display:block;font-size:14px">' + escapeHTML(label) + '</strong>' + (sublabel ? '<small style="display:block;margin-top:2px;color:var(--muted);font-size:12px">' + escapeHTML(sublabel) + '</small>' : '') + '</span>' +
+                (value === data.selectedValue ? icon("i-check") : "") + '</button>';
+            }).join("") + '</div><button class="secondary-button" type="button" style="width:100%;margin-top:12px" data-sheet-action="close">取消</button>';
+        } else if (state.sheetType === "info") {
+          sheetContent.innerHTML = data.about
+            ? sheetHeader("i-archive", data.title, "本地压缩包工具") +
+              '<div class="about-block"><div class="sheet-icon">' + icon(data.iconName || "i-archive") + '</div><h3>' + escapeHTML(data.title) + '</h3><p>' + escapeHTML(data.about) + '</p></div>' +
+              '<div class="info-list">' + data.rows.map((row) => '<div class="info-row"><span>' + escapeHTML(row[0]) + '</span><strong>' + escapeHTML(row[1]) + '</strong></div>').join("") + '</div>' +
+              '<button class="secondary-button" type="button" style="width:100%;margin-top:14px" data-sheet-action="close">关闭</button>'
+            : sheetHeader(data.iconName || "i-info", data.title, data.subtitle || "当前项目") +
+              '<div class="info-list">' + data.rows.map((row) => '<div class="info-row"><span>' + escapeHTML(row[0]) + '</span><strong>' + escapeHTML(row[1]) + '</strong></div>').join("") + '</div>' +
+              '<button class="secondary-button" type="button" style="width:100%;margin-top:14px" data-sheet-action="close">关闭</button>';
+        } else if (state.sheetType === "rename") {
+          sheetContent.innerHTML = sheetHeader("i-text", "重命名", "输入新的名称") +
+            '<div class="sheet-section"><p class="sheet-section-title">名称</p><input class="field-input" id="renameInput" value="' + escapeHTML(data.name) + '" autocomplete="off"></div>' +
+            '<div class="sheet-actions"><button class="secondary-button" type="button" data-sheet-action="close">取消</button><button class="primary-button" type="button" data-sheet-action="rename-confirm">重命名</button></div>';
+        } else if (state.sheetType === "create") {
+          const isFolder = data.kind === "folder";
+          sheetContent.innerHTML = sheetHeader(isFolder ? "i-folder" : "i-archive-plus", isFolder ? "新建文件夹" : "新建压缩包", isFolder ? "输入文件夹名称" : "选择格式并命名压缩包") +
+            '<div class="sheet-section"><p class="sheet-section-title">名称</p><input class="field-input" id="createName" value="' + (isFolder ? "新建文件夹" : "新建压缩包.zip") + '" autocomplete="off"></div>' +
+            (isFolder ? "" : '<div class="sheet-section"><p class="sheet-section-title">格式</p><div class="segment-row" style="grid-template-columns:1fr 1fr"><button class="segment active" type="button" data-create-format="zip">ZIP</button><button class="segment" type="button" data-create-format="7z">7Z</button></div></div>') +
+            '<div class="space-line">' + icon("i-folder") + '保存到 ' + escapeHTML(state.dirPath.map((id) => dirs[id].name).join(" / ")) + '</div>' +
+            '<div class="sheet-actions"><button class="secondary-button" type="button" data-sheet-action="close">取消</button><button class="primary-button" type="button" data-sheet-action="create-confirm">' + (isFolder ? "创建" : "创建压缩包") + '</button></div>';
+        } else if (state.sheetType === "confirm") {
+          sheetContent.innerHTML = sheetHeader("i-trash", data.title, data.description) +
+            '<div class="sheet-actions"><button class="secondary-button" type="button" data-sheet-action="close">取消</button><button class="danger-button" type="button" data-sheet-action="confirm-delete">' + icon("i-trash") + '删除</button></div>';
+        }
+      }
+
+      sheetContent.addEventListener("click", (event) => {
+        const close = event.target.closest("[data-sheet-action='close']");
+        if (close) { closeSheet(); return; }
+        if (state.sheetType === "options") {
+          const option = event.target.closest("[data-option-value]");
+          if (option) {
+            const value = option.dataset.optionValue;
+            const callback = state.sheetData.onSelect;
+            closeSheet();
+            if (callback) callback(value);
+          }
+          return;
+        }
+        if (state.sheetType === "extract") {
+          const destination = event.target.closest("[data-dest-mode]");
+          if (destination) {
+            state.sheetData.destMode = destination.dataset.destMode;
+            document.querySelectorAll("#sheetContent [data-dest-mode]").forEach((item) => {
+              const active = item === destination;
+              item.classList.toggle("active", active);
+              item.setAttribute("aria-pressed", String(active));
+            });
+            if (state.sheetData.destMode === "custom") openFolderPicker();
+            return;
+          }
+          const samePasswordToggle = event.target.closest("#samePasswordToggle");
+          if (samePasswordToggle) {
+            state.sheetData.samePassword = !state.sheetData.samePassword;
+            samePasswordToggle.setAttribute("aria-checked", String(state.sheetData.samePassword));
+            const hint = document.getElementById("samePasswordHint");
+            if (hint) hint.textContent = state.sheetData.samePassword
+              ? "对本次选择的 " + state.sheetData.sources.length + " 个压缩包复用此密码"
+              : "关闭时，将逐个输入密码";
+            return;
+          }
+          const clipboardButton = event.target.closest("#extractClipboardButton");
+          if (clipboardButton) {
+            const panel = document.getElementById("extractClipboardPanel");
+            if (panel) {
+              const willOpen = panel.hidden;
+              panel.hidden = !willOpen;
+              clipboardButton.setAttribute("aria-expanded", String(willOpen));
+              if (willOpen) refreshClipboardFromSystem();
+            }
+            return;
+          }
+          if (event.target.closest("[data-sheet-action='close-clipboard']")) {
+            const panel = document.getElementById("extractClipboardPanel");
+            if (panel) panel.hidden = true;
+            const row = document.getElementById("extractClipboardButton");
+            if (row) row.setAttribute("aria-expanded", "false");
+            return;
+          }
+          const clipboardItem = event.target.closest("[data-clipboard-value]");
+          if (clipboardItem) {
+            const value = clipboardItem.dataset.clipboardValue;
+            const input = document.getElementById("extractPassword");
+            if (input) {
+              input.value = value;
+              input.focus();
+              input.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+            setLastClipboard(value);
+            const panel = document.getElementById("extractClipboardPanel");
+            if (panel) panel.hidden = true;
+            const row = document.getElementById("extractClipboardButton");
+            if (row) row.setAttribute("aria-expanded", "false");
+            return;
+          }
+          const segment = event.target.closest("[data-segment]");
+          if (segment) {
+            state.sheetData[segment.dataset.segment] = segment.dataset.value;
+            segment.parentElement.querySelectorAll("[data-segment]").forEach((item) => {
+              item.classList.toggle("active", item === segment);
+              item.setAttribute("aria-pressed", String(item === segment));
+            });
+            return;
+          }
+          const eye = event.target.closest("#extractPasswordEye");
+          if (eye) {
+            const input = document.getElementById("extractPassword");
+            const show = input.type === "password";
+            input.type = show ? "text" : "password";
+            eye.setAttribute("aria-pressed", String(show));
+            eye.setAttribute("aria-label", show ? "隐藏密码" : "显示密码");
+            eye.innerHTML = icon(show ? "i-eye-off" : "i-eye");
+            return;
+          }
+          if (event.target.closest("[data-sheet-action='start-extract']")) startExtraction();
+          return;
+        }
+        if (state.sheetType === "rename") {
+          if (event.target.closest("[data-sheet-action='rename-confirm']")) renameFromSheet();
+          return;
+        }
+        if (state.sheetType === "create") {
+          const format = event.target.closest("[data-create-format]");
+          if (format) {
+            format.parentElement.querySelectorAll("[data-create-format]").forEach((item) => item.classList.toggle("active", item === format));
+            state.sheetData.format = format.dataset.createFormat;
+            const nameInput = document.getElementById("createName");
+            if (nameInput && /\.[^.]+$/.test(nameInput.value.trim())) {
+              nameInput.value = nameInput.value.trim().replace(/\.[^.]+$/, "." + state.sheetData.format);
+            }
+            return;
+          }
+          if (event.target.closest("[data-sheet-action='create-confirm']")) createFromSheet();
+          return;
+        }
+        if (state.sheetType === "confirm" && event.target.closest("[data-sheet-action='confirm-delete']")) {
+          const callback = state.sheetData.onConfirm;
+          closeSheet();
+          if (callback) callback();
+        }
+      });
+
+      sheetContent.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && state.sheetType === "rename") {
+          event.preventDefault();
+          renameFromSheet();
+        }
+      });
+
+      sheetContent.addEventListener("input", (event) => {
+        if (event.target.id !== "extractPassword") return;
+        if (event.target.value.trim().length >= 4) {
+          document.getElementById("extractPasswordWrap").classList.remove("has-error");
+          event.target.removeAttribute("aria-invalid");
+          document.getElementById("extractPasswordError").hidden = true;
+        }
+      });
+
+      function renderFolderPicker() {
+        const volume = volumes[pickerState.volume] || volumes.internal;
+        if (pickerState.path[0] !== volume.root) pickerState.path = [volume.root];
+        const currentId = pickerState.path[pickerState.path.length - 1];
+        const dir = dirs[currentId] || dirs[volume.root];
+        folderPickerTitle.textContent = dir.name;
+        folderPickerPath.textContent = pickerState.path.map((id) => (dirs[id] || {}).name).filter(Boolean).join(" / ");
+        folderPickerVolumes.querySelectorAll("[data-picker-volume]").forEach((button) => {
+          const active = button.dataset.pickerVolume === pickerState.volume;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-pressed", String(active));
+        });
+        const folders = (dir.entries || []).map((id) => entries[id]).filter((entry) => entry && entry.kind === "folder");
+        folderPickerList.innerHTML = folders.length
+          ? folders.map((entry) => '<button class="folder-picker-row" type="button" data-picker-dir="' + entry.childDir + '">' +
+              '<span class="file-icon folder">' + icon("i-folder") + '</span>' +
+              '<span class="folder-picker-copy"><strong>' + escapeHTML(entry.name) + '</strong><span>' + (entry.itemCount || folderItemCount(entry.childDir)) + ' 项</span></span>' +
+              '<svg class="icon row-chevron"><use href="#i-chevron"/></svg></button>').join("")
+          : '<div class="folder-picker-empty">此文件夹没有子文件夹</div>';
+      }
+      function openFolderPicker(purpose = "extract", actionMode = null) {
+        closeMenus();
+        pickerState.purpose = purpose;
+        pickerState.actionMode = actionMode;
+        folderPickerSelect.textContent = purpose === "copy" ? "复制到这里" : purpose === "move" ? "移动到这里" : "选择此文件夹";
+        appMain.inert = true;
+        const volumeId = volumes[state.volume] ? state.volume : "internal";
+        pickerState.volume = volumeId;
+        const root = volumes[volumeId].root;
+        pickerState.path = state.dirPath[0] === root ? [...state.dirPath] : [root];
+        renderFolderPicker();
+        folderPicker.classList.add("open");
+        folderPicker.removeAttribute("aria-hidden");
+        sheetLayer.inert = true;
+        setTimeout(() => folderPickerSelect.focus(), 120);
+      }
+      function closeFolderPicker() {
+        folderPicker.classList.remove("open");
+        folderPicker.setAttribute("aria-hidden", "true");
+        sheetLayer.inert = false;
+        appMain.inert = !sheetLayer.hidden;
+        setTimeout(() => {
+          const toolbarButton = document.getElementById(pickerState.actionMode === "move" ? "defaultMove" : "defaultCopy");
+          const focusTarget = pickerState.purpose === "extract"
+            ? document.querySelector('[data-dest-mode="custom"]')
+            : toolbarButton && !toolbarButton.closest("[hidden]") ? toolbarButton : document.getElementById("topBackButton");
+          if (focusTarget) focusTarget.focus();
+        }, 100);
+      }
+      function isInsideFolder(targetDirId, ancestorDirId) {
+        let cursor = targetDirId;
+        const seen = new Set();
+        while (cursor && dirs[cursor] && !seen.has(cursor)) {
+          if (cursor === ancestorDirId) return true;
+          seen.add(cursor);
+          cursor = dirs[cursor].parent;
+        }
+        return false;
+      }
+      function transferSelectedTo(targetDirId, mode) {
+        if (!dirs[targetDirId]) return false;
+        const selected = selectedEntries();
+        if (!selected.length) return false;
+        if (mode === "move" && targetDirId === currentDirId()) {
+          showToast("目标位置与当前位置相同");
+          return false;
+        }
+        if (selected.some((entry) => entry.kind === "folder" && isInsideFolder(targetDirId, entry.childDir))) {
+          showToast("不能复制或移动到自身内部");
+          return false;
+        }
+        const source = dirs[currentDirId()];
+        if (mode === "move") {
+          selected.forEach((entry) => {
+            source.entries = source.entries.filter((id) => id !== entry.id);
+            dirs[targetDirId].entries.unshift(entry.id);
+            if (entry.kind === "folder" && dirs[entry.childDir]) dirs[entry.childDir].parent = targetDirId;
+          });
+        } else {
+          selected.forEach((entry) => {
+            const clone = cloneEntry(entry, targetDirId);
+            dirs[targetDirId].entries.unshift(clone.id);
+          });
+        }
+        const count = selected.length;
+        const action = mode === "copy" ? "复制" : "移动";
+        clearSelection();
+        renderAll();
+        showToast("已" + action + " " + count + " 项到 " + dirs[targetDirId].name);
+        return true;
+      }
+      function selectFolderFromPicker() {
+        const targetDirId = pickerState.path[pickerState.path.length - 1];
+        if (pickerState.purpose === "copy" || pickerState.purpose === "move") {
+          if (transferSelectedTo(targetDirId, pickerState.purpose)) closeFolderPicker();
+          return;
+        }
+        if (!state.sheetData) return;
+        const path = pickerState.path.map((id) => (dirs[id] || {}).name).filter(Boolean).join(" / ");
+        state.sheetData.customTarget = path;
+        state.sheetData.customDirId = targetDirId;
+        state.sheetData.customVolume = pickerState.volume;
+        state.sheetData.destMode = "custom";
+        const customOption = document.querySelector('[data-dest-mode="custom"]');
+        if (customOption) {
+          document.querySelectorAll("#sheetContent [data-dest-mode]").forEach((item) => {
+            const active = item === customOption;
+            item.classList.toggle("active", active);
+            item.setAttribute("aria-pressed", String(active));
+          });
+          const detail = customOption.querySelector("small");
+          if (detail) detail.textContent = path;
+        }
+        closeFolderPicker();
+      }
+      document.getElementById("folderPickerBack").addEventListener("click", () => {
+        if (pickerState.path.length > 1) {
+          pickerState.path.pop();
+          renderFolderPicker();
+        } else {
+          closeFolderPicker();
+        }
+      });
+      document.getElementById("folderPickerClose").addEventListener("click", closeFolderPicker);
+      folderPickerSelect.addEventListener("click", selectFolderFromPicker);
+      folderPickerVolumes.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-picker-volume]");
+        if (!button || !volumes[button.dataset.pickerVolume]) return;
+        pickerState.volume = button.dataset.pickerVolume;
+        pickerState.path = [volumes[pickerState.volume].root];
+        renderFolderPicker();
+      });
+      folderPickerList.addEventListener("click", (event) => {
+        const row = event.target.closest("[data-picker-dir]");
+        if (!row) return;
+        pickerState.path.push(row.dataset.pickerDir);
+        renderFolderPicker();
+      });
+
+      function openExtractSheet(sources) {
+        if (!sources || !sources.length) return;
+        const required = sources.some((source) => source.encrypted);
+        const sourceFolder = state.dirPath.map((id) => dirs[id].name).join(" / ");
+        const folderName = sources.length === 1 ? sources[0].name.replace(/\.[^.]+$/, "") : "解压文件";
+        openSheet("extract", {
+          sources,
+          destMode: "new-folder",
+          samePassword: false,
+          customTarget: sourceFolder,
+          customDirId: currentDirId(),
+          customVolume: state.volume,
+          sourceFolder,
+          folderName,
+          conflict: settings.conflict,
+          encoding: settings.encoding
+        }, required ? "#extractPassword" : "#extractClipboardButton");
+      }
+
+      function startExtraction() {
+        const data = state.sheetData;
+        const required = data.sources.some((source) => source.encrypted);
+        const password = document.getElementById("extractPassword").value.trim();
+        if (required && password.length < 4) {
+          document.getElementById("extractPasswordWrap").classList.add("has-error");
+          document.getElementById("extractPassword").setAttribute("aria-invalid", "true");
+          document.getElementById("extractPasswordError").hidden = false;
+          document.getElementById("extractPassword").focus();
+          return;
+        }
+        const total = data.sources.reduce((sum, source) => sum + source.unpackedBytes, 0);
+        const speed = total >= 1073741824 ? "286 MB/s" : total >= 104857600 ? "42.6 MB/s" : "8.4 MB/s";
+        const name = data.sources.length === 1 ? data.sources[0].name : data.sources.length + " 个压缩包";
+        const destMode = data.destMode || "new-folder";
+        const sourceFolder = data.sourceFolder || state.dirPath.map((id) => dirs[id].name).join(" / ");
+        const folderName = data.folderName || "解压文件";
+        const destination = destMode === "custom"
+          ? (data.customTarget || sourceFolder)
+          : destMode === "new-folder" ? sourceFolder + " / " + folderName : sourceFolder;
+        const destinationParentId = destMode === "custom" ? (data.customDirId || currentDirId()) : currentDirId();
+        const destinationVolume = destMode === "custom" ? (data.customVolume || state.volume) : state.volume;
+        const task = {
+          id: nextUid("task"),
+          name,
+          progress: 0,
+          status: "running",
+          duration: 4000,
+          lastTick: performance.now(),
+          speed,
+          target: destination,
+          completedTarget: destination + " / " + (data.sources.length === 1 ? data.sources[0].name.replace(/\.[^.]+$/, "") : "已解压文件"),
+          conflict: data.conflict,
+          encoding: data.encoding,
+          samePassword: Boolean(data.samePassword),
+          destinationParentId,
+          folderName,
+          volumeId: destinationVolume,
+          unpackedBytes: total,
+          materialized: false
+        };
+        tasks.unshift(task);
+        state.currentTaskId = task.id;
+        clearSelection();
+        closeSheet();
+        renderAll();
+        openTaskDrawer(false);
+        showToast("已开始解压到 " + destination);
+      }
+
+      function createFromSheet() {
+        const nameInput = document.getElementById("createName");
+        const name = nameInput.value.trim();
+        if (!name) {
+          nameInput.focus();
+          showToast("请输入名称");
+          return;
+        }
+        if (state.mode !== "files") {
+          closeSheet();
+          showToast("请在文件目录中创建");
+          return;
+        }
+        const dir = dirs[currentDirId()];
+        if (state.sheetData.kind === "folder") {
+          const dirId = nextUid("folder");
+          dirs[dirId] = { name, parent: currentDirId(), entries: [] };
+          const id = nextUid("entry");
+          entries[id] = { id, kind: "folder", name, childDir: dirId, modified: Date.now() };
+          dir.entries.unshift(id);
+          closeSheet();
+          renderAll();
+          showToast("文件夹已创建");
+          return;
+        }
+        let finalName = name;
+        const format = state.sheetData.format || "zip";
+        if (!/\.[^.]+$/.test(finalName)) finalName += "." + format;
+        else if (!finalName.toLowerCase().endsWith("." + format)) finalName = finalName.replace(/\.[^.]+$/, "") + "." + format;
+        const id = nextUid("entry");
+        const archiveKey = nextUid("created");
+        const selected = state.sheetData.selected || [];
+        entries[id] = {
+          id,
+          kind: "archive",
+          name: finalName,
+          sizeBytes: selected.reduce((sum, entry) => sum + (entry.sizeBytes || 0), 1048576),
+          format: format.toUpperCase(),
+          archiveKey,
+          modified: Date.now()
+        };
+        archiveData[archiveKey] = {
+          name: finalName,
+          sizeBytes: entries[id].sizeBytes,
+          format: format.toUpperCase(),
+          modified: Date.now(),
+          encrypted: false,
+          unpackedBytes: Math.max(entries[id].sizeBytes * 1.3, 1048576),
+          totalItems: Math.max(selected.length, 1),
+          folders: {
+            "": selected.length
+              ? selected.map((entry, index) => internalEntry("created-" + index, entry.name, entry.kind === "folder" ? "folder" : "file", entry.sizeBytes || 0, entry.modified || Date.now(), { folderKey: "", itemCount: entry.itemCount || 0 }))
+              : [internalEntry("created-readme", "README.txt", "file", 1024, Date.now())]
+          }
+        };
+        dir.entries.unshift(id);
+        clearSelection();
+        closeSheet();
+        renderAll();
+        showToast("已创建 " + finalName);
+      }
+
+      function openCreateSheet(kind, selected) {
+        if (state.mode === "archive") {
+          showToast("请在文件目录中创建");
+          return;
+        }
+        openSheet("create", { kind, format: "zip", selected: selected || [] }, "#createName");
+      }
+
+      function openNewItemSheet() {
+        if (state.mode === "archive") {
+          showToast("请在文件目录中新建");
+          return;
+        }
+        openOptionsSheet("新建", "选择要创建的项目类型。", ["新建文件夹", "新建压缩包"], "", (value) => {
+          openCreateSheet(value === "新建文件夹" ? "folder" : "archive");
+        });
+      }
+
+      function openDeleteConfirm() {
+        if (state.mode !== "files" || !state.selected.size) return;
+        const count = state.selected.size;
+        openSheet("confirm", {
+          title: "删除 " + count + " 项？",
+          description: "删除后不会保留副本。",
+          onConfirm: () => {
+            const dir = dirs[currentDirId()];
+            dir.entries = dir.entries.filter((id) => !state.selected.has(id));
+            clearSelection();
+            renderAll();
+            showToast("已删除 " + count + " 项");
+          }
+        });
+      }
+
+      function openDestinationSheet(mode) {
+        if (state.mode !== "files" || !state.selected.size) return;
+        openFolderPicker(mode, mode);
+      }
+
+      function cloneEntry(entry, targetDir) {
+        const id = nextUid("entry");
+        if (entry.kind === "folder") {
+          const childDir = nextUid("folder");
+          dirs[childDir] = { name: entry.name + " 副本", parent: targetDir, entries: [] };
+          dirs[entry.childDir].entries.forEach((childId) => {
+            const child = entries[childId];
+            if (child) dirs[childDir].entries.push(cloneEntry(child, childDir).id);
+          });
+          entries[id] = { id, kind: "folder", name: entry.name + " 副本", childDir, modified: Date.now() };
+        } else {
+          entries[id] = Object.assign({}, entry, { id, name: entry.name.replace(/(\.[^.]+)$/, " 副本$1"), modified: Date.now() });
+        }
+        return entries[id];
+      }
+
+      function selectedEntryList() {
+        return currentEntries().filter((entry) => state.selected.has(entry.id));
+      }
+      function openRenameSheet() {
+        if (state.mode !== "files") {
+          showToast("包内文件暂不支持重命名");
+          return;
+        }
+        const selected = selectedEntryList();
+        if (selected.length !== 1) {
+          showToast("请选择 1 个文件或文件夹重命名");
+          return;
+        }
+        openSheet("rename", { id: selected[0].id, name: selected[0].name }, "#renameInput");
+      }
+      function renameFromSheet() {
+        const data = state.sheetData || {};
+        const input = document.getElementById("renameInput");
+        const name = input ? input.value.trim() : "";
+        if (!name) {
+          showToast("名称不能为空");
+          if (input) input.focus();
+          return;
+        }
+        const entry = entries[data.id];
+        if (!entry) return;
+        entry.name = name;
+        closeSheet();
+        clearSelection();
+        renderAll();
+        showToast("已重命名为 " + name);
+      }
+      function shareSelected() {
+        const selected = selectedEntryList();
+        if (!selected.length) {
+          showToast("请先选择要分享的项目");
+          return;
+        }
+        showToast("已准备分享 " + selected.length + " 项");
+      }
+      function openPropertiesSheet() {
+        const selected = selectedEntryList();
+        if (selected.length === 1) {
+          const entry = selected[0];
+          const rows = [
+            ["名称", entry.name],
+            ["类型", entry.kind === "folder" ? "文件夹" : entry.kind === "archive" ? (entry.format || "压缩包") : "文件"],
+            ["位置", state.dirPath.map((id) => dirs[id].name).join(" / ")]
+          ];
+          if (entry.kind === "folder") rows.push(["项目数", (entry.itemCount || folderItemCount(entry.childDir)) + " 项"]);
+          else rows.push(["大小", formatBytes(entry.sizeBytes)]);
+          rows.push(["修改日期", new Date(entry.modified).toLocaleString("zh-CN", { hour12: false })]);
+          openInfo("属性", rows, entry.name);
+          return;
+        }
+        const dir = dirs[currentDirId()];
+        openInfo("当前目录", [
+          ["路径", state.dirPath.map((id) => dirs[id].name).join(" / ")],
+          ["项目数", ((dir && dir.entries) || []).length + " 项"],
+          ["存储卷", volumes[state.volume].name]
+        ], "文件夹");
+      }
+      function refreshCurrentFolder() {
+        renderAll();
+        showToast("已刷新当前目录");
+      }
+
+      function openInfo(title, rows, subtitle) {
+        openSheet("info", { title, subtitle, rows: rows.map((row) => [row[0], row[1] || "—"]) });
+      }
+      function openArchiveInfo() {
+        const archive = currentArchive();
+        openInfo("压缩包信息", [
+          ["名称", archive.name],
+          ["格式", archive.format],
+          ["压缩后大小", formatBytes(archive.sizeBytes)],
+          ["解压后预计", formatBytes(archive.unpackedBytes)],
+          ["文件数量", archive.totalItems + " 个"],
+          ["加密", archive.encrypted ? "是" : "否"],
+          ["修改日期", new Date(archive.modified).toLocaleString("zh-CN", { hour12: false })]
+        ], "压缩包");
+      }
+
+      // Task drawer
+      function taskCounts() {
+        return {
+          running: tasks.filter((task) => task.status === "running").length,
+          waiting: tasks.filter((task) => task.status === "waiting" || task.status === "paused").length,
+          completed: tasks.filter((task) => task.status === "completed").length
+        };
+      }
+      function currentTask() {
+        return tasks.find((task) => task.id === state.currentTaskId) || tasks.find((task) => task.status === "running") || tasks[0];
+      }
+      function taskStatusLabel(task) {
+        return task.status === "running" ? "解压中" : task.status === "paused" ? "已暂停" : task.status === "waiting" ? "等待" : "已完成";
+      }
+      function renderTaskDrawer(rebuildQueue = true) {
+        if (!state.drawerVisible) return;
+        const current = currentTask();
+        if (!current) return;
+        const counts = taskCounts();
+        document.getElementById("drawerSummary").textContent = counts.running + " 进行中 · " + counts.waiting + " 等待 · " + counts.completed + " 已完成";
+        document.getElementById("currentTaskName").textContent = current.name;
+        const stateEl = document.getElementById("currentTaskState");
+        stateEl.className = "task-state " + current.status;
+        stateEl.textContent = taskStatusLabel(current);
+        const currentCard = document.getElementById("drawerCurrent");
+        currentCard.classList.toggle("paused", current.status === "paused" || current.status === "waiting");
+        currentCard.classList.toggle("completed", current.status === "completed");
+        document.getElementById("currentTaskProgress").style.width = current.progress + "%";
+        const remaining = current.status === "running" ? Math.max(1, Math.ceil((100 - current.progress) / 100 * current.duration / 1000)) : 0;
+        document.getElementById("currentTaskLeft").textContent = current.status === "completed"
+          ? "解压完成"
+          : current.status === "waiting"
+            ? "等待处理"
+            : current.status === "paused"
+              ? "已暂停"
+              : current.speed + " · 剩余 " + remaining + " 秒";
+        document.getElementById("currentTaskRight").textContent = current.status === "completed" ? current.completedTarget : current.target;
+        const toggle = document.getElementById("currentTaskToggle");
+        if (current.status === "completed") {
+          toggle.className = "task-toggle complete";
+          toggle.innerHTML = icon("i-check-circle");
+          toggle.disabled = true;
+        } else {
+          toggle.className = "task-toggle";
+          toggle.innerHTML = icon(current.status === "running" ? "i-pause" : "i-play");
+          toggle.disabled = false;
+          toggle.setAttribute("aria-label", current.status === "running" ? "暂停当前任务" : "继续当前任务");
+        }
+        document.getElementById("taskRunning").textContent = counts.running;
+        document.getElementById("taskWaiting").textContent = counts.waiting;
+        document.getElementById("taskComplete").textContent = counts.completed;
+        if (rebuildQueue) renderQueueList();
+        tasks.forEach((task) => {
+          const row = document.querySelector('[data-task-row="' + task.id + '"]');
+          if (!row) return;
+          row.querySelector("[data-task-progress]").style.width = task.progress + "%";
+          row.querySelector("[data-task-percent]").textContent = Math.round(task.progress) + "%";
+          const status = row.querySelector("[data-task-status]");
+          status.className = "task-state " + task.status;
+          status.textContent = taskStatusLabel(task);
+        });
+        renderSettingsTaskSummary();
+      }
+      function renderQueueList() {
+        const list = document.getElementById("queueList");
+        list.innerHTML = tasks.map((task) => {
+          const statusText = taskStatusLabel(task);
+          const button = task.status === "completed"
+            ? '<button class="task-toggle complete" type="button" disabled>' + icon("i-check-circle") + '</button>'
+            : '<button class="task-toggle" type="button" data-task-toggle="' + task.id + '" aria-label="' + (task.status === "running" ? "暂停" : "继续") + ' ' + escapeHTML(task.name) + '">' + icon(task.status === "running" ? "i-pause" : "i-play") + '</button>';
+          return '<div class="queue-row" data-task-row="' + task.id + '"><div class="queue-row-copy"><div class="queue-row-title"><strong>' + escapeHTML(task.name) + '</strong><span class="task-state ' + task.status + '" data-task-status>' + statusText + '</span></div>' +
+            '<div class="linear-progress"><span data-task-progress style="width:' + task.progress + '%"></span></div><div class="queue-row-meta"><span data-task-percent>' + Math.round(task.progress) + '%</span><span>' + escapeHTML(task.target) + '</span></div></div>' + button + '</div>';
+        }).join("");
+      }
+      function renderSettingsTaskSummary() {
+        const counts = taskCounts();
+        document.getElementById("settingsTaskSummary").textContent = counts.running + " 进行中 · " + counts.waiting + " 等待";
+      }
+      function openTaskDrawer(expanded) {
+        state.drawerVisible = true;
+        taskDrawer.hidden = false;
+        if (!state.currentTaskId) state.currentTaskId = currentTask() ? currentTask().id : null;
+        setDrawerExpanded(Boolean(expanded));
+        browserView.classList.add("task-mode");
+        renderTaskDrawer(true);
+      }
+      function closeTaskDrawer() {
+        state.drawerVisible = false;
+        taskDrawer.hidden = true;
+        drawerScrim.hidden = true;
+        drawerScrim.classList.remove("show");
+        browserView.classList.remove("task-mode");
+      }
+      function setDrawerExpanded(expanded) {
+        state.drawerExpanded = expanded;
+        taskDrawer.classList.toggle("expanded", expanded);
+        document.getElementById("drawerBody").hidden = !expanded;
+        drawerScrim.hidden = !expanded;
+        requestAnimationFrame(() => drawerScrim.classList.toggle("show", expanded));
+        const toggle = document.getElementById("drawerExpand");
+        toggle.setAttribute("aria-expanded", String(expanded));
+        toggle.querySelector("use").setAttribute("href", expanded ? "#i-chevron-down" : "#i-chevron-up");
+        if (expanded) renderTaskDrawer();
+      }
+      document.getElementById("drawerHandle").addEventListener("click", () => setDrawerExpanded(!state.drawerExpanded));
+      document.getElementById("drawerExpand").addEventListener("click", () => setDrawerExpanded(!state.drawerExpanded));
+      document.getElementById("drawerClose").addEventListener("click", closeTaskDrawer);
+      drawerScrim.addEventListener("click", () => setDrawerExpanded(false));
+      function toggleTask(id) {
+        const task = tasks.find((item) => item.id === id);
+        if (!task || task.status === "completed") return;
+        if (task.status === "running") {
+          task.status = "paused";
+          showToast(task.name + " 已暂停");
+        } else {
+          task.status = "running";
+          task.lastTick = performance.now();
+          showToast(task.name + " 已继续");
+        }
+        renderTaskDrawer();
+      }
+      document.getElementById("currentTaskToggle").addEventListener("click", () => {
+        const current = currentTask();
+        if (current) toggleTask(current.id);
+      });
+      document.getElementById("queueList").addEventListener("click", (event) => {
+        const button = event.target.closest("[data-task-toggle]");
+        if (button) toggleTask(button.dataset.taskToggle);
+      });
+
+      function dirPathName(dirId) {
+        const names = [];
+        const seen = new Set();
+        let cursor = dirId;
+        while (cursor && dirs[cursor] && !seen.has(cursor)) {
+          seen.add(cursor);
+          names.unshift(dirs[cursor].name);
+          cursor = dirs[cursor].parent;
+        }
+        return names.join(" / ");
+      }
+      function uniqueFolderName(parentDirId, baseName) {
+        const names = new Set((dirs[parentDirId].entries || []).map((id) => entries[id]).filter(Boolean).map((entry) => entry.name));
+        if (!names.has(baseName)) return baseName;
+        let index = 2;
+        while (names.has(baseName + " (" + index + ")")) index++;
+        return baseName + " (" + index + ")";
+      }
+      function materializeExtraction(task) {
+        if (task.materialized || !task.destinationParentId) return;
+        const parent = dirs[task.destinationParentId];
+        if (!parent) return;
+        task.materialized = true;
+        const name = uniqueFolderName(task.destinationParentId, task.folderName || "解压文件");
+        const folderId = nextUid("folder");
+        dirs[folderId] = { name, parent: task.destinationParentId, entries: [] };
+        const folderEntryId = nextUid("entry");
+        entries[folderEntryId] = { id: folderEntryId, kind: "folder", name, childDir: folderId, modified: Date.now() };
+        parent.entries.unshift(folderEntryId);
+
+        const imagesId = nextUid("folder");
+        dirs[imagesId] = { name: "images", parent: folderId, entries: [] };
+        const imagesEntryId = nextUid("entry");
+        entries[imagesEntryId] = { id: imagesEntryId, kind: "folder", name: "images", childDir: imagesId, modified: Date.now() };
+        dirs[folderId].entries.unshift(imagesEntryId);
+
+        const readmeId = nextUid("entry");
+        entries[readmeId] = { id: readmeId, kind: "file", name: "说明.txt", sizeBytes: 2048, ext: "txt", modified: Date.now() };
+        dirs[folderId].entries.unshift(readmeId);
+
+        task.completedTarget = dirPathName(task.destinationParentId) + " / " + name;
+        const volume = volumes[task.volumeId || "internal"];
+        if (volume) volume.used = Math.min(volume.total, volume.used + (task.unpackedBytes || 0) / 1e9);
+        renderStorageMeter();
+        renderAll();
+      }
+
+      setInterval(() => {
+        const now = performance.now();
+        let changed = false;
+        let completedNow = false;
+        const completedTasks = [];
+        tasks.forEach((task) => {
+          if (task.status !== "running") return;
+          if (!task.lastTick) task.lastTick = now;
+          const delta = Math.max(0, now - task.lastTick);
+          task.lastTick = now;
+          task.progress = Math.min(100, task.progress + (delta / task.duration) * 100);
+          if (task.progress >= 100) {
+            if (task.status !== "completed") completedNow = true;
+            task.progress = 100;
+            task.status = "completed";
+            task.speed = "已完成";
+            task.finishedAt = Date.now();
+            completedTasks.push(task);
+          }
+          changed = true;
+        });
+        completedTasks.forEach(materializeExtraction);
+        if (changed && state.drawerVisible) {
+          renderTaskDrawer(completedNow);
+          const active = currentTask();
+          if (active && completedTasks.some((task) => task.id === active.id)) showToast(active.name + " 解压完成 · 已保存到 " + active.completedTarget);
+        }
+        if (changed) renderSettingsTaskSummary();
+      }, 180);
+
+      // Generic modal focus trap
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          if (folderPicker.classList.contains("open")) {
+            if (pickerState.path.length > 1) {
+              pickerState.path.pop();
+              renderFolderPicker();
+            } else {
+              closeFolderPicker();
+            }
+            return;
+          }
+          if (!sheetLayer.hidden) { closeSheet(); return; }
+          if (!sortMenu.hidden || !moreMenu.hidden) { closeMenus(); return; }
+          if (!taskDrawer.hidden && state.drawerExpanded) { setDrawerExpanded(false); return; }
+          if (settingsView.classList.contains("open")) { closeSettings(); return; }
+          goBack();
+          return;
+        }
+        if (event.key === "Tab" && !sheetLayer.hidden) {
+          const focusables = Array.from(sheetContent.querySelectorAll("button:not([disabled]), input:not([disabled])")).filter((el) => !el.hidden);
+          if (!focusables.length) return;
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        }
+      });
+
+      function setSystemTime() {
+        document.getElementById("systemTime").textContent = new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
+      }
+
+      setSystemTime();
+      setInterval(setSystemTime, 30000);
+      setTheme(settings.theme);
+      renderSettings();
+      renderAll();
+    })();
+  </script>
+</body>
+</html>

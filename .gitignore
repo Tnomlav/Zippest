@@ -1,0 +1,28 @@
+# Android build output
+/android/.gradle/
+/android/.kotlin/
+/android/build/
+/android/app/build/
+/android/captures/
+
+# Local Android Studio state
+/android/.idea/
+/android/local.properties
+*.iml
+
+# Signing and local secrets
+*.jks
+*.keystore
+keystore.properties
+secrets.properties
+.env
+.env.*
+
+# Generated test artifacts
+/tools/window*.xml
+/tools/decompress-screen.png
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini

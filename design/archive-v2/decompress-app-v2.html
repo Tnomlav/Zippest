@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#F6F7F5">
+  <title>解压</title>
+  <script>
+    try {
+      const savedTheme = localStorage.getItem("decompress-theme");
+      if (savedTheme === "dark") document.documentElement.dataset.theme = "dark";
+    } catch (error) {}
+  </script>
+  <style>
+    :root { --bg: oklch(97.48% 0.0028 128.49); --surface: oklch(100% 0 0); --surface-2: oklch(98.15% 0.004 150); --fg: oklch(24.05% 0.0104 163.95); --muted: oklch(48.67% 0.0137 161.64); --border: oklch(91.18% 0.0110 149.85); --outline: oklch(81.6% 0.013 158); --accent: oklch(47.03% 0.0926 166.26); --accent-hover: oklch(41.2% 0.086 166.26); --accent-soft: oklch(94.4% 0.025 166.26); --accent-faint: oklch(96.8% 0.012 166.26); --on-accent: oklch(100% 0 0); --warning: oklch(60.45% 0.1414 46.33); --warning-ink: oklch(49.13% 0.1278 42.97); --warning-soft: oklch(95.4% 0.029 46.33); --success: oklch(52% 0.09 157); --success-soft: oklch(95.4% 0.023 157); --desk: oklch(91.2% 0.008 150); --shadow: 0 18px 44px oklch(18% 0.012 160 / 0.14); --font: "Noto Sans SC", "Roboto", "PingFang SC", "Microsoft YaHei", sans-serif; --mono: "Roboto Mono", "SFMono-Regular", Consolas, monospace; --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px); --nav-height: 80px; } html[data-theme="dark"] { --bg: oklch(20.4% 0.009 160); --surface: oklch(24.7% 0.010 160); --surface-2: oklch(27.5% 0.010 160); --fg: oklch(94.2% 0.006 150); --muted: oklch(72.5% 0.009 150); --border: oklch(34.5% 0.012 160); --outline: oklch(46% 0.014 158); --accent: oklch(74% 0.09 166.26); --accent-hover: oklch(79% 0.082 166.26); --accent-soft: oklch(31.5% 0.036 166.26); --accent-faint: oklch(27.5% 0.021 166.26); --on-accent: oklch(17.5% 0.012 160); --warning: oklch(70% 0.13 46.33); --warning-ink: oklch(82% 0.095 46.33); --warning-soft: oklch(29.5% 0.046 46.33); --success: oklch(79% 0.09 157); --success-soft: oklch(29.5% 0.030 157); --desk: oklch(14.5% 0.006 160); --shadow: 0 20px 48px oklch(5% 0.008 160 / 0.44); } * { box-sizing: border-box; } html, body { height: 100%; } body { margin: 0; display: grid; place-items: center; overflow: hidden; background: var(--desk); color: var(--fg); font-family: var(--font); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; } button, input { font: inherit; } button { cursor: pointer; } [hidden] { display: none !important; } .icon { width: 24px; height: 24px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; } .svg-sprite { position: absolute; width: 0; height: 0; overflow: hidden; } :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; } .app { position: relative; width: 393px; height: 852px; max-height: 100dvh; display: flex; flex-direction: column; isolation: isolate; overflow: hidden; border: 1px solid var(--border); border-radius: 30px; background: var(--bg); box-shadow: var(--shadow); transition: background-color 180ms ease, border-color 180ms ease; } .statusbar { position: relative; z-index: 30; height: calc(32px + var(--safe-top)); padding: var(--safe-top) 20px 0; display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; color: var(--fg); font-size: 12px; line-height: 1; font-weight: 650; } .camera-dot { position: absolute; left: 50%; top: calc(10px + var(--safe-top)); width: 10px; height: 10px; border-radius: 50%; background: oklch(18% 0.01 160); transform: translateX(-50%); box-shadow: inset 0 0 0 2px oklch(27% 0.012 160); } html[data-theme="dark"] .camera-dot { background: oklch(8% 0.006 160); box-shadow: inset 0 0 0 2px oklch(18% 0.01 160); } .status-icons { display: flex; align-items: center; gap: 5px; } .status-icons .icon { width: 14px; height: 14px; stroke-width: 1.8; } .page-host { position: relative; min-height: 0; flex: 1; overflow: hidden; } .page { position: absolute; inset: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(7px); transition: opacity 220ms cubic-bezier(.2, 0, 0, 1), transform 280ms cubic-bezier(.2, 0, 0, 1), visibility 0s linear 280ms; } .page.active { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0); transition-delay: 0s; } .top-app-bar { height: 64px; padding: 0 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: 0 0 auto; background: var(--bg); } .top-app-bar.with-back { padding-left: 4px; } .appbar-cluster { min-width: 0; display: flex; align-items: center; gap: 2px; } .appbar-title { margin: 0; overflow: hidden; color: var(--fg); font-size: 22px; line-height: 1.25; font-weight: 720; letter-spacing: -0.035em; text-overflow: ellipsis; white-space: nowrap; } .home-title { margin-left: 12px; font-size: 24px; } .appbar-kicker { margin-left: 8px; padding: 5px 8px 4px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 12px; line-height: 1; font-weight: 650; } .icon-button { width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; flex: 0 0 48px; background: transparent; color: var(--fg); transition: background-color 150ms ease, transform 120ms ease; } .icon-button:hover { background: color-mix(in oklch, var(--fg) 8%, transparent); } .icon-button:active { transform: scale(0.96); } .page-scroll { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; } .page-scroll::-webkit-scrollbar { display: none; } .home-scroll { padding: 4px 20px 24px; } .hero-card { padding: 20px; border: 1px solid var(--border); border-radius: 24px; background: var(--surface); box-shadow: 0 4px 14px oklch(24% 0.012 160 / 0.045); } .hero-head { display: flex; align-items: center; gap: 14px; } .hero-icon, .summary-icon { width: 56px; height: 56px; flex: 0 0 56px; border-radius: 18px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); } .hero-icon .icon, .summary-icon .icon { width: 28px; height: 28px; } .hero-copy { min-width: 0; flex: 1; } .hero-copy h1 { margin: 0; font-size: 22px; line-height: 1.25; font-weight: 740; letter-spacing: -0.035em; } .hero-copy p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; } .primary-button, .tonal-button, .outline-button, .text-button { min-height: 48px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; line-height: 1; font-weight: 700; transition: background-color 150ms ease, border-color 150ms ease, transform 120ms ease; } .primary-button { width: 100%; min-height: 56px; padding: 0 18px; border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); box-shadow: 0 4px 12px oklch(35% 0.06 166 / 0.17); } .primary-button:hover { background: var(--accent-hover); border-color: var(--accent-hover); } .primary-button:active, .tonal-button:active, .outline-button:active, .text-button:active { transform: scale(0.985); } .primary-button .icon { width: 21px; height: 21px; } .hero-card .primary-button { margin-top: 17px; } .local-note { margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; line-height: 1.3; } .local-note .icon { width: 15px; height: 15px; } .format-row { display: flex; align-items: center; gap: 7px; margin-top: 14px; overflow: hidden; } .format-row .label { flex: 0 0 auto; color: var(--muted); font-size: 12px; font-weight: 600; } .chip { min-height: 28px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; background: var(--surface); color: var(--fg); font-family: var(--mono); font-size: 12px; font-weight: 650; line-height: 1; white-space: nowrap; } .status-chip { min-height: 26px; padding: 0 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; line-height: 1; font-weight: 650; white-space: nowrap; } .status-chip .icon { width: 14px; height: 14px; } .status-chip.success { background: var(--success-soft); color: var(--success); } .status-chip.warning { background: var(--warning-soft); color: var(--warning-ink); } .status-chip.accent { background: var(--accent-soft); color: var(--accent); } .status-chip.neutral { background: var(--surface-2); color: var(--muted); } .section-heading { min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; } .section-heading h2 { margin: 0; font-size: 16px; line-height: 1.3; font-weight: 720; letter-spacing: -0.018em; } .section-heading span { color: var(--muted); font-size: 12px; } .recent-card, .content-card, .task-card, .settings-card { overflow: hidden; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); } .recent-row { width: 100%; min-height: 76px; padding: 12px 14px; border: 0; display: flex; align-items: center; gap: 12px; background: transparent; color: var(--fg); text-align: left; } .recent-row + .recent-row { border-top: 1px solid var(--border); } .recent-row:hover { background: color-mix(in oklch, var(--accent) 5%, var(--surface)); } .file-tile { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 13px; display: grid; place-items: center; background: var(--surface-2); color: var(--muted); } .file-tile .icon { width: 22px; height: 22px; } .recent-copy { min-width: 0; flex: 1; } .recent-copy strong { display: block; overflow: hidden; font-size: 14px; line-height: 1.35; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; } .recent-meta { margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.35; white-space: nowrap; } .recent-side { flex: 0 0 auto; display: grid; justify-items: end; gap: 5px; } .recent-side .time { color: var(--muted); font-size: 12px; line-height: 1.2; white-space: nowrap; } .detail-scroll { padding: 0 20px 18px; } .summary-card { padding: 16px; border: 1px solid var(--border); border-radius: 22px; background: var(--surface); } .summary-head { display: flex; align-items: center; gap: 13px; } .summary-icon { width: 52px; height: 52px; flex-basis: 52px; border-radius: 16px; } .summary-icon .icon { width: 26px; height: 26px; } .summary-copy { min-width: 0; flex: 1; } .summary-copy h1 { margin: 0; overflow-wrap: anywhere; font-size: 22px; line-height: 1.35; font-weight: 740; letter-spacing: -0.03em; } .summary-copy p { margin: 5px 0 0; color: var(--muted); font-size: 14px; line-height: 1.4; } .summary-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 14px; } .detail-heading { min-height: 52px; display: flex; align-items: center; justify-content: space-between; } .detail-heading h2 { margin: 0; font-size: 16px; line-height: 1.3; font-weight: 720; } .detail-heading span { color: var(--muted); font-size: 12px; } .content-item { min-height: 58px; padding: 8px 13px; display: flex; align-items: center; gap: 11px; } .content-item + .content-item { border-top: 1px solid var(--border); } .content-item .file-tile { width: 36px; height: 36px; flex-basis: 36px; border-radius: 11px; } .content-item .file-tile .icon { width: 19px; height: 19px; } .content-copy { min-width: 0; flex: 1; } .content-copy strong { display: block; overflow: hidden; font-size: 14px; line-height: 1.3; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; } .content-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; line-height: 1.25; } .content-size { color: var(--muted); font-family: var(--mono); font-size: 12px; line-height: 1.3; white-space: nowrap; } .detail-actions { flex: 0 0 auto; padding: 13px 20px calc(18px + var(--safe-bottom)); border-top: 1px solid var(--border); background: var(--surface); } .target-label { margin: 0 0 1px; color: var(--muted); font-size: 12px; line-height: 1.2; font-weight: 600; } .target-button { width: 100%; min-height: 48px; padding: 0 10px; border: 0; border-radius: 12px; display: flex; align-items: center; gap: 8px; background: var(--accent-faint); color: var(--fg); text-align: left; transition: background-color 150ms ease; } .target-button:hover { background: var(--accent-soft); } .target-button > .icon { width: 18px; height: 18px; color: var(--accent); } .target-button span { min-width: 0; flex: 1; overflow: hidden; font-size: 14px; line-height: 1.3; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; } .target-button .chevron { color: var(--muted); } .space-check { min-height: 26px; display: flex; align-items: center; gap: 5px; color: var(--accent); font-size: 12px; line-height: 1.3; font-weight: 650; } .space-check .icon { width: 15px; height: 15px; stroke-width: 2; } .detail-actions .primary-button { margin-top: 7px; } .progress-content { min-height: 0; flex: 1; padding: 4px 24px calc(22px + var(--safe-bottom)); overflow-y: auto; scrollbar-width: none; } .progress-content::-webkit-scrollbar { display: none; } .progress-wrap { min-height: 100%; display: flex; flex-direction: column; align-items: center; } .progress-kicker { margin: 0; color: var(--accent); font-size: 12px; line-height: 1.2; font-weight: 720; letter-spacing: 0.06em; } .progress-ring-wrap { position: relative; width: 196px; height: 196px; margin-top: 26px; display: grid; place-items: center; } .progress-ring { width: 196px; height: 196px; transform: rotate(-90deg); } .ring-track, .ring-value { fill: none; stroke-width: 13; } .ring-track { stroke: var(--accent-faint); } .ring-value { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset 90ms linear; } .ring-copy { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; } .ring-copy strong { font-size: 44px; line-height: 1; font-weight: 720; letter-spacing: -0.055em; } .ring-copy strong span { font-size: 20px; font-weight: 650; letter-spacing: -0.02em; } .ring-copy small { margin-top: 6px; color: var(--muted); font-size: 12px; } .current-file { margin-top: 15px; text-align: center; } .current-file span { color: var(--muted); font-size: 12px; } .current-file strong { display: block; margin-top: 5px; max-width: 300px; overflow: hidden; font-size: 16px; line-height: 1.4; font-weight: 680; text-overflow: ellipsis; white-space: nowrap; } .metrics { width: 100%; margin-top: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } .metric { min-height: 74px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); } .metric span { display: block; color: var(--muted); font-size: 12px; line-height: 1.25; } .metric strong { display: block; margin-top: 6px; font-family: var(--mono); font-size: 16px; line-height: 1.2; font-weight: 700; letter-spacing: -0.025em; } .cancel-button { width: 100%; min-height: 52px; margin-top: auto; border: 1px solid color-mix(in oklch, var(--warning) 56%, transparent); border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--surface); color: var(--warning-ink); font-size: 14px; line-height: 1; font-weight: 700; } .cancel-button:hover { background: var(--warning-soft); } .cancel-button .icon { width: 20px; height: 20px; } .progress-note { margin: 10px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; text-align: center; } .success-wrap { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; } .success-icon { width: 88px; height: 88px; border-radius: 28px; display: grid; place-items: center; background: var(--success-soft); color: var(--success); } .success-icon .icon { width: 44px; height: 44px; stroke-width: 1.9; } .success-wrap h1 { margin: 22px 0 0; font-size: 24px; line-height: 1.3; font-weight: 740; letter-spacing: -0.04em; } .success-wrap p { max-width: 290px; margin: 9px 0 0; color: var(--muted); font-size: 14px; line-height: 1.65; } .success-summary { width: 100%; margin-top: 22px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); display: grid; gap: 6px; text-align: left; } .success-summary div { display: flex; justify-content: space-between; gap: 16px; color: var(--muted); font-size: 12px; line-height: 1.45; } .success-summary strong { color: var(--fg); font-weight: 650; text-align: right; } .success-wrap .primary-button { margin-top: 24px; } .tasks-scroll { padding: 4px 20px 22px; } .task-stats { min-height: 96px; padding: 15px 8px; display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--border); border-radius: 22px; background: var(--surface); } .task-stat { position: relative; display: grid; place-content: center; justify-items: center; gap: 4px; } .task-stat + .task-stat::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 1px; background: var(--border); } .task-stat strong { font-family: var(--mono); font-size: 28px; line-height: 1; font-weight: 700; letter-spacing: -0.055em; } .task-stat span { color: var(--muted); font-size: 12px; line-height: 1.2; } .task-stat.running strong { color: var(--accent); } .task-stat.done strong { color: var(--success); } .task-heading { min-height: 54px; } .task-row { min-height: 92px; padding: 11px 12px; display: grid; grid-template-columns: 38px minmax(0, 1fr) 48px; align-items: center; column-gap: 10px; } .task-row + .task-row { border-top: 1px solid var(--border); } .task-row .file-tile { width: 38px; height: 38px; flex-basis: 38px; border-radius: 12px; } .task-row .file-tile .icon { width: 20px; height: 20px; } .task-main { min-width: 0; } .task-title-line { display: flex; align-items: center; gap: 8px; } .task-title-line strong { min-width: 0; flex: 1; overflow: hidden; font-size: 14px; line-height: 1.3; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; } .task-status { flex: 0 0 auto; font-size: 12px; line-height: 1.2; font-weight: 650; } .task-status.running { color: var(--accent); } .task-status.waiting, .task-status.paused { color: var(--muted); } .task-status.done { color: var(--success); } .linear-progress { position: relative; height: 5px; margin-top: 8px; overflow: hidden; border-radius: 999px; background: var(--border); } .linear-progress span { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--accent); transition: width 450ms linear; } .task-row.is-paused .linear-progress span { opacity: 0.55; } .task-row.is-done .linear-progress span { background: var(--success); } .task-meta { margin-top: 5px; display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; line-height: 1.25; } .task-action { width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: transparent; color: var(--accent); } .task-action:hover { background: var(--accent-soft); } .task-action .icon { width: 22px; height: 22px; } .task-action.complete { color: var(--success); cursor: default; } .task-action.complete:hover { background: transparent; } .settings-scroll { padding: 4px 20px calc(24px + var(--safe-bottom)); } .settings-section + .settings-section { margin-top: 18px; } .settings-section h2 { margin: 0 0 8px 2px; color: var(--muted); font-size: 12px; line-height: 1.2; font-weight: 700; letter-spacing: 0.04em; } .settings-row { width: 100%; min-height: 68px; padding: 8px 13px; border: 0; display: flex; align-items: center; gap: 11px; background: var(--surface); color: var(--fg); text-align: left; } button.settings-row:hover { background: color-mix(in oklch, var(--accent) 5%, var(--surface)); } .settings-row + .settings-row { border-top: 1px solid var(--border); } .settings-icon { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-2); color: var(--muted); } .settings-icon .icon { width: 20px; height: 20px; } .settings-copy { min-width: 0; flex: 1; } .settings-copy strong { display: block; font-size: 14px; line-height: 1.3; font-weight: 650; } .settings-copy span { display: block; margin-top: 2px; overflow: hidden; color: var(--muted); font-size: 12px; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; } .settings-value { max-width: 128px; overflow: hidden; color: var(--muted); font-size: 12px; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; } .settings-chevron { width: 18px; height: 18px; color: var(--muted); } .switch { width: 56px; height: 48px; padding: 0; border: 0; display: grid; place-items: center; flex: 0 0 56px; background: transparent; } .switch-track { position: relative; width: 52px; height: 32px; border: 1.5px solid var(--outline); border-radius: 999px; background: var(--surface-2); transition: background-color 170ms ease, border-color 170ms ease; } .switch-thumb { position: absolute; left: 4px; top: 4px; width: 21px; height: 21px; border-radius: 50%; background: var(--muted); transition: transform 170ms cubic-bezier(.2, 0, 0, 1), background-color 170ms ease; } .switch[aria-checked="true"] .switch-track { background: var(--accent); border-color: var(--accent); } .switch[aria-checked="true"] .switch-thumb { background: var(--on-accent); transform: translateX(20px); } .privacy-card { margin-top: 18px; padding: 13px 14px; display: flex; align-items: center; gap: 11px; border: 1px solid color-mix(in oklch, var(--accent) 22%, var(--border)); border-radius: 18px; background: var(--accent-faint); } .privacy-card .settings-icon { background: var(--surface); color: var(--accent); } .privacy-card strong { display: block; font-size: 14px; line-height: 1.35; font-weight: 650; } .privacy-card p { margin: 3px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; } .bottom-nav { display: none; height: calc(var(--nav-height) + var(--safe-bottom)); padding: 8px 28px calc(12px + var(--safe-bottom)); flex: 0 0 auto; align-items: flex-start; justify-content: space-between; border-top: 1px solid var(--border); background: var(--surface); } .app.show-nav .bottom-nav { display: flex; } .nav-item { width: 78px; min-height: 60px; padding: 0; border: 0; display: grid; justify-items: center; align-content: start; gap: 3px; background: transparent; color: var(--muted); } .nav-indicator { width: 62px; height: 32px; display: grid; place-items: center; border-radius: 999px; transition: background-color 160ms ease, color 160ms ease; } .nav-item:hover .nav-indicator { background: var(--surface-2); } .nav-item.active { color: var(--accent); } .nav-item.active .nav-indicator { background: var(--accent-soft); } .nav-item .icon { width: 24px; height: 24px; } .nav-label { font-size: 12px; line-height: 1.2; font-weight: 650; } .gesture-bar { position: absolute; z-index: 90; left: 50%; bottom: calc(6px + var(--safe-bottom)); width: 112px; height: 4px; border-radius: 99px; background: color-mix(in oklch, var(--fg) 82%, transparent); transform: translateX(-50%); pointer-events: none; } .modal-layer { position: absolute; inset: 0; z-index: 70; display: flex; align-items: flex-end; } .modal-scrim { position: absolute; inset: 0; border: 0; background: oklch(10% 0.008 160 / 0.44); opacity: 0; transition: opacity 220ms ease; } .bottom-sheet { position: relative; z-index: 1; width: 100%; max-height: calc(100% - 64px - var(--safe-top)); overflow-y: auto; padding: 12px 24px calc(22px + var(--safe-bottom)); border-radius: 28px 28px 0 0; background: var(--surface); color: var(--fg); box-shadow: 0 -16px 40px oklch(10% 0.008 160 / 0.24); transform: translateY(102%); transition: transform 280ms cubic-bezier(.2, 0, 0, 1); scrollbar-width: none; } .bottom-sheet::-webkit-scrollbar { display: none; } .modal-layer.open .modal-scrim { opacity: 1; } .modal-layer.open .bottom-sheet { transform: translateY(0); } .sheet-handle { width: 36px; height: 5px; margin: 0 auto; border-radius: 99px; background: var(--outline); } .sheet-icon { width: 50px; height: 50px; margin-top: 15px; border-radius: 16px; display: grid; place-items: center; background: var(--warning-soft); color: var(--warning-ink); } .sheet-icon .icon { width: 25px; height: 25px; } .sheet-title { margin: 13px 0 0; font-size: 22px; line-height: 1.3; font-weight: 740; letter-spacing: -0.035em; } .sheet-description { margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.55; } .field-label { display: block; margin: 18px 0 7px; color: var(--muted); font-size: 12px; line-height: 1.2; font-weight: 650; } .password-field { min-height: 56px; padding: 0 6px 0 14px; display: flex; align-items: center; gap: 8px; border: 1.5px solid var(--outline); border-radius: 16px; background: var(--surface); transition: border-color 150ms ease; } .password-field:focus-within { border-color: var(--accent); outline: 2px solid color-mix(in oklch, var(--accent) 30%, transparent); outline-offset: 1px; } .password-field.has-error { border-color: var(--warning); } .password-field > .icon { width: 20px; height: 20px; color: var(--muted); } .password-field input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--fg); font-family: var(--mono); font-size: 15px; line-height: 1; letter-spacing: 0.08em; } .password-field input::selection { background: var(--accent-soft); } .password-toggle { width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; background: transparent; color: var(--muted); } .password-toggle:hover { background: var(--surface-2); color: var(--fg); } .password-toggle .icon { width: 21px; height: 21px; } .field-error { margin: 7px 0 0; display: flex; align-items: center; gap: 5px; color: var(--warning-ink); font-size: 12px; line-height: 1.35; font-weight: 600; } .field-error .icon { width: 14px; height: 14px; } .sheet-space-check { margin-top: 12px; padding: 9px 10px; border-radius: 12px; background: var(--accent-faint); } .bottom-sheet .primary-button { margin-top: 16px; } .sheet-cancel { width: 100%; min-height: 48px; margin-top: 2px; border: 0; background: transparent; color: var(--muted); font-size: 14px; font-weight: 650; } .sheet-cancel:hover { color: var(--fg); } .choice-list { margin-top: 12px; overflow: hidden; border: 1px solid var(--border); border-radius: 18px; } .choice-option { width: 100%; min-height: 58px; padding: 8px 14px; border: 0; display: flex; align-items: center; gap: 10px; background: var(--surface); color: var(--fg); text-align: left; } .choice-option + .choice-option { border-top: 1px solid var(--border); } .choice-option:hover { background: var(--surface-2); } .choice-option span { flex: 1; font-size: 14px; line-height: 1.35; font-weight: 600; } .choice-option .icon { width: 20px; height: 20px; color: var(--accent); } .about-content { padding: 20px; display: grid; justify-items: center; text-align: center; } .about-content .sheet-icon { margin-top: 0; background: var(--accent-soft); color: var(--accent); } .about-content h3 { margin: 13px 0 0; font-size: 18px; line-height: 1.3; } .about-content p { margin: 7px 0 0; color: var(--muted); font-size: 14px; line-height: 1.65; } .snackbar { position: absolute; z-index: 95; left: 20px; right: 20px; bottom: calc(24px + var(--safe-bottom)); min-height: 48px; padding: 13px 16px; border-radius: 14px; background: oklch(28% 0.012 160); color: oklch(97% 0.004 150); box-shadow: 0 8px 22px oklch(8% 0.01 160 / 0.24); font-size: 14px; line-height: 1.4; opacity: 0; transform: translateY(10px); pointer-events: none; transition: opacity 180ms ease, transform 220ms cubic-bezier(.2, 0, 0, 1); } .app.show-nav .snackbar { bottom: calc(94px + var(--safe-bottom)); } .snackbar.show { opacity: 1; transform: translateY(0); } @media (max-width: 480px) { body { display: block; } .app { width: 100vw; height: 100dvh; max-height: none; border: 0; border-radius: 0; box-shadow: none; } } @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+    .task-meta span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .task-meta .task-progress-label { flex: 0 0 auto; }
+    :root { --control-border: oklch(59% 0.012 158); }
+    html[data-theme="dark"] { --control-border: oklch(61% 0.012 158); }
+    .password-field, .switch-track { border-color: var(--control-border); }
+  </style>
+</head>
+<body>
+  <svg class="svg-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-archive" viewBox="0 0 24 24"><path d="M4 8h16v10.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z"/><path d="m3.8 8 1.5-4h13.4l1.5 4M4.5 10.5h15M9.5 13h5"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V7.5Z"/><path d="M3.5 10h17"/></symbol>
+    <symbol id="i-folder-open" viewBox="0 0 24 24"><path d="M3.5 8.5v9.9a1.8 1.8 0 0 0 1.8 1.8h13.4a1.7 1.7 0 0 0 1.6-1.3l1.2-5.2a1.7 1.7 0 0 0-1.7-2.1H8l-2.2-2H5.3a1.8 1.8 0 0 0-1.8 1.8Z"/><path d="M8 10.1 6.2 18.8"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5l-5-5Z"/><path d="M14 3.5v5h5M8.5 13h7M8.5 16.5h5"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.5"/><path d="m4.5 17 4.2-4.2 3.2 3.2 2.2-2.2 5.4 5.2"/></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><rect x="3.5" y="6" width="13" height="12" rx="2.2"/><path d="m16.5 10.2 4-2.4v8.4l-4-2.4"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M14 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5l-5-5Z"/><path d="M14 3.5v5h5M8.5 12h7M8.5 15h7M8.5 18h4"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.1 13.2a7.7 7.7 0 0 0 0-2.4l2-1.5-2-3.4-2.4 1a8 8 0 0 0-2-1.2L14.4 3h-4.8l-.3 2.7a8 8 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.5a7.7 7.7 0 0 0 0 2.4l-2 1.5 2 3.4 2.4-1a8 8 0 0 0 2 1.2l.3 2.7h4.8l.3-2.7a8 8 0 0 0 2-1.2l2.4 1 2-3.4-2-1.5Z"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.2 4L19 7"/></symbol>
+    <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.3 2.5 2.5 5.2-5.6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.4 4.3 2.8 17.5a1.9 1.9 0 0 0 1.6 2.8h15.2a1.9 1.9 0 0 0 1.6-2.8L13.6 4.3a1.8 1.8 0 0 0-3.2 0Z"/><path d="M12 9v4.2M12 16.8h.01"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m14.5 5.5-6.5 6.5 6.5 6.5"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2.5"/><path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10M12 14v2.5"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.8 12s3.2-5.5 9.2-5.5 9.2 5.5 9.2 5.5-3.2 5.5-9.2 5.5S2.8 12 2.8 12Z"/><circle cx="12" cy="12" r="2.6"/></symbol>
+    <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3.5 20.5 21M9.8 6.8A10.4 10.4 0 0 1 12 6.5c6 0 9.2 5.5 9.2 5.5a16 16 0 0 1-2.8 3.5M6.4 8.3A16.2 16.2 0 0 0 2.8 12s3.2 5.5 9.2 5.5c1.2 0 2.3-.2 3.3-.6"/><path d="M10.2 10.3a2.6 2.6 0 0 0 3.4 3.4"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8.5 5.5 10 6.5-10 6.5v-13Z"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5 19 6v5.3c0 4.4-2.8 7.4-7 9.2-4.2-1.8-7-4.8-7-9.2V6l7-2.5Z"/><path d="m8.8 12 2.1 2.1 4.4-4.5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 10.5v5M12 7.5h.01"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.8v2M12 19.2v2M2.8 12h2M19.2 12h2M5.5 5.5 7 7M17 17l1.5 1.5M18.5 5.5 17 7M7 17l-1.5 1.5"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M19.5 14.2A7.8 7.8 0 0 1 9.8 4.5 8.4 8.4 0 1 0 19.5 14.2Z"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M3.5 9a13 13 0 0 1 17 0M6.5 12.4a8.5 8.5 0 0 1 11 0M9.6 15.7a3.8 3.8 0 0 1 4.8 0M12 19h.01"/></symbol>
+    <symbol id="i-signal" viewBox="0 0 24 24"><path d="M5 17v-3M10 17V9M15 17V6M20 17V3"/></symbol>
+    <symbol id="i-battery" viewBox="0 0 24 24"><rect x="3" y="7" width="17" height="10" rx="2"/><path d="M20 10h1.2v4H20M6 10h8v4H6"/></symbol>
+  </svg>
+
+  <div class="app show-nav" id="app" data-od-id="decompress-app">
+    <div class="statusbar" aria-label="Android 系统状态栏">
+      <span id="systemTime">9:41</span>
+      <span class="camera-dot" aria-hidden="true"></span>
+      <span class="status-icons" aria-hidden="true">
+        <svg class="icon"><use href="#i-signal"/></svg>
+        <svg class="icon"><use href="#i-wifi"/></svg>
+        <svg class="icon"><use href="#i-battery"/></svg>
+      </span>
+    </div>
+
+    <div class="page-host" id="pageHost">
+      <section class="page active" id="page-home" data-page="home" aria-label="首页" data-od-id="home-page">
+        <header class="top-app-bar" data-m3="TopAppBar">
+          <div class="appbar-cluster">
+            <h1 class="appbar-title home-title">解压</h1>
+            <span class="appbar-kicker">本机</span>
+          </div>
+          <button class="icon-button" id="homeSettingsButton" type="button" aria-label="打开设置" data-od-id="home-settings-button">
+            <svg class="icon"><use href="#i-settings"/></svg>
+          </button>
+        </header>
+        <main class="page-scroll home-scroll">
+          <section class="hero-card" data-m3="Card" data-od-id="home-main-card">
+            <div class="hero-head">
+              <div class="hero-icon"><svg class="icon"><use href="#i-archive"/></svg></div>
+              <div class="hero-copy">
+                <h1>选择压缩包</h1>
+                <p>先预览内容，再安全解压到本机。</p>
+              </div>
+            </div>
+            <button class="primary-button" id="pickSampleButton" type="button" data-m3="FilledButton" data-od-id="home-pick-sample">
+              <svg class="icon"><use href="#i-folder-open"/></svg>
+              选择压缩包
+            </button>
+            <div class="local-note"><svg class="icon"><use href="#i-lock"/></svg>文件只在本机处理，不会上传</div>
+            <div class="format-row" aria-label="支持的压缩格式">
+              <span class="label">格式</span>
+              <span class="chip">ZIP</span><span class="chip">RAR</span><span class="chip">7Z</span><span class="chip">TAR</span><span class="chip">GZ</span>
+            </div>
+          </section>
+          <div class="section-heading">
+            <h2>最近解压</h2>
+            <span id="recentCount">3 个压缩包</span>
+          </div>
+          <div class="recent-card" id="recentList" data-m3="Card" aria-label="最近解压记录" data-od-id="home-recent-list"></div>
+          <section class="privacy-card" aria-label="目标空间提示" data-od-id="home-space-check">
+            <span class="settings-icon"><svg class="icon"><use href="#i-shield"/></svg></span>
+            <div><strong>解压前检查目标空间</strong><p>空间不足时不会开始写入任何文件。</p></div>
+          </section>
+        </main>
+      </section>
+
+      <section class="page" id="page-detail" data-page="detail" aria-label="压缩包详情" aria-hidden="true" inert data-od-id="detail-page">
+        <header class="top-app-bar with-back" data-m3="TopAppBar">
+          <div class="appbar-cluster">
+            <button class="icon-button" id="detailBackButton" type="button" aria-label="返回首页">
+              <svg class="icon"><use href="#i-back"/></svg>
+            </button>
+            <h1 class="appbar-title">压缩包详情</h1>
+          </div>
+        </header>
+        <main class="page-scroll detail-scroll">
+          <section class="summary-card" data-m3="Card" data-od-id="detail-summary">
+            <div class="summary-head">
+              <div class="summary-icon"><svg class="icon"><use href="#i-archive"/></svg></div>
+              <div class="summary-copy">
+                <h1 id="detailFileName">sample.zip</h1>
+                <p id="detailFileMeta">24.8 MB · 128 个文件</p>
+              </div>
+            </div>
+            <div class="summary-chips" id="detailChips">
+              <span class="chip" id="detailFormat">ZIP</span>
+              <span class="status-chip success" id="detailPlainChip"><svg class="icon"><use href="#i-shield"/></svg>普通压缩包</span>
+              <span class="status-chip warning" id="detailEncryptedChip" hidden><svg class="icon"><use href="#i-lock"/></svg>已加密</span>
+            </div>
+          </section>
+          <div class="detail-heading">
+            <h2>压缩包内容</h2>
+            <span id="detailItemCount">6 项预览</span>
+          </div>
+          <div class="content-card" id="detailContentList" aria-label="压缩包内容列表" data-od-id="detail-content-list"></div>
+        </main>
+        <footer class="detail-actions" data-od-id="detail-bottom-actions">
+          <p class="target-label">解压到</p>
+          <button class="target-button" id="detailTargetButton" type="button" data-m3="FilledTonalButton" aria-label="选择解压目标目录">
+            <svg class="icon"><use href="#i-folder"/></svg>
+            <span id="detailTargetPath">内部存储 / Download / sample</span>
+            <svg class="icon chevron"><use href="#i-chevron"/></svg>
+          </button>
+          <div class="space-check"><svg class="icon"><use href="#i-shield"/></svg><span id="detailSpaceText">目标空间充足 · 剩余 42.6 GB</span></div>
+          <button class="primary-button" id="detailExtractButton" type="button" data-m3="FilledButton" data-od-id="detail-extract-button">
+            <svg class="icon"><use href="#i-archive"/></svg>
+            解压到此处
+          </button>
+        </footer>
+      </section>
+
+      <section class="page" id="page-progress" data-page="progress" aria-label="解压进度" aria-hidden="true" inert data-od-id="progress-page">
+        <header class="top-app-bar with-back" data-m3="TopAppBar">
+          <div class="appbar-cluster">
+            <button class="icon-button" id="progressBackButton" type="button" aria-label="返回详情">
+              <svg class="icon"><use href="#i-back"/></svg>
+            </button>
+            <h1 class="appbar-title" id="progressAppbarTitle">正在解压</h1>
+          </div>
+        </header>
+        <main class="progress-content">
+          <div class="progress-wrap" id="progressRunning">
+            <p class="progress-kicker">正在安全写入</p>
+            <div class="progress-ring-wrap">
+              <svg class="progress-ring" viewBox="0 0 196 196" aria-hidden="true">
+                <circle class="ring-track" cx="98" cy="98" r="78"/>
+                <circle class="ring-value" id="ringValue" cx="98" cy="98" r="78"/>
+              </svg>
+              <div class="ring-copy" role="progressbar" id="progressMeter" aria-label="解压进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <strong><span id="progressPercent">0</span><span>%</span></strong>
+                <small id="progressFileCount">0 / 128 项</small>
+              </div>
+            </div>
+            <div class="current-file">
+              <span>当前文件</span>
+              <strong id="progressCurrentFile">images/banner.png</strong>
+            </div>
+            <div class="metrics">
+              <div class="metric"><span>已解压 / 总大小</span><strong id="progressSize">0 / 24.8 MB</strong></div>
+              <div class="metric"><span>解压速度</span><strong id="progressSpeed">6.2 MB/s</strong></div>
+              <div class="metric"><span>剩余时间</span><strong id="progressEta">约 4 秒</strong></div>
+              <div class="metric"><span>目标文件夹</span><strong id="progressTarget">sample</strong></div>
+            </div>
+            <button class="cancel-button" id="cancelProgressButton" type="button" data-od-id="cancel-progress-button">
+              <svg class="icon"><use href="#i-pause"/></svg>取消解压
+            </button>
+            <p class="progress-note">切到其他应用时，解压会在后台继续</p>
+          </div>
+
+          <div class="success-wrap" id="progressSuccess" hidden aria-live="polite">
+            <div class="success-icon"><svg class="icon"><use href="#i-check"/></svg></div>
+            <h1>解压完成</h1>
+            <p id="successDescription">128 个文件已安全保存到内部存储 / Download / sample</p>
+            <div class="success-summary">
+              <div><span>压缩包</span><strong id="successFile">sample.zip</strong></div>
+              <div><span>文件数量</span><strong id="successCount">128 个</strong></div>
+              <div><span>保存位置</span><strong id="successTarget">Download / sample</strong></div>
+            </div>
+            <button class="primary-button" id="openFolderButton" type="button" data-m3="FilledButton" data-od-id="open-folder-button">
+              <svg class="icon"><use href="#i-folder-open"/></svg>打开文件夹
+            </button>
+          </div>
+        </main>
+      </section>
+
+      <section class="page" id="page-tasks" data-page="tasks" aria-label="任务" aria-hidden="true" inert data-od-id="tasks-page">
+        <header class="top-app-bar with-back" data-m3="TopAppBar">
+          <div class="appbar-cluster">
+            <button class="icon-button" data-back-to-home type="button" aria-label="返回首页">
+              <svg class="icon"><use href="#i-back"/></svg>
+            </button>
+            <h1 class="appbar-title">任务</h1>
+          </div>
+        </header>
+        <main class="page-scroll tasks-scroll">
+          <section class="task-stats" data-m3="Card" aria-label="队列统计" data-od-id="task-stats">
+            <div class="task-stat running"><strong id="statRunning">2</strong><span>进行中</span></div>
+            <div class="task-stat"><strong id="statWaiting">1</strong><span>等待</span></div>
+            <div class="task-stat done"><strong id="statComplete">1</strong><span>已完成</span></div>
+          </section>
+          <div class="section-heading task-heading">
+            <h2>解压队列</h2>
+            <span>按添加顺序处理</span>
+          </div>
+          <div class="task-card" id="taskList" data-m3="Card" aria-label="解压任务列表" data-od-id="task-list"></div>
+          <section class="privacy-card" aria-label="后台任务说明" data-od-id="tasks-background-note">
+            <span class="settings-icon"><svg class="icon"><use href="#i-clock"/></svg></span>
+            <div><strong>后台继续处理</strong><p>离开任务页不会中断当前解压。</p></div>
+          </section>
+        </main>
+      </section>
+
+      <section class="page" id="page-settings" data-page="settings" aria-label="设置" aria-hidden="true" inert data-od-id="settings-page">
+        <header class="top-app-bar with-back" data-m3="TopAppBar">
+          <div class="appbar-cluster">
+            <button class="icon-button" data-back-to-home type="button" aria-label="返回首页">
+              <svg class="icon"><use href="#i-back"/></svg>
+            </button>
+            <h1 class="appbar-title">设置</h1>
+          </div>
+        </header>
+        <main class="page-scroll settings-scroll">
+          <section class="settings-section">
+            <h2>保存与解压</h2>
+            <div class="settings-card" data-m3="Card">
+              <button class="settings-row" type="button" data-m3="ListItem" data-setting-kind="location" data-od-id="settings-location">
+                <span class="settings-icon"><svg class="icon"><use href="#i-folder"/></svg></span>
+                <span class="settings-copy"><strong>默认解压位置</strong><span>选择保存解压文件的位置</span></span>
+                <span class="settings-value" id="settingLocationValue">Download</span>
+                <svg class="icon settings-chevron"><use href="#i-chevron"/></svg>
+              </button>
+              <button class="settings-row" type="button" data-m3="ListItem" data-setting-kind="conflict" data-od-id="settings-conflict">
+                <span class="settings-icon"><svg class="icon"><use href="#i-file"/></svg></span>
+                <span class="settings-copy"><strong>同名文件处理</strong><span>遇到同名文件时使用</span></span>
+                <span class="settings-value" id="settingConflictValue">重命名</span>
+                <svg class="icon settings-chevron"><use href="#i-chevron"/></svg>
+              </button>
+              <button class="settings-row" type="button" data-m3="ListItem" data-setting-kind="encoding" data-od-id="settings-encoding">
+                <span class="settings-icon"><svg class="icon"><use href="#i-text"/></svg></span>
+                <span class="settings-copy"><strong>文件名编码</strong><span>自动识别中文文件名</span></span>
+                <span class="settings-value" id="settingEncodingValue">自动</span>
+                <svg class="icon settings-chevron"><use href="#i-chevron"/></svg>
+              </button>
+            </div>
+          </section>
+          <section class="settings-section">
+            <h2>外观</h2>
+            <div class="settings-card" data-m3="Card">
+              <div class="settings-row" data-m3="ListItem">
+                <span class="settings-icon" id="themeIcon"><svg class="icon"><use href="#i-sun"/></svg></span>
+                <span class="settings-copy"><strong>深色模式</strong><span id="themeDescription">当前使用浅色主题</span></span>
+                <button class="switch" id="themeSwitch" type="button" role="switch" aria-checked="false" aria-label="深色模式" data-m3="Switch" data-od-id="theme-switch">
+                  <span class="switch-track"><span class="switch-thumb"></span></span>
+                </button>
+              </div>
+            </div>
+          </section>
+          <section class="settings-section">
+            <h2>其他</h2>
+            <div class="settings-card" data-m3="Card">
+              <button class="settings-row" type="button" data-m3="ListItem" id="aboutButton" data-od-id="settings-about">
+                <span class="settings-icon"><svg class="icon"><use href="#i-info"/></svg></span>
+                <span class="settings-copy"><strong>关于「解压」</strong><span>本地处理与版本信息</span></span>
+                <span class="settings-value">版本 1.0.0</span>
+                <svg class="icon settings-chevron"><use href="#i-chevron"/></svg>
+              </button>
+            </div>
+          </section>
+          <section class="privacy-card" aria-label="本地处理说明">
+            <span class="settings-icon"><svg class="icon"><use href="#i-shield"/></svg></span>
+            <div><strong>文件与密码只在本机处理</strong><p>不上传压缩包内容，也不需要账号。</p></div>
+          </section>
+        </main>
+      </section>
+    </div>
+
+    <nav class="bottom-nav" id="bottomNav" aria-label="主导航" data-m3="NavigationBar" data-od-id="navigation-bar">
+      <button class="nav-item active" type="button" data-nav="home" aria-current="page">
+        <span class="nav-indicator"><svg class="icon"><use href="#i-archive"/></svg></span>
+        <span class="nav-label">解压</span>
+      </button>
+      <button class="nav-item" type="button" data-nav="tasks">
+        <span class="nav-indicator"><svg class="icon"><use href="#i-clock"/></svg></span>
+        <span class="nav-label">任务</span>
+      </button>
+      <button class="nav-item" type="button" data-nav="settings">
+        <span class="nav-indicator"><svg class="icon"><use href="#i-settings"/></svg></span>
+        <span class="nav-label">设置</span>
+      </button>
+    </nav>
+
+    <div class="gesture-bar" aria-hidden="true"></div>
+    <div class="snackbar" id="snackbar" role="status" aria-live="polite"></div>
+
+    <div class="modal-layer" id="passwordLayer" hidden data-od-id="password-bottom-sheet">
+      <button class="modal-scrim" type="button" data-close-sheet="password" aria-label="关闭密码输入"></button>
+      <section class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="passwordTitle" data-m3="ModalBottomSheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-icon"><svg class="icon"><use href="#i-lock"/></svg></div>
+        <h2 class="sheet-title" id="passwordTitle">此压缩包已加密</h2>
+        <p class="sheet-description" id="passwordDescription">输入密码后将开始解压。</p>
+        <label class="field-label" for="passwordInput">密码</label>
+        <div class="password-field" id="passwordField">
+          <svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg>
+          <input id="passwordInput" type="password" inputmode="text" autocomplete="off" aria-describedby="passwordError" placeholder="输入密码">
+          <button class="password-toggle" id="passwordToggle" type="button" aria-label="显示密码" aria-pressed="false">
+            <svg class="icon"><use href="#i-eye"/></svg>
+          </button>
+        </div>
+        <p class="field-error" id="passwordError" hidden aria-live="polite">
+          <svg class="icon"><use href="#i-alert"/></svg>密码不正确，请重新输入（至少 4 个字符）
+        </p>
+        <div class="space-check sheet-space-check"><svg class="icon"><use href="#i-shield"/></svg>目标空间充足 · 剩余 42.6 GB</div>
+        <button class="primary-button" id="passwordSubmit" type="button" data-m3="FilledButton">
+          <svg class="icon"><use href="#i-lock"/></svg>解锁并解压
+        </button>
+        <button class="sheet-cancel" type="button" data-close-sheet="password">取消</button>
+      </section>
+    </div>
+
+    <div class="modal-layer" id="choiceLayer" hidden data-od-id="choice-bottom-sheet">
+      <button class="modal-scrim" type="button" data-close-sheet="choice" aria-label="关闭选项"></button>
+      <section class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="choiceTitle" data-m3="ModalBottomSheet">
+        <div class="sheet-handle"></div>
+        <h2 class="sheet-title" id="choiceTitle">选择选项</h2>
+        <p class="sheet-description" id="choiceDescription"></p>
+        <div class="choice-list" id="choiceList"></div>
+        <button class="sheet-cancel" type="button" data-close-sheet="choice">取消</button>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const app = document.getElementById("app");
+      const pageHost = document.getElementById("pageHost");
+      const bottomNav = document.getElementById("bottomNav");
+      const pages = Array.from(document.querySelectorAll(".page"));
+      const navButtons = Array.from(document.querySelectorAll(".nav-item"));
+      const recentList = document.getElementById("recentList");
+      const recentCount = document.getElementById("recentCount");
+      const taskList = document.getElementById("taskList");
+      const snackbar = document.getElementById("snackbar");
+      const passwordLayer = document.getElementById("passwordLayer");
+      const choiceLayer = document.getElementById("choiceLayer");
+      const passwordInput = document.getElementById("passwordInput");
+      const passwordField = document.getElementById("passwordField");
+      const passwordError = document.getElementById("passwordError");
+      const progressRing = document.getElementById("ringValue");
+      const progressMeter = document.getElementById("progressMeter");
+      const progressRunning = document.getElementById("progressRunning");
+      const progressSuccess = document.getElementById("progressSuccess");
+      const progressAppbarTitle = document.getElementById("progressAppbarTitle");
+      const themeSwitch = document.getElementById("themeSwitch");
+      const themeDescription = document.getElementById("themeDescription");
+
+      const archives = {
+        sample: {
+          id: "sample",
+          name: "sample.zip",
+          size: "24.8 MB",
+          sizeMB: 24.8,
+          format: "ZIP",
+          count: 128,
+          encrypted: false,
+          folder: "sample",
+          items: [
+            { name: "images", kind: "folder", meta: "文件夹 · 64 项", size: "14.6 MB" },
+            { name: "assets", kind: "folder", meta: "文件夹 · 42 项", size: "8.2 MB" },
+            { name: "产品规格.pdf", kind: "text", meta: "PDF 文档", size: "2.1 MB" },
+            { name: "README.txt", kind: "text", meta: "纯文本", size: "4 KB" },
+            { name: "preview.png", kind: "image", meta: "PNG 图片", size: "684 KB" },
+            { name: "metadata.json", kind: "file", meta: "JSON 文件", size: "12 KB" }
+          ],
+          files: ["images/banner.png", "assets/logo.svg", "产品规格.pdf", "README.txt", "metadata.json"]
+        },
+        design: {
+          id: "design",
+          name: "设计素材.rar",
+          size: "156 MB",
+          sizeMB: 156,
+          format: "RAR",
+          count: 342,
+          encrypted: true,
+          folder: "设计素材",
+          items: [
+            { name: "fonts", kind: "folder", meta: "文件夹 · 18 项", size: "42.6 MB" },
+            { name: "icons", kind: "folder", meta: "文件夹 · 248 项", size: "36.8 MB" },
+            { name: "layout.fig", kind: "file", meta: "Figma 文件", size: "58.2 MB" },
+            { name: "design-tokens.json", kind: "file", meta: "JSON 文件", size: "46 KB" },
+            { name: "preview.jpg", kind: "image", meta: "JPEG 图片", size: "8.4 MB" }
+          ],
+          files: ["fonts/NotoSans-Regular.otf", "icons/navigation.svg", "layout.fig", "design-tokens.json", "preview.jpg"]
+        },
+        backup: {
+          id: "backup",
+          name: "backup.7z",
+          size: "1.2 GB",
+          sizeMB: 1228.8,
+          format: "7Z",
+          count: 587,
+          encrypted: false,
+          folder: "backup",
+          items: [
+            { name: "photos", kind: "folder", meta: "文件夹 · 386 项", size: "842 MB" },
+            { name: "documents", kind: "folder", meta: "文件夹 · 194 项", size: "286 MB" },
+            { name: "backup.db", kind: "file", meta: "数据库文件", size: "64 MB" },
+            { name: "manifest.xml", kind: "text", meta: "XML 文件", size: "38 KB" },
+            { name: "checksums.sha256", kind: "file", meta: "校验文件", size: "6 KB" }
+          ],
+          files: ["photos/IMG_4821.jpg", "documents/项目资料.pdf", "backup.db", "manifest.xml", "checksums.sha256"]
+        }
+      };
+
+      const recent = [
+        { id: "sample", time: "今天 09:32" },
+        { id: "design", time: "昨天 18:04" },
+        { id: "backup", time: "10月14日" }
+      ];
+
+      const tasks = [
+        { id: "backup-task", name: "backup.7z", progress: 43, status: "running", size: "1.2 GB", detail: "已用 2 分 18 秒" },
+        { id: "work-task", name: "工作资料.rar", progress: 18, status: "running", size: "604 MB", detail: "目标：Download / 工作资料" },
+        { id: "photos-task", name: "手机相册备份.zip", progress: 0, status: "waiting", size: "9.4 GB", detail: "排在 1 个任务后" },
+        { id: "study-task", name: "学习资料.7z", progress: 100, status: "completed", size: "312 MB", detail: "今天 09:26 完成" }
+      ];
+
+      const settings = {
+        location: "Download",
+        conflict: "重命名",
+        encoding: "自动"
+      };
+
+      const state = {
+        page: "home",
+        archiveId: "sample",
+        progressRaf: 0,
+        progressValue: 0,
+        progressStart: 0,
+        progressDone: false,
+        sheetFocus: null,
+        openSheet: null,
+        toastTimer: 0
+      };
+
+      let completedArchives = new Set();
+      try {
+        const stored = JSON.parse(localStorage.getItem("decompress-completed") || "[]");
+        if (Array.isArray(stored)) completedArchives = new Set(stored.filter((id) => archives[id]));
+      } catch (error) {}
+
+      function icon(id, className) {
+        return '<svg class="icon ' + (className || "") + '" aria-hidden="true"><use href="#' + id + '"/></svg>';
+      }
+
+      function setSystemTime() {
+        const time = new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
+        const el = document.getElementById("systemTime");
+        if (el) el.textContent = time;
+      }
+
+      function showToast(message) {
+        snackbar.textContent = message;
+        snackbar.classList.add("show");
+        clearTimeout(state.toastTimer);
+        state.toastTimer = setTimeout(() => snackbar.classList.remove("show"), 2400);
+      }
+
+      function setNavState(page) {
+        navButtons.forEach((button) => {
+          const selected = button.dataset.nav === page;
+          button.classList.toggle("active", selected);
+          if (selected) button.setAttribute("aria-current", "page");
+          else button.removeAttribute("aria-current");
+        });
+      }
+
+      function showPage(name) {
+        state.page = name;
+        const topLevel = name === "home" || name === "tasks" || name === "settings";
+        app.classList.toggle("show-nav", topLevel);
+        if (topLevel) setNavState(name);
+        pages.forEach((page) => {
+          const active = page.dataset.page === name;
+          page.classList.toggle("active", active);
+          page.setAttribute("aria-hidden", String(!active));
+          if (active) page.removeAttribute("inert");
+          else page.setAttribute("inert", "");
+        });
+      }
+
+      function recentStatus(id) {
+        if (completedArchives.has(id)) return '<span class="status-chip success">' + icon("i-check") + '已完成</span>';
+        if (archives[id].encrypted) return '<span class="status-chip warning">' + icon("i-lock") + '已加密</span>';
+        return '<span class="status-chip neutral">可解压</span>';
+      }
+
+      function renderRecent() {
+        recentCount.textContent = recent.length + " 个压缩包";
+        recentList.innerHTML = recent.map((entry) => {
+          const file = archives[entry.id];
+          const completed = completedArchives.has(entry.id);
+          return '<button class="recent-row" type="button" data-m3="ListItem" data-recent-id="' + entry.id + '" aria-label="查看 ' + file.name + ' 的详情">' +
+            '<span class="file-tile">' + icon("i-archive") + '</span>' +
+          '<span class="recent-copy"><strong>' + file.name + '</strong><span class="recent-meta">' + file.size + ' · ' + file.count + ' 个文件</span></span>' +
+            '<span class="recent-side">' + recentStatus(entry.id) + '<span class="time">' + entry.time + '</span></span>' +
+            '</button>';
+        }).join("");
+        recentList.querySelectorAll("[data-recent-id]").forEach((button) => {
+          button.addEventListener("click", () => openDetail(button.dataset.recentId));
+        });
+      }
+
+      function itemIcon(kind) {
+        if (kind === "folder") return "i-folder";
+        if (kind === "image") return "i-image";
+        if (kind === "video") return "i-video";
+        if (kind === "text") return "i-text";
+        return "i-file";
+      }
+
+      function renderDetail() {
+        const file = archives[state.archiveId];
+        document.getElementById("detailFileName").textContent = file.name;
+        document.getElementById("detailFileMeta").textContent = file.size + " · " + file.count + " 个文件";
+        document.getElementById("detailFormat").textContent = file.format;
+        document.getElementById("detailEncryptedChip").hidden = !file.encrypted;
+        document.getElementById("detailPlainChip").hidden = file.encrypted;
+        document.getElementById("detailItemCount").textContent = file.items.length + " 项预览";
+        document.getElementById("detailTargetPath").textContent = "内部存储 / " + settings.location + " / " + file.folder;
+        document.getElementById("detailContentList").innerHTML = file.items.map((item) =>
+          '<div class="content-item" data-m3="ListItem"><span class="file-tile">' + icon(itemIcon(item.kind)) + '</span>' +
+          '<span class="content-copy"><strong>' + item.name + '</strong><span>' + item.meta + '</span></span>' +
+          '<span class="content-size">' + item.size + '</span></div>'
+        ).join("");
+      }
+
+      function openDetail(id) {
+        if (!archives[id]) return;
+        state.archiveId = id;
+        renderDetail();
+        showPage("detail");
+      }
+
+      function formatSize(mb) {
+        if (mb >= 1024) return (mb / 1024).toFixed(2) + " GB";
+        return mb.toFixed(mb < 10 ? 1 : 0) + " MB";
+      }
+
+      function openSheet(layer, focusElement) {
+        if (state.openSheet) closeSheet(state.openSheet, false);
+        state.sheetFocus = document.activeElement;
+        state.openSheet = layer.id;
+        pageHost.inert = true;
+        bottomNav.inert = true;
+        layer.hidden = false;
+        requestAnimationFrame(() => layer.classList.add("open"));
+        setTimeout(() => {
+          const target = focusElement || layer.querySelector("button, input");
+          if (target) target.focus();
+        }, 220);
+      }
+
+      function closeSheet(layerId, restoreFocus = true) {
+        const layer = document.getElementById(layerId);
+        if (!layer) return;
+        layer.classList.remove("open");
+        state.openSheet = null;
+        pageHost.inert = false;
+        bottomNav.inert = false;
+        setTimeout(() => { layer.hidden = true; }, 280);
+        if (restoreFocus && state.sheetFocus) state.sheetFocus.focus();
+      }
+
+      function openPasswordSheet() {
+        const file = archives[state.archiveId];
+        document.getElementById("passwordDescription").textContent = file.name + " · 输入密码后将在本机解压。";
+        passwordInput.value = "";
+        passwordInput.type = "password";
+        passwordInput.removeAttribute("aria-invalid");
+        passwordField.classList.remove("has-error");
+        passwordError.hidden = true;
+        document.getElementById("passwordToggle").setAttribute("aria-pressed", "false");
+        document.getElementById("passwordToggle").setAttribute("aria-label", "显示密码");
+        document.querySelector("#passwordToggle use").setAttribute("href", "#i-eye");
+        openSheet(passwordLayer, passwordInput);
+      }
+
+      function setTheme(isDark) {
+        document.documentElement.dataset.theme = isDark ? "dark" : "light";
+        themeSwitch.setAttribute("aria-checked", String(isDark));
+        themeDescription.textContent = isDark ? "当前使用深色主题" : "当前使用浅色主题";
+        document.querySelector('#themeIcon use').setAttribute("href", isDark ? "#i-moon" : "#i-sun");
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", isDark ? "#1D2421" : "#F6F7F5");
+        try { localStorage.setItem("decompress-theme", isDark ? "dark" : "light"); } catch (error) {}
+      }
+
+      function updateSettingsValues() {
+        document.getElementById("settingLocationValue").textContent = settings.location;
+        document.getElementById("settingConflictValue").textContent = settings.conflict;
+        document.getElementById("settingEncodingValue").textContent = settings.encoding;
+      }
+
+      const choiceConfig = {
+        location: {
+          title: "默认解压位置",
+          description: "新任务会优先保存到该目录。",
+          key: "location",
+          options: ["Download", "Documents"]
+        },
+        conflict: {
+          title: "同名文件处理",
+          description: "解压时遇到已有同名文件。",
+          key: "conflict",
+          options: ["覆盖", "重命名", "跳过"]
+        },
+        encoding: {
+          title: "文件名编码",
+          description: "用于正确显示压缩包内的中文文件名。",
+          key: "encoding",
+          options: ["自动", "GBK", "UTF-8"]
+        }
+      };
+
+      function openChoice(kind) {
+        const config = choiceConfig[kind];
+        if (!config) return;
+        document.getElementById("choiceTitle").textContent = config.title;
+        document.getElementById("choiceDescription").textContent = config.description;
+        const list = document.getElementById("choiceList");
+        list.innerHTML = config.options.map((option) =>
+          '<button class="choice-option" type="button" data-m3="ListItem" data-choice-value="' + option + '">' +
+          '<span>' + option + '</span>' + (settings[config.key] === option ? icon("i-check") : "") +
+          '</button>'
+        ).join("");
+        list.querySelectorAll("[data-choice-value]").forEach((button) => {
+          button.addEventListener("click", () => {
+            settings[config.key] = button.dataset.choiceValue;
+            updateSettingsValues();
+            if (state.page === "detail") renderDetail();
+            closeSheet("choiceLayer");
+            showToast(config.title + "已设为「" + button.dataset.choiceValue + "」");
+          });
+        });
+        openSheet(choiceLayer, list.querySelector("button"));
+      }
+
+      function openAbout() {
+        document.getElementById("choiceTitle").textContent = "关于「解压」";
+        document.getElementById("choiceDescription").textContent = "";
+        document.getElementById("choiceList").innerHTML =
+          '<div class="about-content"><div class="sheet-icon">' + icon("i-archive") + '</div>' +
+          '<h3>解压 1.0.0</h3><p>一个干净、可靠的本地压缩包工具。无广告，无需账号，压缩包与密码都只在设备上处理。</p></div>';
+        openSheet(choiceLayer, choiceLayer.querySelector(".sheet-cancel"));
+      }
+
+      function getCurrentTaskCounts() {
+        return {
+          running: tasks.filter((task) => task.status === "running").length,
+          waiting: tasks.filter((task) => task.status === "waiting" || task.status === "paused").length,
+          complete: tasks.filter((task) => task.status === "completed").length
+        };
+      }
+
+      function updateTaskStats() {
+        const counts = getCurrentTaskCounts();
+        document.getElementById("statRunning").textContent = counts.running;
+        document.getElementById("statWaiting").textContent = counts.waiting;
+        document.getElementById("statComplete").textContent = counts.complete;
+      }
+
+      function taskStatusText(task) {
+        if (task.status === "running") return "解压中";
+        if (task.status === "paused") return "已暂停";
+        if (task.status === "completed") return "已完成";
+        return "等待";
+      }
+
+      function renderTasks() {
+        taskList.innerHTML = tasks.map((task) => {
+          const action = task.status === "completed"
+            ? '<button class="task-action complete" type="button" disabled aria-label="' + task.name + ' 已完成">' + icon("i-check-circle") + '</button>'
+            : '<button class="task-action" type="button" data-task-action="' + task.id + '" aria-label="' + (task.status === "running" ? "暂停" : "继续") + task.name + '">' + icon(task.status === "running" ? "i-pause" : "i-play") + '</button>';
+          return '<div class="task-row ' + (task.status === "paused" ? "is-paused " : "") + (task.status === "completed" ? "is-done" : "") + '" data-task-row="' + task.id + '">' +
+            '<span class="file-tile">' + icon("i-archive") + '</span>' +
+            '<div class="task-main"><div class="task-title-line"><strong>' + task.name + '</strong><span class="task-status ' + task.status + '">' + taskStatusText(task) + '</span></div>' +
+            '<div class="linear-progress" data-m3="LinearProgressIndicator" aria-label="' + task.name + ' 进度"><span style="width:' + task.progress + '%"></span></div>' +
+            '<div class="task-meta"><span class="task-progress-label">' + Math.round(task.progress) + '%</span><span>' + task.detail + '</span></div></div>' +
+            action + '</div>';
+        }).join("");
+        taskList.querySelectorAll("[data-task-action]").forEach((button) => {
+          button.addEventListener("click", () => toggleTask(button.dataset.taskAction));
+        });
+        updateTaskStats();
+      }
+
+      function toggleTask(id) {
+        const task = tasks.find((item) => item.id === id);
+        if (!task || task.status === "completed") return;
+        if (task.status === "running") {
+          task.status = "paused";
+          showToast(task.name + " 已暂停");
+        } else {
+          task.status = "running";
+          showToast(task.name + " 已继续");
+        }
+        renderTasks();
+        const next = taskList.querySelector('[data-task-action="' + id + '"]');
+        if (next) next.focus();
+      }
+
+      function updateTaskRow(task) {
+        const row = taskList.querySelector('[data-task-row="' + task.id + '"]');
+        if (!row) return;
+        row.classList.toggle("is-paused", task.status === "paused");
+        row.classList.toggle("is-done", task.status === "completed");
+        const status = row.querySelector(".task-status");
+        status.className = "task-status " + task.status;
+        status.textContent = taskStatusText(task);
+        row.querySelector(".linear-progress span").style.width = task.progress + "%";
+        row.querySelector(".task-progress-label").textContent = Math.round(task.progress) + "%";
+        if (task.status === "completed") {
+          const oldButton = row.querySelector("[data-task-action]");
+          if (oldButton) {
+            const done = document.createElement("button");
+            done.className = "task-action complete";
+            done.type = "button";
+            done.disabled = true;
+            done.setAttribute("aria-label", task.name + " 已完成");
+            done.innerHTML = icon("i-check-circle");
+            oldButton.replaceWith(done);
+          }
+        }
+      }
+
+      function startTaskSimulation() {
+        setInterval(() => {
+          let changed = false;
+          tasks.forEach((task) => {
+            if (task.status !== "running") return;
+            task.progress = Math.min(100, task.progress + 0.45);
+            if (task.progress >= 100) task.status = "completed";
+            updateTaskRow(task);
+            changed = true;
+          });
+          if (changed) updateTaskStats();
+        }, 700);
+      }
+
+      function updateProgressUI(value) {
+        const file = archives[state.archiveId];
+        const percent = Math.min(100, Math.max(0, value));
+        state.progressValue = percent;
+        const circumference = 2 * Math.PI * 78;
+        progressRing.style.strokeDasharray = String(circumference);
+        progressRing.style.strokeDashoffset = String(circumference * (1 - percent / 100));
+        document.getElementById("progressPercent").textContent = String(Math.round(percent));
+        document.getElementById("progressFileCount").textContent = Math.round(file.count * percent / 100) + " / " + file.count + " 项";
+        progressMeter.setAttribute("aria-valuenow", String(Math.round(percent)));
+        const fileIndex = Math.min(file.files.length - 1, Math.floor((percent / 100) * file.files.length));
+        document.getElementById("progressCurrentFile").textContent = file.files[Math.max(0, fileIndex)];
+        document.getElementById("progressSize").textContent = formatSize(file.sizeMB * percent / 100) + " / " + file.size;
+        const speed = file.sizeMB >= 1024 ? "307 MB/s" : file.sizeMB >= 100 ? "39.0 MB/s" : "6.2 MB/s";
+        document.getElementById("progressSpeed").textContent = speed;
+        const remaining = Math.max(0, Math.ceil((100 - percent) / 25));
+        document.getElementById("progressEta").textContent = remaining > 0 ? "约 " + remaining + " 秒" : "即将完成";
+        document.getElementById("progressTarget").textContent = file.folder;
+      }
+
+      function startProgress() {
+        cancelAnimationFrame(state.progressRaf);
+        const file = archives[state.archiveId];
+        state.progressDone = false;
+        state.progressValue = 0;
+        document.getElementById("progressAppbarTitle").textContent = "正在解压";
+        progressRunning.hidden = false;
+        progressSuccess.hidden = true;
+        updateProgressUI(0);
+        showPage("progress");
+        state.progressStart = performance.now();
+        const step = (now) => {
+          const value = Math.min(100, ((now - state.progressStart) / 4000) * 100);
+          updateProgressUI(value);
+          if (value < 100) {
+            state.progressRaf = requestAnimationFrame(step);
+          } else {
+            finishProgress();
+          }
+        };
+        state.progressRaf = requestAnimationFrame(step);
+      }
+
+      function finishProgress() {
+        if (state.progressDone) return;
+        state.progressDone = true;
+        updateProgressUI(100);
+        const file = archives[state.archiveId];
+        completedArchives.add(file.id);
+        try { localStorage.setItem("decompress-completed", JSON.stringify(Array.from(completedArchives))); } catch (error) {}
+        const existing = recent.find((entry) => entry.id === file.id);
+        if (existing) existing.time = "刚刚";
+        else recent.unshift({ id: file.id, time: "刚刚" });
+        renderRecent();
+        document.getElementById("progressAppbarTitle").textContent = "解压完成";
+        document.getElementById("successDescription").textContent = file.count + " 个文件已安全保存到内部存储 / " + settings.location + " / " + file.folder;
+        document.getElementById("successFile").textContent = file.name;
+        document.getElementById("successCount").textContent = file.count + " 个";
+        document.getElementById("successTarget").textContent = settings.location + " / " + file.folder;
+        progressRunning.hidden = true;
+        progressSuccess.hidden = false;
+        document.getElementById("openFolderButton").focus();
+      }
+
+      function cancelProgress() {
+        cancelAnimationFrame(state.progressRaf);
+        state.progressDone = false;
+        showPage("detail");
+        showToast("已取消解压，未写入完整文件");
+      }
+
+      // Home
+      document.getElementById("pickSampleButton").addEventListener("click", () => openDetail("sample"));
+      document.getElementById("homeSettingsButton").addEventListener("click", () => showPage("settings"));
+
+      // Navigation
+      navButtons.forEach((button) => {
+        button.addEventListener("click", () => showPage(button.dataset.nav));
+      });
+      document.querySelectorAll("[data-back-to-home]").forEach((button) => {
+        button.addEventListener("click", () => showPage("home"));
+      });
+      document.getElementById("detailBackButton").addEventListener("click", () => showPage("home"));
+      document.getElementById("progressBackButton").addEventListener("click", () => {
+        if (state.progressDone) showPage("home");
+        else cancelProgress();
+      });
+
+      // Details and extraction
+      document.getElementById("detailTargetButton").addEventListener("click", () => openChoice("location"));
+      document.getElementById("detailExtractButton").addEventListener("click", () => {
+        const file = archives[state.archiveId];
+        if (file.encrypted) openPasswordSheet();
+        else startProgress();
+      });
+
+      // Password sheet
+      document.getElementById("passwordToggle").addEventListener("click", () => {
+        const show = passwordInput.type === "password";
+        passwordInput.type = show ? "text" : "password";
+        const toggle = document.getElementById("passwordToggle");
+        toggle.setAttribute("aria-pressed", String(show));
+        toggle.setAttribute("aria-label", show ? "隐藏密码" : "显示密码");
+        toggle.querySelector("use").setAttribute("href", show ? "#i-eye-off" : "#i-eye");
+      });
+      function submitPassword() {
+        const value = passwordInput.value.trim();
+        if (value.length < 4) {
+          passwordField.classList.add("has-error");
+          passwordInput.setAttribute("aria-invalid", "true");
+          passwordError.hidden = false;
+          passwordInput.focus();
+          return;
+        }
+        passwordField.classList.remove("has-error");
+        passwordInput.removeAttribute("aria-invalid");
+        passwordError.hidden = true;
+        closeSheet("passwordLayer", false);
+        setTimeout(startProgress, 180);
+      }
+      document.getElementById("passwordSubmit").addEventListener("click", submitPassword);
+      passwordInput.addEventListener("input", () => {
+        if (passwordInput.value.trim().length >= 4) {
+          passwordField.classList.remove("has-error");
+          passwordInput.removeAttribute("aria-invalid");
+          passwordError.hidden = true;
+        }
+      });
+      passwordInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") submitPassword();
+      });
+      document.querySelectorAll("[data-close-sheet='password']").forEach((button) => {
+        button.addEventListener("click", () => closeSheet("passwordLayer"));
+      });
+
+      // Progress
+      document.getElementById("cancelProgressButton").addEventListener("click", cancelProgress);
+      document.getElementById("openFolderButton").addEventListener("click", () => {
+        const file = archives[state.archiveId];
+        showPage("home");
+        showToast(file.name + " 已保存到 " + settings.location + "/" + file.folder);
+      });
+
+      // Settings
+      document.querySelectorAll("[data-setting-kind]").forEach((button) => {
+        button.addEventListener("click", () => openChoice(button.dataset.settingKind));
+      });
+      document.querySelectorAll("[data-close-sheet='choice']").forEach((button) => {
+        button.addEventListener("click", () => closeSheet("choiceLayer"));
+      });
+      document.getElementById("aboutButton").addEventListener("click", openAbout);
+      themeSwitch.addEventListener("click", () => setTheme(document.documentElement.dataset.theme !== "dark"));
+
+      document.addEventListener("keydown", (event) => {
+        if (state.openSheet && event.key === "Tab") {
+          const layer = document.getElementById(state.openSheet);
+          const focusables = Array.from(layer.querySelectorAll("button:not([disabled]), input:not([disabled])")).filter((el) => !el.hidden);
+          if (!focusables.length) return;
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+          return;
+        }
+        if (event.key !== "Escape") return;
+        if (state.openSheet) {
+          closeSheet(state.openSheet);
+          return;
+        }
+        if (state.page === "detail") showPage("home");
+        else if (state.page === "progress") state.progressDone ? showPage("home") : cancelProgress();
+        else if (state.page === "tasks" || state.page === "settings") showPage("home");
+      });
+
+      // Initial application state
+      setSystemTime();
+      setInterval(setSystemTime, 30000);
+      setTheme(document.documentElement.dataset.theme === "dark");
+      updateSettingsValues();
+      renderRecent();
+      renderDetail();
+      renderTasks();
+      startTaskSimulation();
+      updateProgressUI(0);
+      showPage("home");
+    })();
+  </script>
+</body>
+</html>
