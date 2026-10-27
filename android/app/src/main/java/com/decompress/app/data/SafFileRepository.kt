@@ -7,10 +7,13 @@ import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
+import android.webkit.MimeTypeMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
+import java.io.File
+import java.io.FileInputStream
 
 class SafFileRepository(private val context: Context) {
     private val resolver: ContentResolver = context.contentResolver
@@ -108,6 +111,110 @@ class SafFileRepository(private val context: Context) {
         runCatching {
             DocumentsContract.deleteDocument(resolver, documentUri)
         }.getOrDefault(false)
+    }
+
+    suspend fun listDirectChildren(directory: File): List<BrowserEntry> =
+        withContext(Dispatchers.IO) {
+            if (!directory.isDirectory) {
+                throw IllegalStateException("无法读取文件夹：${directory.name}")
+            }
+            directory.listFiles()
+                .orEmpty()
+                .map { file -> directEntry(file) }
+                .sortedWith(
+                    compareByDescending<BrowserEntry> { it.isDirectory }
+                        .thenBy { it.name.lowercase() }
+                )
+        }
+
+    fun directEntry(file: File): BrowserEntry {
+        val extension = file.extension.lowercase()
+        val mimeType = when {
+            file.isDirectory -> Document.MIME_TYPE_DIR
+            else -> MimeTypeMap.getSingleton()
+                .getMimeTypeFromExtension(extension)
+                ?: "application/octet-stream"
+        }
+        return BrowserEntry(
+            uri = Uri.fromFile(file),
+            name = file.name,
+            isDirectory = file.isDirectory,
+            size = if (file.isFile) file.length() else 0L,
+            lastModified = file.lastModified(),
+            mimeType = mimeType
+        )
+    }
+
+    suspend fun createDirectoryDirect(parent: File, name: String): Boolean =
+        withContext(Dispatchers.IO) {
+            File(parent, name).mkdirs()
+        }
+
+    suspend fun deleteDirect(documentUri: Uri): Boolean = withContext(Dispatchers.IO) {
+        documentUri.localFile()?.deleteRecursively() == true
+    }
+
+    suspend fun copyDirectToSaf(
+        sourceUri: Uri,
+        destinationTreeUri: Uri,
+        move: Boolean
+    ): Boolean = withContext(Dispatchers.IO) {
+        val source = sourceUri.localFile() ?: return@withContext false
+        var createdDestination: Uri? = null
+        runCatching {
+            val destinationRoot = rootDocumentUri(destinationTreeUri)
+            createdDestination = transferDirectToSaf(
+                source = source,
+                destinationParent = destinationRoot,
+                destinationTreeUri = destinationTreeUri
+            )
+            if (move && !source.deleteRecursively()) {
+                throw IllegalStateException("无法删除原文件")
+            }
+            true
+        }.getOrElse {
+            createdDestination?.let { uri ->
+                runCatching { DocumentsContract.deleteDocument(resolver, uri) }
+            }
+            false
+        }
+    }
+
+    private suspend fun transferDirectToSaf(
+        source: File,
+        destinationParent: Uri,
+        destinationTreeUri: Uri
+    ): Uri {
+        val destination = createUniqueDocument(
+            parentUri = destinationParent,
+            treeUri = destinationTreeUri,
+            name = source.name,
+            mimeType = if (source.isDirectory) {
+                Document.MIME_TYPE_DIR
+            } else {
+                directEntry(source).mimeType ?: "application/octet-stream"
+            }
+        ) ?: throw IllegalStateException("无法在目标文件夹创建 ${source.name}")
+
+        if (source.isDirectory) {
+            source.listFiles().orEmpty().forEach { child ->
+                transferDirectToSaf(
+                    source = child,
+                    destinationParent = destination,
+                    destinationTreeUri = destinationTreeUri
+                )
+            }
+        } else {
+            val input = FileInputStream(source)
+            BufferedInputStream(input).use { bufferedInput ->
+                val output = resolver.openOutputStream(destination)
+                    ?: throw IllegalStateException("无法写入 ${source.name}")
+                BufferedOutputStream(output).use { bufferedOutput ->
+                    bufferedInput.copyTo(bufferedOutput, BUFFER_SIZE)
+                }
+            }
+        }
+        return destination
     }
 
     suspend fun copyOrMove(

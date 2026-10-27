@@ -5,6 +5,7 @@
 
 package com.decompress.app.ui
 
+import android.Manifest
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.ClipData
@@ -12,9 +13,12 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.media.ThumbnailUtils
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.Settings
 import android.os.StatFs
 import android.provider.OpenableColumns
 import android.text.format.DateUtils
@@ -124,6 +128,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 private enum class SortMode(val label: String) {
     NAME("名称"),
@@ -317,6 +322,30 @@ private fun FileBrowserScreen(
     ) { uri ->
         if (uri != null) {
             scope.launch { controller.chooseRoot(uri) }
+        }
+    }
+
+    val allFilesAccessLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (controller.hasDirectStorageAccess()) {
+            scope.launch { controller.openInternalStorage() }
+        } else {
+            scope.launch {
+                snackbarHostState.showSnackbar("尚未获得所有文件访问权限")
+            }
+        }
+    }
+
+    val legacyStoragePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        if (grants.values.all { it } && controller.hasDirectStorageAccess()) {
+            scope.launch { controller.openInternalStorage() }
+        } else {
+            scope.launch {
+                snackbarHostState.showSnackbar("存储权限被拒绝，可改为选择一个文件夹")
+            }
         }
     }
 
@@ -570,7 +599,7 @@ private fun FileBrowserScreen(
                                             },
                                             onClick = {
                                                 moreExpanded = false
-                                                notify("Zippest 1.0.0 · SAF 文件浏览")
+                                                notify("Zippest 1.0.1 · 文件浏览")
                                             }
                                         )
                                     }
@@ -622,7 +651,11 @@ private fun FileBrowserScreen(
                         if (!shared) notify("系统中没有可用的分享应用")
                     }
                 )
-                controller.treeUri != null -> StorageBar(context)
+                controller.treeUri != null -> StorageBar(
+                    context = context,
+                    hasFullAccess =
+                        controller.storageMode == FileBrowserController.StorageMode.DIRECT
+                )
             }
         }
     ) { padding ->
@@ -631,6 +664,29 @@ private fun FileBrowserScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
+                onRequestAccess = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        val appSettings = Intent(
+                            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                            Uri.parse("package:${context.packageName}")
+                        )
+                        runCatching {
+                            allFilesAccessLauncher.launch(appSettings)
+                        }.onFailure {
+                            allFilesAccessLauncher.launch(
+                                Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                            )
+                        }
+                    } else {
+                        val permissions = buildList {
+                            add(Manifest.permission.READ_EXTERNAL_STORAGE)
+                            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                                add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                            }
+                        }.toTypedArray()
+                        legacyStoragePermissionLauncher.launch(permissions)
+                    }
+                },
                 onChooseFolder = { folderPicker.launch(null) }
             )
             controller.loading -> Box(
@@ -1025,11 +1081,28 @@ private fun MediaThumbnail(entry: BrowserEntry) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             bitmap = withContext(Dispatchers.IO) {
                 runCatching {
-                    context.contentResolver.loadThumbnail(
-                        entry.uri,
-                        Size(96, 96),
-                        null
-                    )
+                    if (entry.uri.scheme == "file") {
+                        val file = File(entry.uri.path ?: return@runCatching null)
+                        if (entry.isVideo) {
+                            ThumbnailUtils.createVideoThumbnail(
+                                file,
+                                Size(96, 96),
+                                null
+                            )
+                        } else {
+                            ThumbnailUtils.createImageThumbnail(
+                                file,
+                                Size(96, 96),
+                                null
+                            )
+                        }
+                    } else {
+                        context.contentResolver.loadThumbnail(
+                            entry.uri,
+                            Size(96, 96),
+                            null
+                        )
+                    }
                 }.getOrNull()
             }?.asImageBitmap()
         }
@@ -1131,7 +1204,7 @@ private fun androidx.compose.foundation.layout.RowScope.SelectionAction(
 }
 
 @Composable
-private fun StorageBar(context: Context) {
+private fun StorageBar(context: Context, hasFullAccess: Boolean) {
     val (used, total) = remember { readStorageStats() }
     val fraction = if (total > 0L) used.toFloat() / total.toFloat() else 0f
 
@@ -1156,7 +1229,7 @@ private fun StorageBar(context: Context) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    "只访问已授权目录",
+                    if (hasFullAccess) "所有文件访问已授权" else "只访问已授权目录",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -1176,7 +1249,11 @@ private fun StorageBar(context: Context) {
 }
 
 @Composable
-private fun Onboarding(modifier: Modifier, onChooseFolder: () -> Unit) {
+private fun Onboarding(
+    modifier: Modifier,
+    onRequestAccess: () -> Unit,
+    onChooseFolder: () -> Unit
+) {
     Column(
         modifier = modifier.padding(horizontal = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1198,24 +1275,28 @@ private fun Onboarding(modifier: Modifier, onChooseFolder: () -> Unit) {
         }
         Spacer(Modifier.height(22.dp))
         Text(
-            "选择要浏览的文件夹",
+            "访问手机文件",
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(Modifier.height(10.dp))
         Text(
-            "Android 通过系统文件授权访问。应用只会读取你选择的目录，不会扫描整台手机。",
+            "授予所有文件访问权限后，可以直接浏览内部存储、下载、相册和所有文件夹，体验更接近 ZArchiver。",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(24.dp))
         Button(
-            onClick = onChooseFolder,
+            onClick = onRequestAccess,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp)
         ) {
-            Text("选择文件夹")
+            Text("授予所有文件访问权限")
+        }
+        Spacer(Modifier.height(6.dp))
+        TextButton(onClick = onChooseFolder) {
+            Text("或仅选择一个文件夹")
         }
     }
 }

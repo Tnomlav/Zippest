@@ -1,17 +1,31 @@
 package com.decompress.app.data
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
+import java.io.File
 
 class FileBrowserController(context: Context) {
+    private val appContext = context.applicationContext
     private val repository = SafFileRepository(context)
     private val preferences =
         context.getSharedPreferences("decompress-browser", Context.MODE_PRIVATE)
     private val backStack = ArrayDeque<Pair<Uri, String>>()
 
+    enum class StorageMode {
+        SAF,
+        DIRECT
+    }
+
+    var storageMode by mutableStateOf<StorageMode?>(null)
+        private set
     var treeUri by mutableStateOf<Uri?>(null)
         private set
     var currentUri by mutableStateOf<Uri?>(null)
@@ -35,10 +49,16 @@ class FileBrowserController(context: Context) {
         get() = backStack.isNotEmpty()
 
     suspend fun restore() {
+        val savedMode = preferences.getString(KEY_STORAGE_MODE, null)
+        if (savedMode == StorageMode.DIRECT.name && hasDirectStorageAccess()) {
+            openInternalStorage()
+            return
+        }
         val saved = preferences.getString(KEY_TREE_URI, null) ?: return
         val uri = Uri.parse(saved)
         runCatching {
             repository.persistPermission(uri)
+            storageMode = StorageMode.SAF
             treeUri = uri
             currentUri = repository.rootDocumentUri(uri)
             folderName = repository.displayName(currentUri!!) ?: "所选文件夹"
@@ -52,6 +72,7 @@ class FileBrowserController(context: Context) {
 
     suspend fun chooseRoot(uri: Uri) {
         repository.persistPermission(uri)
+        storageMode = StorageMode.SAF
         treeUri = uri
         currentUri = repository.rootDocumentUri(uri)
         folderName = repository.displayName(currentUri!!) ?: "所选文件夹"
@@ -59,7 +80,27 @@ class FileBrowserController(context: Context) {
         backStack.clear()
         clearSelection()
         preferences.edit().putString(KEY_TREE_URI, uri.toString()).apply()
+        preferences.edit().putString(KEY_STORAGE_MODE, StorageMode.SAF.name).apply()
         loadCurrent()
+    }
+
+    suspend fun openInternalStorage(): Boolean {
+        if (!hasDirectStorageAccess()) return false
+        val root = Environment.getExternalStorageDirectory()
+        storageMode = StorageMode.DIRECT
+        treeUri = Uri.fromFile(root)
+        currentUri = Uri.fromFile(root)
+        folderName = "内部存储"
+        path = listOf(folderName)
+        backStack.clear()
+        clearSelection()
+        preferences.edit()
+            .putString(KEY_STORAGE_MODE, StorageMode.DIRECT.name)
+            .putString(KEY_DIRECT_ROOT, root.absolutePath)
+            .remove(KEY_TREE_URI)
+            .apply()
+        loadCurrent()
+        return true
     }
 
     suspend fun open(entry: BrowserEntry) {
@@ -92,12 +133,22 @@ class FileBrowserController(context: Context) {
     }
 
     private suspend fun loadCurrent() {
-        val tree = treeUri ?: return
         val current = currentUri ?: return
         loading = true
         error = null
         runCatching {
-            repository.listChildren(tree, current)
+            when (storageMode) {
+                StorageMode.DIRECT -> {
+                    val directory = current.localFile()
+                        ?: throw IllegalStateException("直连目录不可用")
+                    repository.listDirectChildren(directory)
+                }
+                StorageMode.SAF -> repository.listChildren(
+                    treeUri ?: throw IllegalStateException("文件夹未授权"),
+                    current
+                )
+                null -> emptyList()
+            }
         }.onSuccess { loaded ->
             entries = loaded
             val visibleUris = loaded.mapTo(mutableSetOf()) { it.uri }
@@ -134,7 +185,13 @@ class FileBrowserController(context: Context) {
 
     suspend fun createFolder(name: String): Boolean {
         val current = currentUri ?: return false
-        val created = repository.createDirectory(current, name)
+        val created = when (storageMode) {
+            StorageMode.DIRECT -> current.localFile()?.let {
+                repository.createDirectoryDirect(it, name)
+            } ?: false
+            StorageMode.SAF -> repository.createDirectory(current, name)
+            null -> false
+        }
         if (created) loadCurrent()
         return created
     }
@@ -142,7 +199,12 @@ class FileBrowserController(context: Context) {
     suspend fun deleteSelected(): Int {
         var deleted = 0
         selected.forEach { uri ->
-            if (repository.delete(uri)) deleted++
+            val success = when (storageMode) {
+                StorageMode.DIRECT -> repository.deleteDirect(uri)
+                StorageMode.SAF -> repository.delete(uri)
+                null -> false
+            }
+            if (success) deleted++
         }
         clearSelection()
         loadCurrent()
@@ -150,11 +212,27 @@ class FileBrowserController(context: Context) {
     }
 
     suspend fun transferSelected(destinationTreeUri: Uri, move: Boolean): Int {
-        val sourceTree = treeUri ?: return 0
         val sources = entries.filter { it.uri in selected }
         var transferred = 0
         for (source in sources) {
-            if (repository.copyOrMove(source, sourceTree, destinationTreeUri, move)) {
+            val success = when (storageMode) {
+                StorageMode.DIRECT -> repository.copyDirectToSaf(
+                    source.uri,
+                    destinationTreeUri,
+                    move
+                )
+                StorageMode.SAF -> {
+                    val sourceTree = treeUri ?: break
+                    repository.copyOrMove(
+                        source,
+                        sourceTree,
+                        destinationTreeUri,
+                        move
+                    )
+                }
+                null -> false
+            }
+            if (success) {
                 transferred++
             }
         }
@@ -164,16 +242,40 @@ class FileBrowserController(context: Context) {
     }
 
     fun forgetRoot() {
+        storageMode = null
         treeUri = null
         currentUri = null
         entries = emptyList()
         path = emptyList()
         backStack.clear()
         clearSelection()
-        preferences.edit().remove(KEY_TREE_URI).apply()
+        preferences.edit()
+            .remove(KEY_TREE_URI)
+            .remove(KEY_STORAGE_MODE)
+            .remove(KEY_DIRECT_ROOT)
+            .apply()
     }
+
+    fun hasDirectStorageAccess(): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            ContextCompat.checkSelfPermission(
+                appContext,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED &&
+                (
+                    Build.VERSION.SDK_INT > Build.VERSION_CODES.P ||
+                        ContextCompat.checkSelfPermission(
+                            appContext,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE
+                        ) == PackageManager.PERMISSION_GRANTED
+                    )
+        }
 
     companion object {
         private const val KEY_TREE_URI = "tree_uri"
+        private const val KEY_STORAGE_MODE = "storage_mode"
+        private const val KEY_DIRECT_ROOT = "direct_root"
     }
 }

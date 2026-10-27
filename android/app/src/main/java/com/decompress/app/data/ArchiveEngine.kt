@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.charset.Charset
@@ -65,7 +66,10 @@ class ArchiveException(message: String, cause: Throwable? = null) : Exception(me
 
 internal fun ensureLocalFreeSpace(context: Context, treeUri: Uri, expectedBytes: Long) {
     if (expectedBytes <= 0L) return
-    if (treeUri.authority != "com.android.externalstorage.documents") return
+    if (
+        treeUri.authority != "com.android.externalstorage.documents" &&
+        treeUri.scheme != "file"
+    ) return
     val stat = StatFs(Environment.getExternalStorageDirectory().absolutePath)
     val available = stat.availableBlocksLong * stat.blockSizeLong
     val reserve = 64L * 1024 * 1024
@@ -76,6 +80,9 @@ internal fun ensureLocalFreeSpace(context: Context, treeUri: Uri, expectedBytes:
         )
     }
 }
+
+internal fun Uri.localFile(): File? =
+    if (scheme == "file") path?.let(::File) else null
 
 internal fun ensureSafeExpansion(unpackedBytes: Long, packedBytes: Long) {
     if (unpackedBytes > MAX_ARCHIVE_UNPACKED_BYTES) {
@@ -256,7 +263,7 @@ class ZipArchiveEngine(private val context: Context) {
                                     conflictPolicy = settings.conflictPolicy
                                 )
                                 if (fileUri != null) {
-                                    resolver.openOutputStream(fileUri)?.use { out ->
+                                    output.openOutputStream(fileUri)?.use { out ->
                                         writtenBytes += copyWithLimit(
                                             input = zip,
                                             output = out,
@@ -448,7 +455,7 @@ class ZipArchiveEngine(private val context: Context) {
             conflictPolicy = settings.conflictPolicy
         ) ?: return 0L
         archive.getInputStream(header).use { input ->
-            resolver.openOutputStream(fileUri)?.use { out ->
+            output.openOutputStream(fileUri)?.use { out ->
                 return copyWithLimit(
                     input = input,
                     output = out,
@@ -490,6 +497,11 @@ class ZipArchiveEngine(private val context: Context) {
         private val rootDocumentUri: Uri
     ) {
         fun ensureDirectory(parentUri: Uri, name: String): Uri? {
+            parentUri.localFile()?.let { parent ->
+                val directory = File(parent, name)
+                if (directory.isDirectory) return Uri.fromFile(directory)
+                return if (directory.mkdirs()) Uri.fromFile(directory) else null
+            }
             findChild(parentUri, name)?.let { return it }
             return runCatching {
                 DocumentsContract.createDocument(
@@ -506,6 +518,22 @@ class ZipArchiveEngine(private val context: Context) {
             name: String,
             conflictPolicy: ConflictPolicy
         ): Uri? {
+            parentUri.localFile()?.let { parent ->
+                val target = File(parent, name)
+                if (target.exists()) {
+                    when (conflictPolicy) {
+                        ConflictPolicy.SKIP -> return null
+                        ConflictPolicy.OVERWRITE -> {
+                            if (!target.delete()) return null
+                        }
+                        ConflictPolicy.RENAME -> return createUniqueFile(
+                            parentUri,
+                            name
+                        )
+                    }
+                }
+                return createDocument(parentUri, name)
+            }
             val existing = findChild(parentUri, name)
             if (existing != null) {
                 when (conflictPolicy) {
@@ -521,6 +549,10 @@ class ZipArchiveEngine(private val context: Context) {
             return createDocument(parentUri, name)
         }
 
+        fun openOutputStream(uri: Uri): OutputStream? =
+            uri.localFile()?.let(::FileOutputStream)
+                ?: resolver.openOutputStream(uri)
+
         private fun createUniqueFile(parentUri: Uri, name: String): Uri? {
             val dot = name.lastIndexOf('.')
             val base = if (dot > 0) name.substring(0, dot) else name
@@ -528,6 +560,13 @@ class ZipArchiveEngine(private val context: Context) {
             var index = 1
             while (true) {
                 val candidate = "$base ($index)$suffix"
+                parentUri.localFile()?.let { parent ->
+                    val target = File(parent, candidate)
+                    if (!target.exists() && target.createNewFile()) {
+                        return Uri.fromFile(target)
+                    }
+                    return@let
+                }
                 if (findChild(parentUri, candidate) == null) {
                     return createDocument(parentUri, candidate)
                 }
@@ -537,6 +576,14 @@ class ZipArchiveEngine(private val context: Context) {
         }
 
         private fun createDocument(parentUri: Uri, name: String): Uri? =
+            parentUri.localFile()?.let { parent ->
+                val target = File(parent, name)
+                if (target.exists() || target.createNewFile()) {
+                    Uri.fromFile(target)
+                } else {
+                    null
+                }
+            } ?: run {
             runCatching {
                 DocumentsContract.createDocument(
                     resolver,
@@ -545,8 +592,13 @@ class ZipArchiveEngine(private val context: Context) {
                     name
                 )
             }.getOrNull()
+            }
 
         private fun findChild(parentUri: Uri, name: String): Uri? {
+            parentUri.localFile()?.let { parent ->
+                val child = File(parent, name)
+                return if (child.exists()) Uri.fromFile(child) else null
+            }
             val parentId = DocumentsContract.getDocumentId(parentUri)
             val childrenUri =
                 DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentId)

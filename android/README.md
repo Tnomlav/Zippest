@@ -7,7 +7,7 @@ archive formats. The product UI follows the finalized prototype in
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.0.0`
+- Version: `1.0.1`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, with no broad storage permission
@@ -17,6 +17,8 @@ archive formats. The product UI follows the finalized prototype in
 
 - Browse authorized folders, search, sort, create folders, select by long press,
   copy, move, share, and delete.
+- Use all-files access to browse the internal storage directly on Android 11+,
+  with scoped SAF folder access as an explicit fallback.
 - Browse and extract ZIP, 7Z, RAR, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, CPIO, GZ,
   BZ2, and XZ archives.
 - Open archive files from another app through Android's standard "Open with"
@@ -72,7 +74,12 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
-Version `1.0.0` focuses on reliable on-device extraction. Archive creation is
+Version `1.0.1` focuses on reliable on-device extraction with direct storage
+access. Archive creation is
 not included yet.
 Cloud-backed SAF providers may offer less information or different performance
 than local storage.
+
+For Google Play distribution, the `MANAGE_EXTERNAL_STORAGE` declaration must be
+submitted through the File Manager and Archive policy declaration. Direct APK
+distribution does not require that review.

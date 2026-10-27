@@ -18,6 +18,7 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream
 import java.io.BufferedInputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -472,7 +473,7 @@ class MultiArchiveEngine(private val context: Context) {
                 ?: throw ArchiveException("无法确定输出文件名")
             val fileUri = output.createFile(destination, name, settings.conflictPolicy)
                 ?: return@use
-            resolver.openOutputStream(fileUri)?.use { out ->
+            output.openOutputStream(fileUri)?.use { out ->
                 val written = copyWithLimit(
                     input = stream,
                     output = out,
@@ -528,7 +529,7 @@ class MultiArchiveEngine(private val context: Context) {
         ) ?: return 0L
         val input = inputFactory()
         return try {
-            resolver.openOutputStream(fileUri)?.use { out ->
+            output.openOutputStream(fileUri)?.use { out ->
                 copyWithLimit(
                     input = input,
                     output = out,
@@ -541,7 +542,8 @@ class MultiArchiveEngine(private val context: Context) {
     }
 
     private fun fileSize(uri: Uri): Long =
-        resolver.openFileDescriptor(uri, "r")?.use { it.statSize }.orZero()
+        uri.localFile()?.takeIf { it.isFile }?.length()
+            ?: resolver.openFileDescriptor(uri, "r")?.use { it.statSize }.orZero()
 
     private fun Long?.orZero(): Long = this?.coerceAtLeast(0L) ?: 0L
 
@@ -605,6 +607,11 @@ class MultiArchiveEngine(private val context: Context) {
         private val treeUri: Uri
     ) {
         fun ensureDirectory(parentUri: Uri, name: String): Uri? {
+            parentUri.localFile()?.let { parent ->
+                val directory = File(parent, name)
+                if (directory.isDirectory) return Uri.fromFile(directory)
+                return if (directory.mkdirs()) Uri.fromFile(directory) else null
+            }
             findChild(parentUri, name)?.let { return it }
             return createDocument(parentUri, name, Document.MIME_TYPE_DIR)
         }
@@ -614,6 +621,19 @@ class MultiArchiveEngine(private val context: Context) {
             name: String,
             conflictPolicy: ConflictPolicy
         ): Uri? {
+            parentUri.localFile()?.let { parent ->
+                val target = File(parent, name)
+                if (target.exists()) {
+                    when (conflictPolicy) {
+                        ConflictPolicy.SKIP -> return null
+                        ConflictPolicy.OVERWRITE -> {
+                            if (!target.delete()) return null
+                        }
+                        ConflictPolicy.RENAME -> return createUnique(parentUri, name)
+                    }
+                }
+                return createDocument(parentUri, name, "application/octet-stream")
+            }
             val existing = findChild(parentUri, name)
             if (existing != null) {
                 when (conflictPolicy) {
@@ -627,6 +647,10 @@ class MultiArchiveEngine(private val context: Context) {
             return createDocument(parentUri, name, "application/octet-stream")
         }
 
+        fun openOutputStream(uri: Uri): OutputStream? =
+            uri.localFile()?.let(::FileOutputStream)
+                ?: resolver.openOutputStream(uri)
+
         private fun createUnique(parentUri: Uri, name: String): Uri? {
             val dot = name.lastIndexOf('.')
             val base = if (dot > 0) name.substring(0, dot) else name
@@ -634,6 +658,13 @@ class MultiArchiveEngine(private val context: Context) {
             var index = 1
             while (index < 10_000) {
                 val candidate = "$base ($index)$suffix"
+                parentUri.localFile()?.let { parent ->
+                    val target = File(parent, candidate)
+                    if (!target.exists() && target.createNewFile()) {
+                        return Uri.fromFile(target)
+                    }
+                    return@let
+                }
                 if (findChild(parentUri, candidate) == null) {
                     return createDocument(parentUri, candidate, "application/octet-stream")
                 }
@@ -643,11 +674,24 @@ class MultiArchiveEngine(private val context: Context) {
         }
 
         private fun createDocument(parentUri: Uri, name: String, mime: String): Uri? =
+            parentUri.localFile()?.let { parent ->
+                val target = File(parent, name)
+                if (target.exists() || target.createNewFile()) {
+                    Uri.fromFile(target)
+                } else {
+                    null
+                }
+            } ?: run {
             runCatching {
                 DocumentsContract.createDocument(resolver, parentUri, mime, name)
             }.getOrNull()
+            }
 
         private fun findChild(parentUri: Uri, name: String): Uri? {
+            parentUri.localFile()?.let { parent ->
+                val child = File(parent, name)
+                return if (child.exists()) Uri.fromFile(child) else null
+            }
             val parentId = DocumentsContract.getDocumentId(parentUri)
             val childrenUri =
                 DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentId)
