@@ -48,11 +48,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -114,7 +117,7 @@ import kotlinx.coroutines.launch
 fun ArchiveScreen(
     target: ArchiveTarget,
     onBack: () -> Unit,
-    onExtract: (BrowserEntry) -> Unit
+    onExtract: (BrowserEntry, String) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -125,8 +128,15 @@ fun ArchiveScreen(
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var currentPath by rememberSaveable { mutableStateOf("") }
+    var archivePassword by rememberSaveable(target.archive.uri.toString()) {
+        mutableStateOf("")
+    }
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    var passwordInput by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var testing by remember { mutableStateOf(false) }
 
-    LaunchedEffect(target.archive.uri) {
+    LaunchedEffect(target.archive.uri, archivePassword) {
         loading = true
         error = null
         if (!engine.supports(target.archive.name)) {
@@ -134,7 +144,9 @@ fun ArchiveScreen(
             loading = false
             return@LaunchedEffect
         }
-        runCatching { engine.list(target.archive.uri, target.archive.name) }
+        runCatching {
+            engine.list(target.archive.uri, target.archive.name, archivePassword)
+        }
             .onSuccess { items = it }
             .onFailure { error = it.message ?: "无法读取压缩包" }
         loading = false
@@ -142,6 +154,26 @@ fun ArchiveScreen(
 
     fun notify(message: String) {
         scope.launch { snackbarHostState.showSnackbar(message) }
+    }
+
+    fun testArchive() {
+        if (testing || loading) return
+        scope.launch {
+            testing = true
+            runCatching {
+                engine.test(
+                    archiveUri = target.archive.uri,
+                    archiveName = target.archive.name,
+                    password = archivePassword,
+                    onProgress = { _, _ -> }
+                )
+            }.onSuccess { count ->
+                notify("压缩包测试通过 · $count 项")
+            }.onFailure {
+                notify(it.message ?: "压缩包测试失败")
+            }
+            testing = false
+        }
     }
 
     BackHandler {
@@ -189,6 +221,22 @@ fun ArchiveScreen(
                         )
                     }
                 },
+                actions = {
+                    IconButton(onClick = {
+                        passwordInput = archivePassword
+                        passwordVisible = false
+                        showPasswordDialog = true
+                    }) {
+                        Icon(
+                            if (archivePassword.isEmpty()) {
+                                Icons.Outlined.Lock
+                            } else {
+                                Icons.Outlined.LockOpen
+                            },
+                            contentDescription = "压缩包密码"
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -197,13 +245,9 @@ fun ArchiveScreen(
         bottomBar = {
             if (error == null) {
                 ArchiveBottomBar(
-                    onExtract = { onExtract(target.archive) },
-                    onTest = {
-                        notify(
-                            if (items.isEmpty()) "压缩包为空"
-                            else "${target.archive.extension.uppercase()} 结构读取正常 · ${items.size} 项"
-                        )
-                    },
+                    onExtract = { onExtract(target.archive, archivePassword) },
+                    onTest = ::testArchive,
+                    testing = testing,
                     onInfo = {
                         notify(
                             "${target.archive.extension.uppercase()} · ${items.size} 项 · " +
@@ -243,6 +287,14 @@ fun ArchiveScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(Modifier.height(16.dp))
+                Button(onClick = {
+                    passwordInput = archivePassword
+                    passwordVisible = false
+                    showPasswordDialog = true
+                }) {
+                    Text("输入密码")
+                }
             }
             nodes.isEmpty() -> Box(
                 Modifier
@@ -279,12 +331,71 @@ fun ArchiveScreen(
             }
         }
     }
+
+    if (showPasswordDialog) {
+        AlertDialog(
+            onDismissRequest = { showPasswordDialog = false },
+            title = { Text("输入压缩包密码") },
+            text = {
+                Column {
+                    Text(
+                        target.archive.name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = passwordInput,
+                        onValueChange = { passwordInput = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("密码") },
+                        visualTransformation = if (passwordVisible) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                passwordVisible = !passwordVisible
+                            }) {
+                                Icon(
+                                    if (passwordVisible) Icons.Outlined.VisibilityOff
+                                    else Icons.Outlined.Visibility,
+                                    contentDescription =
+                                        if (passwordVisible) "隐藏密码" else "显示密码"
+                                )
+                            }
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        archivePassword = passwordInput
+                        showPasswordDialog = false
+                    }
+                ) {
+                    Text("解锁")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPasswordDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 private fun ArchiveBottomBar(
     onExtract: () -> Unit,
     onTest: () -> Unit,
+    testing: Boolean,
     onInfo: () -> Unit
 ) {
     Surface(
@@ -299,7 +410,13 @@ private fun ArchiveBottomBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             ArchiveAction(Icons.Outlined.Unarchive, "解压", true, onExtract)
-            ArchiveAction(Icons.Outlined.Info, "测试", false, onTest)
+            ArchiveAction(
+                Icons.Outlined.CheckCircle,
+                if (testing) "测试中" else "测试",
+                false,
+                onTest,
+                enabled = !testing
+            )
             ArchiveAction(Icons.Outlined.Info, "信息", false, onInfo)
         }
     }
@@ -310,28 +427,35 @@ private fun androidx.compose.foundation.layout.RowScope.ArchiveAction(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     accent: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    enabled: Boolean = true
 ) {
     Column(
         modifier = Modifier
             .weight(1f)
-            .combinedClickable(onClick = onClick)
+            .combinedClickable(enabled = enabled, onClick = onClick)
             .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
             icon,
             contentDescription = label,
-            tint = if (accent) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurface,
+            tint = when {
+                !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                accent -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.onSurface
+            },
             modifier = Modifier.size(23.dp)
         )
         Spacer(Modifier.height(2.dp))
         Text(
             label,
             style = MaterialTheme.typography.labelMedium,
-            color = if (accent) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurface
+            color = when {
+                !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                accent -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.onSurface
+            }
         )
     }
 }
@@ -417,7 +541,12 @@ fun ExtractSheet(
     val clipboardManager =
         context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
-    var password by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable(
+        target.archives.firstOrNull()?.uri,
+        target.initialPassword
+    ) {
+        mutableStateOf(target.initialPassword)
+    }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var clipboardText by remember { mutableStateOf(readClipboard(clipboardManager, context)) }
     var clipboardExpanded by remember { mutableStateOf(false) }

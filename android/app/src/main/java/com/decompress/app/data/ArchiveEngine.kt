@@ -110,13 +110,26 @@ internal fun copyWithLimit(
     return written
 }
 
-internal fun Throwable.archiveMessage(): String =
-    message?.trim()?.takeIf { it.isNotEmpty() }
-        ?: when (javaClass.simpleName) {
-            "WrongPasswordException" -> "密码错误"
+internal fun Throwable.archiveMessage(): String {
+    val detail = message?.trim().orEmpty()
+    val lower = detail.lowercase()
+    return when {
+        "without a password" in lower ||
+            "missing password" in lower ||
+            "wrong password" in lower ||
+            javaClass.simpleName == "WrongPasswordException" -> "密码错误或密码缺失"
+        detail.isNotEmpty() -> detail
+        else -> when (javaClass.simpleName) {
             "UnsupportedRarV5Exception" -> "当前 RAR5 压缩包不受支持"
             else -> javaClass.simpleName
         }
+    }
+}
+
+internal object DiscardOutputStream : OutputStream() {
+    override fun write(byte: Int) = Unit
+    override fun write(bytes: ByteArray, offset: Int, length: Int) = Unit
+}
 
 private const val MAX_ARCHIVE_UNPACKED_BYTES = 20L * 1024 * 1024 * 1024
 private const val SAFE_RATIO_BYTES = 1024L * 1024 * 1024
@@ -263,6 +276,92 @@ class ZipArchiveEngine(private val context: Context) {
                     }
                 }
             }
+        }
+    }
+
+    suspend fun test(
+        archiveUri: Uri,
+        password: String,
+        onProgress: (Int, Int) -> Unit
+    ): Int = withContext(Dispatchers.IO) {
+        if (password.isNotEmpty()) {
+            return@withContext testPasswordProtected(archiveUri, password, onProgress)
+        }
+        val input = resolver.openInputStream(archiveUri)
+            ?: throw ArchiveException("无法读取压缩包")
+        BufferedInputStream(input).use { buffered ->
+            ZipInputStream(buffered).use { zip ->
+                var entry = zip.nextEntry
+                var processed = 0
+                var declaredBytes = 0L
+                var compressedBytes = 0L
+                while (entry != null) {
+                    if (processed >= MAX_ENTRIES) {
+                        throw ArchiveException("压缩包条目过多，已停止测试")
+                    }
+                    declaredBytes += entry.size.coerceAtLeast(0L)
+                    compressedBytes += entry.compressedSize.coerceAtLeast(0L)
+                    ensureSafeExpansion(declaredBytes, compressedBytes)
+                    if (!entry.isDirectory) {
+                        copyWithLimit(
+                            input = zip,
+                            output = DiscardOutputStream,
+                            remainingBytes = MAX_TOTAL_BYTES - declaredBytes
+                        )
+                    }
+                    zip.closeEntry()
+                    processed++
+                    onProgress(processed, processed)
+                    entry = zip.nextEntry
+                }
+                processed
+            }
+        }
+    }
+
+    private fun testPasswordProtected(
+        archiveUri: Uri,
+        password: String,
+        onProgress: (Int, Int) -> Unit
+    ): Int {
+        val temp = File.createTempFile("zip-test-", ".zip", context.cacheDir)
+        try {
+            resolver.openInputStream(archiveUri)?.use { input ->
+                temp.outputStream().use { output -> input.copyTo(output) }
+            } ?: throw ArchiveException("无法读取压缩包")
+            return runCatching {
+                val archive = Zip4jFile(temp, password.toCharArray())
+                val headers = archive.fileHeaders
+                if (headers.size > MAX_ENTRIES) {
+                    throw ArchiveException("压缩包条目过多，已停止测试")
+                }
+                val declaredBytes = headers.sumOf {
+                    it.uncompressedSize.coerceAtLeast(0L)
+                }
+                ensureSafeExpansion(declaredBytes, temp.length())
+                var writtenBytes = 0L
+                headers.forEachIndexed { index, header ->
+                    if (!header.isDirectory) {
+                        archive.getInputStream(header).use { input ->
+                            writtenBytes += copyWithLimit(
+                                input = input,
+                                output = DiscardOutputStream,
+                                remainingBytes = MAX_TOTAL_BYTES - writtenBytes
+                            )
+                        }
+                    }
+                    onProgress(index + 1, headers.size)
+                }
+                headers.size
+            }.getOrElse { error ->
+                if (error is ArchiveException) throw error
+                throw ArchiveException(
+                    "ZIP 测试失败：${error.archiveMessage()}",
+                    error
+                )
+            }
+        } finally {
+            temp.delete()
         }
     }
 

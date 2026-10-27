@@ -44,13 +44,17 @@ class MultiArchiveEngine(private val context: Context) {
             lower.endsWith(".cpio")
     }
 
-    suspend fun list(archiveUri: Uri, archiveName: String): List<ArchiveItem> {
+    suspend fun list(
+        archiveUri: Uri,
+        archiveName: String,
+        password: String = ""
+    ): List<ArchiveItem> {
         val lower = archiveName.lowercase()
         return when {
             lower.endsWith(".zip") || lower.endsWith(".jar") ->
                 zipEngine.list(archiveUri)
-            lower.endsWith(".7z") -> listSevenZ(archiveUri, "")
-            lower.endsWith(".rar") -> listRar(archiveUri, "")
+            lower.endsWith(".7z") -> listSevenZ(archiveUri, password)
+            lower.endsWith(".rar") -> listRar(archiveUri, password)
             else -> listStream(archiveUri, lower, archiveName)
         }
     }
@@ -83,6 +87,166 @@ class MultiArchiveEngine(private val context: Context) {
                 lower.endsWith(".xz") ->
                 extractSingleCompressed(archiveUri, lower, archiveName, settings)
             else -> throw ArchiveException("暂不支持此压缩格式")
+        }
+    }
+
+    suspend fun test(
+        archiveUri: Uri,
+        archiveName: String,
+        password: String,
+        onProgress: (Int, Int) -> Unit
+    ): Int {
+        val lower = archiveName.lowercase()
+        return when {
+            lower.endsWith(".zip") || lower.endsWith(".jar") ->
+                zipEngine.test(archiveUri, password, onProgress)
+            lower.endsWith(".7z") ->
+                testSevenZ(archiveUri, password, onProgress)
+            lower.endsWith(".rar") ->
+                testRar(archiveUri, password, onProgress)
+            lower.endsWith(".tar") ||
+                lower.endsWith(".tar.gz") ||
+                lower.endsWith(".tgz") ||
+                lower.endsWith(".tar.bz2") ||
+                lower.endsWith(".tbz2") ||
+                lower.endsWith(".tar.xz") ||
+                lower.endsWith(".txz") ||
+                lower.endsWith(".cpio") ->
+                testStream(archiveUri, lower, onProgress)
+            lower.endsWith(".gz") ||
+                lower.endsWith(".bz2") ||
+                lower.endsWith(".xz") -> {
+                testSingleCompressed(archiveUri, lower)
+                onProgress(1, 1)
+                1
+            }
+            else -> throw ArchiveException("暂不支持此压缩格式")
+        }
+    }
+
+    private suspend fun testSevenZ(
+        uri: Uri,
+        password: String,
+        onProgress: (Int, Int) -> Unit
+    ): Int = withTempArchive(uri) { file ->
+        runCatching {
+            val archive = if (password.isBlank()) {
+                SevenZFile(file)
+            } else {
+                SevenZFile(file, password.toCharArray())
+            }
+            archive.use {
+                val entries = it.entries.toList()
+                if (entries.size > MAX_ENTRIES) {
+                    throw ArchiveException("压缩包条目过多，已停止测试")
+                }
+                val declaredBytes = entries.sumOf { entry ->
+                    entry.size.coerceAtLeast(0L)
+                }
+                ensureSafeExpansion(declaredBytes, file.length())
+                var writtenBytes = 0L
+                entries.forEachIndexed { index, entry ->
+                    if (!entry.isDirectory) {
+                        it.getInputStream(entry).use { input ->
+                            writtenBytes += copyWithLimit(
+                                input = input,
+                                output = DiscardOutputStream,
+                                remainingBytes = MAX_TOTAL_BYTES - writtenBytes
+                            )
+                        }
+                    }
+                    onProgress(index + 1, entries.size)
+                }
+                entries.size
+            }
+        }.getOrElse { throw ArchiveException("7Z 测试失败：${it.archiveMessage()}", it) }
+    }
+
+    private suspend fun testRar(
+        uri: Uri,
+        password: String,
+        onProgress: (Int, Int) -> Unit
+    ): Int = withTempArchive(uri) { file ->
+        runCatching {
+            val archive = if (password.isBlank()) {
+                RarArchive(file)
+            } else {
+                RarArchive(file, password)
+            }
+            archive.use { rar ->
+                val headers = rar.fileHeaders
+                if (headers.size > MAX_ENTRIES) {
+                    throw ArchiveException("压缩包条目过多，已停止测试")
+                }
+                val declaredBytes = headers.sumOf {
+                    it.fullUnpackSize.coerceAtLeast(0L)
+                }
+                ensureSafeExpansion(declaredBytes, file.length())
+                var writtenBytes = 0L
+                headers.forEachIndexed { index, header ->
+                    if (!header.isDirectory) {
+                        rar.getInputStream(header).use { input ->
+                            writtenBytes += copyWithLimit(
+                                input = input,
+                                output = DiscardOutputStream,
+                                remainingBytes = MAX_TOTAL_BYTES - writtenBytes
+                            )
+                        }
+                    }
+                    onProgress(index + 1, headers.size)
+                }
+                headers.size
+            }
+        }.getOrElse { throw ArchiveException("RAR 测试失败：${it.archiveMessage()}", it) }
+    }
+
+    private suspend fun testStream(
+        uri: Uri,
+        lowerName: String,
+        onProgress: (Int, Int) -> Unit
+    ): Int = withContext(Dispatchers.IO) {
+        openStreamArchive(uri, lowerName).use { archive ->
+            val packedSize = fileSize(uri)
+            var entry = archive.nextEntry
+            var processed = 0
+            var writtenBytes = 0L
+            while (entry != null) {
+                if (processed >= MAX_ENTRIES) {
+                    throw ArchiveException("压缩包条目过多，已停止测试")
+                }
+                if (!entry.isDirectory) {
+                    writtenBytes += copyWithLimit(
+                        input = archive,
+                        output = DiscardOutputStream,
+                        remainingBytes = MAX_TOTAL_BYTES - writtenBytes
+                    )
+                }
+                ensureSafeExpansion(writtenBytes, packedSize)
+                processed++
+                onProgress(processed, processed)
+                entry = archive.nextEntry
+            }
+            processed
+        }
+    }
+
+    private fun testSingleCompressed(uri: Uri, lowerName: String) {
+        val input = resolver.openInputStream(uri)
+            ?: throw ArchiveException("无法读取压缩包")
+        val compressed: InputStream = when {
+            lowerName.endsWith(".gz") ->
+                GzipCompressorInputStream(BufferedInputStream(input))
+            lowerName.endsWith(".bz2") ->
+                BZip2CompressorInputStream(BufferedInputStream(input))
+            else -> XZCompressorInputStream(BufferedInputStream(input))
+        }
+        compressed.use { stream ->
+            val written = copyWithLimit(
+                input = stream,
+                output = DiscardOutputStream,
+                remainingBytes = MAX_TOTAL_BYTES
+            )
+            ensureSafeExpansion(written, fileSize(uri))
         }
     }
 

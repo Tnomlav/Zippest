@@ -146,7 +146,8 @@ data class ExtractTarget(
     val parentTreeUri: Uri?,
     val parentPath: String,
     val parentName: String,
-    val requiresCustomDestination: Boolean = false
+    val requiresCustomDestination: Boolean = false,
+    val initialPassword: String = ""
 )
 
 @Composable
@@ -222,7 +223,7 @@ fun ZippestApp(incomingArchiveUri: Uri? = null) {
                     ArchiveScreen(
                         target = currentArchive,
                         onBack = { archiveTarget = null },
-                        onExtract = { archive ->
+                        onExtract = { archive, password ->
                             extractTarget = ExtractTarget(
                                 archives = listOf(archive),
                                 parentUri = currentArchive.parentUri,
@@ -230,7 +231,8 @@ fun ZippestApp(incomingArchiveUri: Uri? = null) {
                                 parentPath = currentArchive.parentPath,
                                 parentName = currentArchive.parentName,
                                 requiresCustomDestination =
-                                    currentArchive.requiresCustomDestination
+                                    currentArchive.requiresCustomDestination,
+                                initialPassword = password
                             )
                         }
                     )
@@ -568,7 +570,7 @@ private fun FileBrowserScreen(
                                             },
                                             onClick = {
                                                 moreExpanded = false
-                                                notify("Zippest 0.2.0 · SAF 文件浏览")
+                                                notify("Zippest 1.0.0 · SAF 文件浏览")
                                             }
                                         )
                                     }
@@ -786,6 +788,11 @@ private fun TaskQueueDialog(onDismiss: () -> Unit) {
             it.state == WorkInfo.State.ENQUEUED ||
             it.state == WorkInfo.State.BLOCKED
     }
+    val hasFinishedTasks = sortedTasks.any {
+        it.state != WorkInfo.State.RUNNING &&
+            it.state != WorkInfo.State.ENQUEUED &&
+            it.state != WorkInfo.State.BLOCKED
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -813,6 +820,17 @@ private fun TaskQueueDialog(onDismiss: () -> Unit) {
                 ) {
                     sortedTasks.forEach { task ->
                         TaskQueueRow(task)
+                    }
+                    if (hasFinishedTasks) {
+                        TextButton(
+                            onClick = {
+                                WorkManager.getInstance(context.applicationContext)
+                                    .pruneWork()
+                            },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("清理历史")
+                        }
                     }
                 }
             }

@@ -20,12 +20,14 @@ Access Framework for scoped folder access.
 - Browse ZIP, 7Z, RAR, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, CPIO, GZ, BZ2, and XZ.
 - Extract to the archive folder, a new same-name folder, or any SAF folder.
 - Open password-protected ZIP, 7Z, and RAR archives.
+- Unlock encrypted 7Z and RAR headers directly in the archive browser.
 - Reuse one password across a multi-archive job or enter each password
   separately.
 - Queue extraction through WorkManager with persistent notification progress
   and recovery after the app process is stopped.
 - Encrypt queued archive passwords with an Android Keystore-managed key.
 - Inspect active, queued, and completed jobs from the in-app task center.
+- Run a real integrity test that reads every archive entry.
 - Open archives through Android's standard "Open with" flow.
 - Guard against path traversal, archive bombs, excessive entry counts, and
   insufficient disk space.
@@ -37,18 +39,26 @@ cd android
 $env:JAVA_HOME='C:\Android Studio\jbr'
 .\gradlew.bat assembleDebug
 .\gradlew.bat lintDebug
+.\gradlew.bat assembleRelease
+.\gradlew.bat bundleRelease
 ```
 
-The debug APK is generated at:
+The signed release APK is generated at:
 
 ```text
-android/app/build/outputs/apk/debug/app-debug.apk
+android/app/build/outputs/apk/release/app-release.apk
 ```
 
 Android Studio can open `android/` directly.
 
+Release signing is loaded from the local, Git-ignored `.signing/` directory.
+Back up both the keystore and its properties file before publishing future
+updates.
+
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `0.2.0` adds the persistent extraction queue, RAR5 support, task status
-UI, and resumable checkpoints. Archive creation is not included yet.
+Version `1.0.0` is the first stable decompression release, with persistent
+extraction queues, RAR4/RAR5 support, task status UI, resumable checkpoints,
+password-protected archive browsing, and built-in integrity testing. Archive
+creation is not included yet.

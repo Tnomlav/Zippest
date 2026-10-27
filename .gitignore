@@ -4,6 +4,8 @@
 /android/build/
 /android/app/build/
 /android/captures/
+/.signing/
+/release/
 
 # Local Android Studio state
 /android/.idea/

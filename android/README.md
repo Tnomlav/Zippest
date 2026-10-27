@@ -7,11 +7,11 @@ archive formats. The product UI follows the finalized prototype in
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `0.2.0`
+- Version: `1.0.0`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, with no broad storage permission
-- APK: `app/build/outputs/apk/debug/app-debug.apk`
+- APK: `app/build/outputs/apk/release/app-release.apk`
 
 ## Features
 
@@ -29,6 +29,9 @@ archive formats. The product UI follows the finalized prototype in
   password storage, and recovery after a process stop.
 - Inspect active, queued, completed, failed, and canceled jobs from the in-app
   background task dialog.
+- Unlock archives with encrypted headers directly from the archive browser.
+- Run a real integrity test that reads every archive entry instead of reporting
+  only the header count.
 - Refresh the current folder and show an in-app result after a background job
   finishes.
 - Guard against path traversal, excessive entry counts, excessive unpacked
@@ -43,6 +46,8 @@ cd C:\Decompress\android
 $env:JAVA_HOME='C:\Android Studio\jbr'
 .\gradlew.bat assembleDebug
 .\gradlew.bat lintDebug
+.\gradlew.bat assembleRelease
+.\gradlew.bat bundleRelease
 ```
 
 The project is also configured to open directly in Android Studio from
@@ -52,17 +57,22 @@ The project is also configured to open directly in Android Studio from
 
 ```powershell
 $adb='C:\Users\23399\AppData\Local\Android\Sdk\platform-tools\adb.exe'
-& $adb install -r app\build\outputs\apk\debug\app-debug.apk
+& $adb install -r app\build\outputs\apk\release\app-release.apk
 & $adb shell am start -n com.decompress.app/.MainActivity
 ```
+
+The local signing files in `.signing/` are intentionally excluded from Git and
+must be backed up separately.
 
 The development emulator is `Pixel_7_Pro`. The authorized test directory is
 `/sdcard/Download/DecompressTest`. Local test fixtures are in
 `C:\Decompress\tools`; `encrypted-secret.zip` uses the password `Secret42`.
+The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
+7Z fixture uses `Secret42`.
 
 ## Scope
 
-Version `0.2.0` focuses on reliable on-device extraction. Archive creation is
+Version `1.0.0` focuses on reliable on-device extraction. Archive creation is
 not included yet.
 Cloud-backed SAF providers may offer less information or different performance
 than local storage.
