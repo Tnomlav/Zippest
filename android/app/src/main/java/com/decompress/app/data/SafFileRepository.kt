@@ -43,6 +43,10 @@ class SafFileRepository(private val context: Context) {
     }
 
     suspend fun displayName(documentUri: Uri): String? = withContext(Dispatchers.IO) {
+        queryDisplayName(documentUri)
+    }
+
+    private fun queryDisplayName(documentUri: Uri): String? =
         resolver.query(
             documentUri,
             arrayOf(Document.COLUMN_DISPLAY_NAME),
@@ -52,7 +56,6 @@ class SafFileRepository(private val context: Context) {
         )?.use { cursor ->
             if (cursor.moveToFirst()) cursor.getString(0) else null
         }
-    }
 
     suspend fun listChildren(
         treeUri: Uri,
@@ -127,7 +130,12 @@ class SafFileRepository(private val context: Context) {
     suspend fun rename(documentUri: Uri, name: String): Boolean =
         withContext(Dispatchers.IO) {
             runCatching {
-                DocumentsContract.renameDocument(resolver, documentUri, name) != null
+                val renamedUri = DocumentsContract.renameDocument(
+                    resolver,
+                    documentUri,
+                    name
+                ) ?: return@runCatching false
+                queryDisplayName(renamedUri) == name
             }.getOrDefault(false)
         }
 
@@ -177,7 +185,19 @@ class SafFileRepository(private val context: Context) {
             val source = documentUri.localFile() ?: return@withContext false
             if (source.name == name) return@withContext true
             val target = File(source.parentFile ?: return@withContext false, name)
-            if (target.exists()) return@withContext false
+            if (target.exists() && target.canonicalFile != source.canonicalFile) {
+                return@withContext false
+            }
+            if (target.exists()) {
+                val temporary = File(
+                    source.parentFile,
+                    ".${source.name}.zippest-rename-${System.nanoTime()}"
+                )
+                if (!source.renameTo(temporary)) return@withContext false
+                if (temporary.renameTo(target)) return@withContext true
+                temporary.renameTo(source)
+                return@withContext false
+            }
             source.renameTo(target)
         }
 
@@ -320,7 +340,7 @@ class SafFileRepository(private val context: Context) {
             val deleted = runCatching {
                 DocumentsContract.deleteDocument(resolver, source.uri)
             }.getOrDefault(false)
-            if (!deleted) {
+            if (!deleted || documentExists(source.uri)) {
                 return@withContext TransferResult(
                     TransferOutcome.SOURCE_RETAINED,
                     "已复制，但无法删除源文件"
@@ -422,6 +442,17 @@ class SafFileRepository(private val context: Context) {
         }
         return names
     }
+
+    private fun documentExists(documentUri: Uri): Boolean =
+        runCatching {
+            resolver.query(
+                documentUri,
+                arrayOf(Document.COLUMN_DOCUMENT_ID),
+                null,
+                null,
+                null
+            )?.use { cursor -> cursor.moveToFirst() } == true
+        }.getOrDefault(false)
 
     private fun localDirectory(uri: Uri): File? {
         uri.localFile()?.let { return it }
