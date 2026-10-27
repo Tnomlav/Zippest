@@ -110,6 +110,14 @@ internal fun copyWithLimit(
     return written
 }
 
+internal fun Throwable.archiveMessage(): String =
+    message?.trim()?.takeIf { it.isNotEmpty() }
+        ?: when (javaClass.simpleName) {
+            "WrongPasswordException" -> "密码错误"
+            "UnsupportedRarV5Exception" -> "当前 RAR5 压缩包不受支持"
+            else -> javaClass.simpleName
+        }
+
 private const val MAX_ARCHIVE_UNPACKED_BYTES = 20L * 1024 * 1024 * 1024
 private const val SAFE_RATIO_BYTES = 1024L * 1024 * 1024
 private const val MAX_ARCHIVE_RATIO = 1_000L
@@ -307,7 +315,7 @@ class ZipArchiveEngine(private val context: Context) {
             }.getOrElse { error ->
                 if (error is ArchiveException) throw error
                 throw ArchiveException(
-                    "ZIP 解压失败：密码错误或压缩包已损坏",
+                    "ZIP 解压失败：${error.archiveMessage()}",
                     error
                 )
             }

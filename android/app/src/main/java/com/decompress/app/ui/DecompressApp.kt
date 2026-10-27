@@ -26,6 +26,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,6 +61,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Sort
@@ -111,11 +114,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.decompress.app.data.BrowserEntry
 import com.decompress.app.data.FileBrowserController
-import com.decompress.app.service.ExtractionService
+import com.decompress.app.service.ExtractionScheduler
 import com.decompress.app.ui.theme.ZippestTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -175,11 +181,11 @@ fun ZippestApp(incomingArchiveUri: Uri? = null) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 val successful = intent?.getBooleanExtra(
-                    ExtractionService.EXTRA_EXTRACTION_SUCCESS,
+                    ExtractionScheduler.EXTRA_EXTRACTION_SUCCESS,
                     false
                 ) == true
                 val message = intent?.getStringExtra(
-                    ExtractionService.EXTRA_EXTRACTION_MESSAGE
+                    ExtractionScheduler.EXTRA_EXTRACTION_MESSAGE
                 ) ?: if (successful) "解压完成" else "解压失败"
                 archiveTarget = null
                 scope.launch {
@@ -191,7 +197,7 @@ fun ZippestApp(incomingArchiveUri: Uri? = null) {
         ContextCompat.registerReceiver(
             context,
             receiver,
-            IntentFilter(ExtractionService.ACTION_EXTRACTION_FINISHED),
+            IntentFilter(ExtractionScheduler.ACTION_EXTRACTION_FINISHED),
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
         onDispose {
@@ -264,7 +270,7 @@ fun ZippestApp(incomingArchiveUri: Uri? = null) {
                             extractTarget = null
                             archiveTarget = null
                             scope.launch {
-                                snackbarHostState.showSnackbar("已加入后台解压任务")
+                                snackbarHostState.showSnackbar("已加入后台任务队列")
                             }
                         }
                     )
@@ -301,6 +307,7 @@ private fun FileBrowserScreen(
     var showNewFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showTaskQueue by remember { mutableStateOf(false) }
     var transferMove by remember { mutableStateOf(false) }
 
     val folderPicker = rememberLauncherForActivityResult(
@@ -535,6 +542,16 @@ private fun FileBrowserScreen(
                                         onDismissRequest = { moreExpanded = false }
                                     ) {
                                         DropdownMenuItem(
+                                            text = { Text("后台任务") },
+                                            leadingIcon = {
+                                                Icon(Icons.Outlined.Schedule, null)
+                                            },
+                                            onClick = {
+                                                moreExpanded = false
+                                                showTaskQueue = true
+                                            }
+                                        )
+                                        DropdownMenuItem(
                                             text = { Text("重新选择文件夹") },
                                             leadingIcon = {
                                                 Icon(Icons.Outlined.FolderOpen, null)
@@ -551,7 +568,7 @@ private fun FileBrowserScreen(
                                             },
                                             onClick = {
                                                 moreExpanded = false
-                                                notify("Zippest 0.1.0 · SAF 文件浏览")
+                                                notify("Zippest 0.2.0 · SAF 文件浏览")
                                             }
                                         )
                                     }
@@ -727,6 +744,152 @@ private fun FileBrowserScreen(
                 }
             }
         )
+    }
+
+    if (showTaskQueue) {
+        TaskQueueDialog(onDismiss = { showTaskQueue = false })
+    }
+}
+
+@Composable
+private fun TaskQueueDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    var tasks by remember { mutableStateOf<List<WorkInfo>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            tasks = runCatching {
+                withContext(Dispatchers.IO) {
+                    WorkManager.getInstance(context.applicationContext)
+                        .getWorkInfosForUniqueWork(ExtractionScheduler.QUEUE_NAME)
+                        .get()
+                }
+            }.getOrDefault(emptyList())
+            loading = false
+            delay(1000)
+        }
+    }
+
+    val sortedTasks = tasks.sortedWith(
+        compareBy {
+            when (it.state) {
+                WorkInfo.State.RUNNING -> 0
+                WorkInfo.State.ENQUEUED -> 1
+                WorkInfo.State.BLOCKED -> 2
+                else -> 3
+            }
+        }
+    )
+    val hasActiveTasks = sortedTasks.any {
+        it.state == WorkInfo.State.RUNNING ||
+            it.state == WorkInfo.State.ENQUEUED ||
+            it.state == WorkInfo.State.BLOCKED
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("后台任务") },
+        text = {
+            when {
+                loading -> Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+                sortedTasks.isEmpty() -> Text(
+                    "暂无后台解压任务",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                else -> Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 440.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    sortedTasks.forEach { task ->
+                        TaskQueueRow(task)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (hasActiveTasks) {
+                TextButton(
+                    onClick = {
+                        WorkManager.getInstance(context.applicationContext)
+                            .cancelUniqueWork(ExtractionScheduler.QUEUE_NAME)
+                    }
+                ) {
+                    Text("取消全部", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("关闭") }
+        }
+    )
+}
+
+@Composable
+private fun TaskQueueRow(task: WorkInfo) {
+    val title = task.tags
+        .firstOrNull { it.startsWith(ExtractionScheduler.TAG_NAME_PREFIX) }
+        ?.removePrefix(ExtractionScheduler.TAG_NAME_PREFIX)
+        ?: "解压任务"
+    val message = when (task.state) {
+        WorkInfo.State.SUCCEEDED ->
+            task.outputData.getString(ExtractionScheduler.KEY_MESSAGE) ?: "解压完成"
+        WorkInfo.State.FAILED ->
+            task.outputData.getString(ExtractionScheduler.KEY_MESSAGE) ?: "解压失败"
+        WorkInfo.State.CANCELLED -> "已取消"
+        WorkInfo.State.BLOCKED -> "等待前序任务"
+        WorkInfo.State.ENQUEUED -> "等待执行"
+        WorkInfo.State.RUNNING ->
+            task.progress.getString(ExtractionScheduler.KEY_MESSAGE) ?: "正在解压"
+    }
+    val progress = when (task.state) {
+        WorkInfo.State.SUCCEEDED -> 100
+        WorkInfo.State.RUNNING ->
+            task.progress.getInt(ExtractionScheduler.KEY_PROGRESS, 0)
+        else -> 0
+    }
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                message,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (task.state == WorkInfo.State.RUNNING) {
+                Spacer(Modifier.height(7.dp))
+                LinearProgressIndicator(
+                    progress = { progress / 100f },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(99.dp))
+                )
+            }
+        }
     }
 }
 

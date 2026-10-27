@@ -103,7 +103,7 @@ class MultiArchiveEngine(private val context: Context) {
                         )
                     }.take(MAX_ENTRIES)
                 }
-            }.getOrElse { throw ArchiveException("无法读取 7Z：${it.message}", it) }
+            }.getOrElse { throw ArchiveException("无法读取 7Z：${it.archiveMessage()}", it) }
         }
 
     private suspend fun extractSevenZ(
@@ -146,7 +146,7 @@ class MultiArchiveEngine(private val context: Context) {
                     onProgress(index + 1, entries.size)
                 }
             }
-        }.getOrElse { throw ArchiveException("7Z 解压失败：${it.message}", it) }
+        }.getOrElse { throw ArchiveException("7Z 解压失败：${it.archiveMessage()}", it) }
     }
 
     private suspend fun listRar(uri: Uri, password: String): List<ArchiveItem> =
@@ -166,7 +166,7 @@ class MultiArchiveEngine(private val context: Context) {
                         )
                     }
                 }
-            }.getOrElse { throw ArchiveException("无法读取 RAR：${it.message}", it) }
+            }.getOrElse { throw ArchiveException("无法读取 RAR：${it.archiveMessage()}", it) }
         }
 
     private suspend fun extractRar(
@@ -211,7 +211,7 @@ class MultiArchiveEngine(private val context: Context) {
                     onProgress(index + 1, headers.size)
                 }
             }
-        }.getOrElse { throw ArchiveException("RAR 解压失败：${it.message}", it) }
+        }.getOrElse { throw ArchiveException("RAR 解压失败：${it.archiveMessage()}", it) }
     }
 
     private suspend fun listStream(

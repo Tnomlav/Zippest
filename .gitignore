@@ -21,6 +21,9 @@ secrets.properties
 # Generated test artifacts
 /tools/window*.xml
 /tools/decompress-screen.png
+/tools/large-*.bin
+/tools/sample-large*.zip
+/tools/fixture-work/
 
 # Operating system files
 .DS_Store

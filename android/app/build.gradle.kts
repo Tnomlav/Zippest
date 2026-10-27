@@ -11,8 +11,8 @@ android {
         applicationId = "com.decompress.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -52,6 +52,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.19.0")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.documentfile:documentfile:1.1.0")
+    implementation("androidx.work:work-runtime-ktx:2.12.0")
     implementation("androidx.compose.ui:ui:$composeUi")
     implementation("androidx.compose.ui:ui-tooling-preview:$composeUi")
     implementation("androidx.compose.foundation:foundation:$composeUi")
@@ -61,7 +62,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.apache.commons:commons-compress:1.27.1")
     implementation("org.tukaani:xz:1.10")
-    implementation("com.github.junrar:junrar:7.5.5")
+    implementation("com.github.junrar:junrar:8.1.2")
     implementation("net.lingala.zip4j:zip4j:2.11.5")
 
     debugImplementation("androidx.compose.ui:ui-tooling:$composeUi")

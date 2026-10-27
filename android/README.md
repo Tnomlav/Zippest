@@ -7,7 +7,7 @@ archive formats. The product UI follows the finalized prototype in
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `0.1.0`
+- Version: `0.2.0`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, with no broad storage permission
@@ -23,9 +23,12 @@ archive formats. The product UI follows the finalized prototype in
   flow.
 - Extract to the archive folder, a new same-name folder, or any folder selected
   through the system picker.
-- Extract password-protected ZIP and 7Z/RAR archives. Multi-archive jobs can
-  reuse one password or collect a password for every archive.
-- Continue extraction in a foreground service with notification progress.
+- Extract password-protected ZIP, 7Z, RAR4, and RAR5 archives. Multi-archive
+  jobs can reuse one password or collect a password for every archive.
+- Queue extraction through WorkManager with notification progress, encrypted
+  password storage, and recovery after a process stop.
+- Inspect active, queued, completed, failed, and canceled jobs from the in-app
+  background task dialog.
 - Refresh the current folder and show an in-app result after a background job
   finishes.
 - Guard against path traversal, excessive entry counts, excessive unpacked
@@ -59,7 +62,7 @@ The development emulator is `Pixel_7_Pro`. The authorized test directory is
 
 ## Scope
 
-The initial release focuses on opening, browsing, and extracting archives.
-Archive creation and persistent background queues are not included yet.
+Version `0.2.0` focuses on reliable on-device extraction. Archive creation is
+not included yet.
 Cloud-backed SAF providers may offer less information or different performance
 than local storage.

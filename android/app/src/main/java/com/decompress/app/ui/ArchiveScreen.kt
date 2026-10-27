@@ -106,7 +106,8 @@ import com.decompress.app.data.ConflictPolicy
 import com.decompress.app.data.DestinationMode
 import com.decompress.app.data.FileNameEncoding
 import com.decompress.app.data.MultiArchiveEngine
-import com.decompress.app.service.ExtractionService
+import com.decompress.app.service.ExtractionScheduler
+import com.decompress.app.service.ExtractionTask
 import kotlinx.coroutines.launch
 
 @Composable
@@ -480,24 +481,28 @@ fun ExtractSheet(
                 if (parentUri == null || treeUri == null) {
                     error = "目标位置不可用"
                 } else {
-                    ContextCompat.startForegroundService(
-                        context,
-                        ExtractionService.createIntent(
-                            context = context,
-                            archiveUris = target.archives.map { it.uri },
-                            archiveNames = target.archives.map { it.name },
-                            parentUri = parentUri,
-                            parentTreeUri = treeUri,
-                            mode = destinationMode,
-                            customTreeUri = customTreeUri,
-                            customRootUri = customRootUri,
-                            createFolder = destinationMode != DestinationMode.CURRENT_FOLDER,
-                            conflictPolicy = conflictPolicy,
-                            encoding = encoding,
-                            passwords = passwords
+                    runCatching {
+                        ExtractionScheduler.enqueue(
+                            context,
+                            ExtractionTask(
+                                archiveUris = target.archives.map { it.uri },
+                                archiveNames = target.archives.map { it.name },
+                                parentUri = parentUri,
+                                parentTreeUri = treeUri,
+                                mode = destinationMode,
+                                customTreeUri = customTreeUri,
+                                customRootUri = customRootUri,
+                                createFolder =
+                                    destinationMode != DestinationMode.CURRENT_FOLDER,
+                                conflictPolicy = conflictPolicy,
+                                encoding = encoding,
+                                passwords = passwords
+                            )
                         )
-                    )
-                    onExtractionStarted()
+                        onExtractionStarted()
+                    }.onFailure {
+                        error = it.message ?: "无法创建后台任务"
+                    }
                 }
             }
         }

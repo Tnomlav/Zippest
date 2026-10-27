@@ -22,7 +22,10 @@ Access Framework for scoped folder access.
 - Open password-protected ZIP, 7Z, and RAR archives.
 - Reuse one password across a multi-archive job or enter each password
   separately.
-- Run extraction in a foreground service with persistent notification progress.
+- Queue extraction through WorkManager with persistent notification progress
+  and recovery after the app process is stopped.
+- Encrypt queued archive passwords with an Android Keystore-managed key.
+- Inspect active, queued, and completed jobs from the in-app task center.
 - Open archives through Android's standard "Open with" flow.
 - Guard against path traversal, archive bombs, excessive entry counts, and
   insufficient disk space.
@@ -46,6 +49,6 @@ Android Studio can open `android/` directly.
 
 ## Status
 
-The package name remains `com.decompress.app` for upgrade compatibility. The
-initial release focuses on browsing and extraction; archive creation and
-persistent background queues are not included yet.
+The package name remains `com.decompress.app` for upgrade compatibility.
+Version `0.2.0` adds the persistent extraction queue, RAR5 support, task status
+UI, and resumable checkpoints. Archive creation is not included yet.
