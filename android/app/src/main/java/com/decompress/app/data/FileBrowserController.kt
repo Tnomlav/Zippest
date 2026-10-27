@@ -12,6 +12,13 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import java.io.File
 
+data class TransferSummary(
+    val completed: Int,
+    val sourceRetained: Int,
+    val failed: Int,
+    val firstError: String?
+)
+
 class FileBrowserController(context: Context) {
     private val appContext = context.applicationContext
     private val repository = SafFileRepository(context)
@@ -184,16 +191,32 @@ class FileBrowserController(context: Context) {
     }
 
     suspend fun createFolder(name: String): Boolean {
+        val cleanName = validFileName(name) ?: return false
         val current = currentUri ?: return false
         val created = when (storageMode) {
             StorageMode.DIRECT -> current.localFile()?.let {
-                repository.createDirectoryDirect(it, name)
+                repository.createDirectoryDirect(it, cleanName)
             } ?: false
-            StorageMode.SAF -> repository.createDirectory(current, name)
+            StorageMode.SAF -> repository.createDirectory(current, cleanName)
             null -> false
         }
         if (created) loadCurrent()
         return created
+    }
+
+    suspend fun renameSelected(name: String): Boolean {
+        val selectedUri = selected.singleOrNull() ?: return false
+        val cleanName = validFileName(name) ?: return false
+        val renamed = when (storageMode) {
+            StorageMode.DIRECT -> repository.renameDirect(selectedUri, cleanName)
+            StorageMode.SAF -> repository.rename(selectedUri, cleanName)
+            null -> false
+        }
+        if (renamed) {
+            clearSelection()
+            loadCurrent()
+        }
+        return renamed
     }
 
     suspend fun deleteSelected(): Int {
@@ -211,11 +234,29 @@ class FileBrowserController(context: Context) {
         return deleted
     }
 
-    suspend fun transferSelected(destinationTreeUri: Uri, move: Boolean): Int {
+    suspend fun transferSelected(
+        destinationTreeUri: Uri,
+        move: Boolean
+    ): TransferSummary {
         val sources = entries.filter { it.uri in selected }
-        var transferred = 0
+        val destinationRoot = runCatching {
+            repository.rootDocumentUri(destinationTreeUri)
+        }.getOrNull()
+        var completed = 0
+        var sourceRetained = 0
+        var failed = 0
+        var firstError: String? = null
         for (source in sources) {
-            val success = when (storageMode) {
+            if (
+                move &&
+                destinationRoot != null &&
+                currentUri?.let { repository.isSameDirectory(it, destinationRoot) } == true
+            ) {
+                failed++
+                firstError = firstError ?: "不能把文件移动到当前文件夹"
+                continue
+            }
+            val result = when (storageMode) {
                 StorageMode.DIRECT -> repository.copyDirectToSaf(
                     source.uri,
                     destinationTreeUri,
@@ -230,15 +271,18 @@ class FileBrowserController(context: Context) {
                         move
                     )
                 }
-                null -> false
+                null -> TransferResult(TransferOutcome.FAILED, "存储位置不可用")
             }
-            if (success) {
-                transferred++
+            when (result.outcome) {
+                TransferOutcome.COMPLETED -> completed++
+                TransferOutcome.SOURCE_RETAINED -> sourceRetained++
+                TransferOutcome.FAILED -> failed++
             }
+            firstError = firstError ?: result.message
         }
         clearSelection()
         loadCurrent()
-        return transferred
+        return TransferSummary(completed, sourceRetained, failed, firstError)
     }
 
     fun forgetRoot() {
@@ -272,6 +316,13 @@ class FileBrowserController(context: Context) {
                         ) == PackageManager.PERMISSION_GRANTED
                     )
         }
+
+    private fun validFileName(name: String): String? {
+        val clean = name.trim()
+        if (clean.isBlank() || clean == "." || clean == "..") return null
+        if (clean.any { it == '/' || it == '\\' || it == '\u0000' }) return null
+        return clean
+    }
 
     companion object {
         private const val KEY_TREE_URI = "tree_uri"

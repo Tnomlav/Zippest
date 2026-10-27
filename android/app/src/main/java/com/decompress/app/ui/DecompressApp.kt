@@ -60,6 +60,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DriveFileMove
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Info
@@ -320,6 +321,8 @@ private fun FileBrowserScreen(
     var moreExpanded by remember { mutableStateOf(false) }
     var showNewFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var renameName by remember { mutableStateOf("") }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showTaskQueue by remember { mutableStateOf(false) }
     var transferMove by remember { mutableStateOf(false) }
@@ -369,10 +372,24 @@ private fun FileBrowserScreen(
             }
             val moving = transferMove
             scope.launch {
-                val count = controller.transferSelected(uri, moving)
+                val summary = controller.transferSelected(uri, moving)
                 val action = if (moving) "移动" else "复制"
+                val message = when {
+                    summary.completed > 0 &&
+                        summary.sourceRetained == 0 &&
+                        summary.failed == 0 ->
+                        "已${action} ${summary.completed} 项"
+                    summary.completed + summary.sourceRetained > 0 ->
+                        "已复制 ${summary.completed + summary.sourceRetained} 项" +
+                            if (summary.sourceRetained > 0) {
+                                "，${summary.sourceRetained} 项源文件未能删除"
+                            } else {
+                                "，${summary.failed} 项失败"
+                            }
+                    else -> summary.firstError ?: "${action}失败"
+                }
                 snackbarHostState.showSnackbar(
-                    if (count > 0) "已${action} $count 项" else "${action}失败"
+                    message
                 )
             }
         }
@@ -404,6 +421,7 @@ private fun FileBrowserScreen(
     val allSelected = visibleEntries.isNotEmpty() &&
         visibleEntries.all { it.uri in controller.selected }
     val selectedCount = controller.selected.size
+    val selectedEntries = controller.entries.filter { it.uri in controller.selected }
 
     BackHandler {
         when {
@@ -606,7 +624,7 @@ private fun FileBrowserScreen(
                                             },
                                             onClick = {
                                                 moreExpanded = false
-                                                notify("Zippest 1.0.2 · 文件浏览")
+                                                notify("Zippest 1.0.3 · 文件浏览")
                                             }
                                         )
                                     }
@@ -649,11 +667,17 @@ private fun FileBrowserScreen(
                         transferMove = true
                         transferPicker.launch(null)
                     },
+                    onRename = {
+                        val entry = selectedEntries.singleOrNull()
+                        if (entry == null) {
+                            notify("请只选择一个项目")
+                        } else {
+                            renameName = entry.name
+                            showRenameDialog = true
+                        }
+                    },
                     onDelete = { showDeleteDialog = true },
                     onShare = {
-                        val selectedEntries = controller.entries.filter {
-                            it.uri in controller.selected
-                        }
                         val shared = shareEntries(context, selectedEntries)
                         if (!shared) notify("系统中没有可用的分享应用")
                     }
@@ -779,6 +803,46 @@ private fun FileBrowserScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showNewFolderDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    if (showRenameDialog) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text("重命名") },
+            text = {
+                OutlinedTextField(
+                    value = renameName,
+                    onValueChange = { renameName = it },
+                    singleLine = true,
+                    label = { Text("新名称") }
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = renameName.isNotBlank(),
+                    onClick = {
+                        scope.launch {
+                            val renamed = controller.renameSelected(renameName)
+                            showRenameDialog = false
+                            notify(
+                                if (renamed) {
+                                    "重命名成功"
+                                } else {
+                                    "重命名失败，名称无效或已存在"
+                                }
+                            )
+                        }
+                    }
+                ) {
+                    Text("保存")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameDialog = false }) {
                     Text("取消")
                 }
             }
@@ -1159,6 +1223,7 @@ private fun SelectionToolbar(
     onExtract: () -> Unit,
     onCopy: () -> Unit,
     onMove: () -> Unit,
+    onRename: () -> Unit,
     onDelete: () -> Unit,
     onShare: () -> Unit
 ) {
@@ -1176,6 +1241,7 @@ private fun SelectionToolbar(
             SelectionAction(Icons.Outlined.Unarchive, "解压", onExtract)
             SelectionAction(Icons.Outlined.ContentCopy, "复制", onCopy)
             SelectionAction(Icons.Outlined.DriveFileMove, "移动", onMove)
+            SelectionAction(Icons.Outlined.Edit, "重命名", onRename)
             SelectionAction(Icons.Outlined.Delete, "删除", onDelete)
             SelectionAction(Icons.Outlined.Share, "分享", onShare)
         }

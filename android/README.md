@@ -7,7 +7,7 @@ archive formats. The product UI follows the finalized prototype in
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.0.2`
+- Version: `1.0.3`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct
@@ -17,7 +17,7 @@ archive formats. The product UI follows the finalized prototype in
 ## Features
 
 - Browse authorized folders, search, sort, create folders, select by long press,
-  copy, move, share, and delete.
+  copy, move, rename, share, and delete.
 - Use all-files access to browse the internal storage directly on Android 11+,
   with scoped SAF folder access as an explicit fallback. Android 10 uses the
   legacy storage bridge so read/write access works across shared storage.
@@ -77,8 +77,9 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
-Version `1.0.2` focuses on reliable on-device extraction with direct storage
-access and system sharing. Archive creation is
+Version `1.0.3` focuses on reliable on-device file modification for direct
+storage and SAF providers, including rename and safe move/copy outcomes.
+Archive creation is
 not included yet.
 Cloud-backed SAF providers may offer less information or different performance
 than local storage.

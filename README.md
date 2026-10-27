@@ -16,7 +16,7 @@ Access Framework for scoped folder access.
 ## Highlights
 
 - Browse authorized folders, search, sort, create folders, copy, move, share,
-  and delete.
+  rename, and delete.
 - Request Android's all-files access for direct internal-storage browsing, with
   a scoped SAF folder picker as fallback.
 - Browse ZIP, 7Z, RAR, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, CPIO, GZ, BZ2, and XZ.
@@ -62,8 +62,9 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.0.2` fixes Android 10 storage writes, direct-file sharing through
-the system share sheet, and expands archive file associations. It includes persistent
+Version `1.0.3` adds reliable rename and move/copy status handling for direct
+storage and SAF providers, including protection against deleting a source when
+its copied destination could not be safely committed. It includes persistent
 extraction queues, RAR4/RAR5 support, task status UI, resumable checkpoints,
 password-protected archive browsing, and built-in integrity testing. Archive
 creation is not included yet.

@@ -15,6 +15,17 @@ import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
 
+enum class TransferOutcome {
+    COMPLETED,
+    SOURCE_RETAINED,
+    FAILED
+}
+
+data class TransferResult(
+    val outcome: TransferOutcome,
+    val message: String? = null
+)
+
 class SafFileRepository(private val context: Context) {
     private val resolver: ContentResolver = context.contentResolver
 
@@ -113,6 +124,13 @@ class SafFileRepository(private val context: Context) {
         }.getOrDefault(false)
     }
 
+    suspend fun rename(documentUri: Uri, name: String): Boolean =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                DocumentsContract.renameDocument(resolver, documentUri, name) != null
+            }.getOrDefault(false)
+        }
+
     suspend fun listDirectChildren(directory: File): List<BrowserEntry> =
         withContext(Dispatchers.IO) {
             if (!directory.isDirectory) {
@@ -154,30 +172,70 @@ class SafFileRepository(private val context: Context) {
         documentUri.localFile()?.deleteRecursively() == true
     }
 
+    suspend fun renameDirect(documentUri: Uri, name: String): Boolean =
+        withContext(Dispatchers.IO) {
+            val source = documentUri.localFile() ?: return@withContext false
+            if (source.name == name) return@withContext true
+            val target = File(source.parentFile ?: return@withContext false, name)
+            if (target.exists()) return@withContext false
+            source.renameTo(target)
+        }
+
+    fun isSameDirectory(first: Uri, second: Uri): Boolean {
+        if (first == second) return true
+        if (first.authority == second.authority) {
+            val firstId = runCatching {
+                DocumentsContract.getDocumentId(first)
+            }.getOrNull()
+            val secondId = runCatching {
+                DocumentsContract.getDocumentId(second)
+            }.getOrNull()
+            if (firstId != null && firstId == secondId) return true
+        }
+        val firstDirectory = localDirectory(first) ?: return false
+        val secondDirectory = localDirectory(second) ?: return false
+        return runCatching {
+            firstDirectory.canonicalFile == secondDirectory.canonicalFile
+        }.getOrDefault(false)
+    }
+
     suspend fun copyDirectToSaf(
         sourceUri: Uri,
         destinationTreeUri: Uri,
         move: Boolean
-    ): Boolean = withContext(Dispatchers.IO) {
-        val source = sourceUri.localFile() ?: return@withContext false
+    ): TransferResult = withContext(Dispatchers.IO) {
+        val source = sourceUri.localFile()
+            ?: return@withContext TransferResult(
+                TransferOutcome.FAILED,
+                "源文件不可用"
+            )
         var createdDestination: Uri? = null
-        runCatching {
+        try {
             val destinationRoot = rootDocumentUri(destinationTreeUri)
             createdDestination = transferDirectToSaf(
                 source = source,
                 destinationParent = destinationRoot,
                 destinationTreeUri = destinationTreeUri
             )
-            if (move && !source.deleteRecursively()) {
-                throw IllegalStateException("无法删除原文件")
-            }
-            true
-        }.getOrElse {
+        } catch (error: Exception) {
             createdDestination?.let { uri ->
                 runCatching { DocumentsContract.deleteDocument(resolver, uri) }
             }
-            false
+            TransferResult(
+                TransferOutcome.FAILED,
+                error.message ?: "复制失败"
+            )
         }
+        if (move) {
+            val deleted = runCatching { source.deleteRecursively() }.getOrDefault(false)
+            if (!deleted) {
+                return@withContext TransferResult(
+                    TransferOutcome.SOURCE_RETAINED,
+                    "已复制，但无法删除源文件"
+                )
+            }
+        }
+        TransferResult(TransferOutcome.COMPLETED)
     }
 
     private suspend fun transferDirectToSaf(
@@ -222,9 +280,9 @@ class SafFileRepository(private val context: Context) {
         sourceTreeUri: Uri,
         destinationTreeUri: Uri,
         move: Boolean
-    ): Boolean = withContext(Dispatchers.IO) {
+    ): TransferResult = withContext(Dispatchers.IO) {
         var createdDestination: Uri? = null
-        runCatching {
+        try {
             val destinationRoot = rootDocumentUri(destinationTreeUri)
             if (source.isDirectory && isPotentialSelfCopy(source, destinationRoot)) {
                 throw IllegalArgumentException("不能把文件夹移动到它自身内部")
@@ -249,16 +307,27 @@ class SafFileRepository(private val context: Context) {
                 destinationParent = destinationRoot,
                 destinationTreeUri = destinationTreeUri
             )
-            if (move) {
-                DocumentsContract.deleteDocument(resolver, source.uri)
-            }
-            true
-        }.getOrElse {
+        } catch (error: Exception) {
             createdDestination?.let { uri ->
                 runCatching { DocumentsContract.deleteDocument(resolver, uri) }
             }
-            false
+            TransferResult(
+                TransferOutcome.FAILED,
+                error.message ?: "复制失败"
+            )
         }
+        if (move) {
+            val deleted = runCatching {
+                DocumentsContract.deleteDocument(resolver, source.uri)
+            }.getOrDefault(false)
+            if (!deleted) {
+                return@withContext TransferResult(
+                    TransferOutcome.SOURCE_RETAINED,
+                    "已复制，但无法删除源文件"
+                )
+            }
+        }
+        TransferResult(TransferOutcome.COMPLETED)
     }
 
     private fun isPotentialSelfCopy(source: BrowserEntry, destinationRoot: Uri): Boolean {
@@ -352,6 +421,23 @@ class SafFileRepository(private val context: Context) {
             }
         }
         return names
+    }
+
+    private fun localDirectory(uri: Uri): File? {
+        uri.localFile()?.let { return it }
+        if (uri.authority != "com.android.externalstorage.documents") return null
+        val documentId = runCatching {
+            DocumentsContract.getDocumentId(uri)
+        }.getOrNull() ?: return null
+        val volume = documentId.substringBefore(':', "")
+        val relativePath = documentId.substringAfter(':', "")
+        if (volume.isBlank()) return null
+        val volumeRoot = if (volume == "primary") {
+            android.os.Environment.getExternalStorageDirectory()
+        } else {
+            File("/storage", volume)
+        }
+        return if (relativePath.isBlank()) volumeRoot else File(volumeRoot, relativePath)
     }
 
     companion object {
