@@ -481,6 +481,7 @@ class MultiArchiveEngine(private val context: Context) {
                 )
                 ensureSafeExpansion(written, fileSize(uri))
             } ?: throw ArchiveException("无法写入解压文件")
+            settings.onFileCreated(fileUri)
         }
     }
 
@@ -528,7 +529,7 @@ class MultiArchiveEngine(private val context: Context) {
             conflictPolicy = settings.conflictPolicy
         ) ?: return 0L
         val input = inputFactory()
-        return try {
+        val written = try {
             output.openOutputStream(fileUri)?.use { out ->
                 copyWithLimit(
                     input = input,
@@ -539,6 +540,8 @@ class MultiArchiveEngine(private val context: Context) {
         } finally {
             if (closeInput) input.close()
         }
+        settings.onFileCreated(fileUri)
+        return written
     }
 
     private fun fileSize(uri: Uri): Long =

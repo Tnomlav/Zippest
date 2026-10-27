@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
 import android.os.SystemClock
@@ -32,6 +33,7 @@ import kotlinx.coroutines.CancellationException
 import org.json.JSONArray
 import java.security.KeyStore
 import java.util.Base64
+import java.util.Collections
 import java.util.UUID
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -271,6 +273,7 @@ class ExtractionWorker(
 
         val engine = MultiArchiveEngine(applicationContext)
         val total = task.archiveUris.size
+        val createdFiles = Collections.synchronizedList(mutableListOf<Uri>())
         task.archiveUris.forEachIndexed { index, archiveUri ->
             if (!engine.supports(task.archiveNames[index])) {
                 throw IllegalArgumentException("暂不支持 ${task.archiveNames[index]}")
@@ -289,7 +292,12 @@ class ExtractionWorker(
                     createFolder = task.createFolder,
                     conflictPolicy = task.conflictPolicy,
                     encoding = task.encoding,
-                    password = task.passwords[index]
+                    password = task.passwords[index],
+                    onFileCreated = { uri ->
+                        if (uri.scheme == "file") {
+                            createdFiles += uri
+                        }
+                    }
                 ),
                 onProgress = { processed, entryTotal ->
                     val within = if (entryTotal > 0) {
@@ -305,7 +313,23 @@ class ExtractionWorker(
                 }
             )
         }
+        scanCreatedFiles(createdFiles)
         return "已完成 $total 个压缩包"
+    }
+
+    private fun scanCreatedFiles(uris: List<Uri>) {
+        val paths = synchronized(uris) {
+            uris.mapNotNull { uri -> uri.path }
+                .distinct()
+        }
+        paths.chunked(100).forEach { chunk ->
+            MediaScannerConnection.scanFile(
+                applicationContext,
+                chunk.toTypedArray(),
+                null,
+                null
+            )
+        }
     }
 
     private fun buildForegroundInfo(

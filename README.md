@@ -27,6 +27,8 @@ Access Framework for scoped folder access.
   separately.
 - Queue extraction through WorkManager with persistent notification progress
   and recovery after the app process is stopped.
+- Notify Android's media index when extraction writes images or videos directly
+  into shared storage.
 - Encrypt queued archive passwords with an Android Keystore-managed key.
 - Inspect active, queued, and completed jobs from the in-app task center.
 - Run a real integrity test that reads every archive entry.
@@ -60,8 +62,8 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.0.1` adds direct all-files storage access and fixes the first-run
-permission flow. It includes persistent
+Version `1.0.2` fixes Android 10 storage writes, direct-file sharing through
+the system share sheet, and expands archive file associations. It includes persistent
 extraction queues, RAR4/RAR5 support, task status UI, resumable checkpoints,
 password-protected archive browsing, and built-in integrity testing. Archive
 creation is not included yet.

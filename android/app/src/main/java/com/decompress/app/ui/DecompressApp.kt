@@ -9,6 +9,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.ClipData
+import android.content.ContentResolver
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
@@ -118,8 +119,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import com.decompress.app.IncomingArchive
 import com.decompress.app.data.BrowserEntry
 import com.decompress.app.data.FileBrowserController
 import com.decompress.app.service.ExtractionScheduler
@@ -156,7 +159,7 @@ data class ExtractTarget(
 )
 
 @Composable
-fun ZippestApp(incomingArchiveUri: Uri? = null) {
+fun ZippestApp(incomingArchive: IncomingArchive? = null) {
     val context = LocalContext.current
     val controller = remember { FileBrowserController(context.applicationContext) }
     val scope = rememberCoroutineScope()
@@ -170,9 +173,13 @@ fun ZippestApp(incomingArchiveUri: Uri? = null) {
         restored = true
     }
 
-    LaunchedEffect(incomingArchiveUri, restored) {
-        if (!restored || incomingArchiveUri == null) return@LaunchedEffect
-        val entry = describeIncomingFile(context, incomingArchiveUri)
+    LaunchedEffect(incomingArchive?.uri, incomingArchive?.displayName, restored) {
+        if (!restored || incomingArchive == null) return@LaunchedEffect
+        val entry = describeIncomingFile(
+            context,
+            incomingArchive.uri,
+            incomingArchive.displayName
+        )
         archiveTarget = ArchiveTarget(
             archive = entry,
             parentUri = null,
@@ -599,7 +606,7 @@ private fun FileBrowserScreen(
                                             },
                                             onClick = {
                                                 moreExpanded = false
-                                                notify("Zippest 1.0.1 · 文件浏览")
+                                                notify("Zippest 1.0.2 · 文件浏览")
                                             }
                                         )
                                     }
@@ -680,7 +687,7 @@ private fun FileBrowserScreen(
                     } else {
                         val permissions = buildList {
                             add(Manifest.permission.READ_EXTERNAL_STORAGE)
-                            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
                                 add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                             }
                         }.toTypedArray()
@@ -1385,8 +1392,12 @@ private fun readStorageStats(): Pair<Long, Long> {
     }.getOrDefault(0L to 0L)
 }
 
-private fun describeIncomingFile(context: Context, uri: Uri): BrowserEntry {
-    var displayName: String? = null
+private fun describeIncomingFile(
+    context: Context,
+    uri: Uri,
+    suppliedDisplayName: String?
+): BrowserEntry {
+    var displayName: String? = suppliedDisplayName
     var size = 0L
     runCatching {
         context.contentResolver.query(
@@ -1414,28 +1425,43 @@ private fun describeIncomingFile(context: Context, uri: Uri): BrowserEntry {
 
 private fun shareEntries(context: Context, entries: List<BrowserEntry>): Boolean {
     if (entries.isEmpty()) return false
-    val uris = ArrayList(entries.map { it.uri })
-    val mimeType = entries.singleOrNull()?.mimeType ?: "*/*"
-    val intent = if (entries.size == 1) {
-        Intent(Intent.ACTION_SEND).apply {
-            type = mimeType
-            putExtra(Intent.EXTRA_STREAM, uris.first())
-        }
-    } else {
-        Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-            type = "*/*"
-            putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
-        }
-    }.apply {
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        clipData = ClipData.newRawUri(
-            "解压文件",
-            uris.first()
-        ).also { clip ->
-            uris.drop(1).forEach { clip.addItem(ClipData.Item(it)) }
-        }
-    }
     return runCatching {
+        val uris = ArrayList<Uri>(entries.size)
+        for (entry in entries) {
+            val shareUri = if (entry.uri.scheme == ContentResolver.SCHEME_FILE) {
+                val path = entry.uri.path ?: error("本地文件路径无效")
+                FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    File(path)
+                )
+            } else {
+                entry.uri
+            }
+            uris += shareUri
+        }
+        val mimeType = entries.singleOrNull()?.mimeType
+            ?: entries.mapNotNull(BrowserEntry::mimeType).distinct().singleOrNull()
+            ?: "*/*"
+        val intent = if (entries.size == 1) {
+            Intent(Intent.ACTION_SEND).apply {
+                type = mimeType
+                putExtra(Intent.EXTRA_STREAM, uris.first())
+            }
+        } else {
+            Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                type = mimeType
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+            }
+        }.apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            clipData = ClipData.newRawUri(
+                "解压文件",
+                uris.first()
+            ).also { clip ->
+                uris.drop(1).forEach { clip.addItem(ClipData.Item(it)) }
+            }
+        }
         context.startActivity(Intent.createChooser(intent, "分享所选文件"))
     }.isSuccess
 }

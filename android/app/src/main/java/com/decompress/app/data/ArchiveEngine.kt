@@ -59,7 +59,8 @@ data class ExtractSettings(
     val createFolder: Boolean,
     val conflictPolicy: ConflictPolicy,
     val encoding: FileNameEncoding,
-    val password: String
+    val password: String,
+    val onFileCreated: (Uri) -> Unit = {}
 )
 
 class ArchiveException(message: String, cause: Throwable? = null) : Exception(message, cause)
@@ -272,6 +273,7 @@ class ZipArchiveEngine(private val context: Context) {
                                     } ?: throw ArchiveException(
                                         "无法写入文件：${segments.last()}"
                                     )
+                                    settings.onFileCreated(fileUri)
                                 }
                             }
                         }
@@ -456,11 +458,13 @@ class ZipArchiveEngine(private val context: Context) {
         ) ?: return 0L
         archive.getInputStream(header).use { input ->
             output.openOutputStream(fileUri)?.use { out ->
-                return copyWithLimit(
+                val written = copyWithLimit(
                     input = input,
                     output = out,
                     remainingBytes = MAX_TOTAL_BYTES - writtenBytes
                 )
+                settings.onFileCreated(fileUri)
+                return written
             } ?: throw ArchiveException("无法写入文件：${segments.last()}")
         }
     }

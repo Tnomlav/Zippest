@@ -265,7 +265,7 @@ class FileBrowserController(context: Context) {
                 Manifest.permission.READ_EXTERNAL_STORAGE
             ) == PackageManager.PERMISSION_GRANTED &&
                 (
-                    Build.VERSION.SDK_INT > Build.VERSION_CODES.P ||
+                    Build.VERSION.SDK_INT > Build.VERSION_CODES.Q ||
                         ContextCompat.checkSelfPermission(
                             appContext,
                             Manifest.permission.WRITE_EXTERNAL_STORAGE

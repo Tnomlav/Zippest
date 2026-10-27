@@ -7,10 +7,11 @@ archive formats. The product UI follows the finalized prototype in
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.0.1`
+- Version: `1.0.2`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
-- Storage: Android Storage Access Framework, with no broad storage permission
+- Storage: Android Storage Access Framework, plus all-files access for direct
+  internal storage on supported releases
 - APK: `app/build/outputs/apk/release/app-release.apk`
 
 ## Features
@@ -18,7 +19,8 @@ archive formats. The product UI follows the finalized prototype in
 - Browse authorized folders, search, sort, create folders, select by long press,
   copy, move, share, and delete.
 - Use all-files access to browse the internal storage directly on Android 11+,
-  with scoped SAF folder access as an explicit fallback.
+  with scoped SAF folder access as an explicit fallback. Android 10 uses the
+  legacy storage bridge so read/write access works across shared storage.
 - Browse and extract ZIP, 7Z, RAR, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, CPIO, GZ,
   BZ2, and XZ archives.
 - Open archive files from another app through Android's standard "Open with"
@@ -29,6 +31,7 @@ archive formats. The product UI follows the finalized prototype in
   jobs can reuse one password or collect a password for every archive.
 - Queue extraction through WorkManager with notification progress, encrypted
   password storage, and recovery after a process stop.
+- Refresh Android's media index for files extracted into direct shared storage.
 - Inspect active, queued, completed, failed, and canceled jobs from the in-app
   background task dialog.
 - Unlock archives with encrypted headers directly from the archive browser.
@@ -74,8 +77,8 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
-Version `1.0.1` focuses on reliable on-device extraction with direct storage
-access. Archive creation is
+Version `1.0.2` focuses on reliable on-device extraction with direct storage
+access and system sharing. Archive creation is
 not included yet.
 Cloud-backed SAF providers may offer less information or different performance
 than local storage.
