@@ -21,8 +21,8 @@ android {
         applicationId = "com.decompress.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 30
-        versionName = "1.1.9"
+        versionCode = 31
+        versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -90,6 +90,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.apache.commons:commons-compress:1.27.1")
+    implementation("org.brotli:dec:0.1.2")
+    implementation("net.java.dev.jna:jna:5.17.0@aar")
     implementation("org.tukaani:xz:1.10")
     implementation("org.lz4:lz4-java:1.8.0")
     implementation("com.github.junrar:junrar:8.1.2")

@@ -261,6 +261,63 @@ class CompressionEngineDeviceTest {
     }
 
     @Test
+    fun createsZstandardStreamsAndTarZstandard() = runBlocking {
+        val engine = CompressionEngine(context)
+        val archiveEngine = MultiArchiveEngine(context)
+        val tarResult = engine.compress(
+            selected = listOf(sourceEntry),
+            sourceTreeUri = Uri.fromFile(root),
+            targetParentUri = Uri.fromFile(outputDirectory),
+            targetTreeUri = Uri.fromFile(outputDirectory),
+            options = CompressionOptions(
+                format = CompressionFormat.TAR_ZSTD,
+                archiveName = "zstd.tar.zst"
+            )
+        )
+        assertExtractsToFiles(tarResult, "")
+
+        val sourceFile = File(sourceDirectory, "说明.txt")
+        val streamResult = engine.compress(
+            selected = listOf(
+                SafFileRepository(context).directEntry(sourceFile)
+            ),
+            sourceTreeUri = Uri.fromFile(sourceDirectory),
+            targetParentUri = Uri.fromFile(outputDirectory),
+            targetTreeUri = Uri.fromFile(outputDirectory),
+            options = CompressionOptions(
+                format = CompressionFormat.ZSTD,
+                archiveName = "说明.txt.zst"
+            )
+        )
+        assertEquals(
+            1,
+            archiveEngine.list(
+                archiveUri = streamResult.primaryUri,
+                archiveName = streamResult.displayName
+            ).size
+        )
+        val extracted = File(root, "zstd-extracted").apply { mkdirs() }
+        archiveEngine.extract(
+            archiveUri = streamResult.primaryUri,
+            archiveName = streamResult.displayName,
+            settings = ExtractSettings(
+                mode = DestinationMode.CURRENT_FOLDER,
+                targetParentUri = Uri.fromFile(extracted),
+                targetTreeUri = Uri.fromFile(extracted),
+                createFolder = false,
+                conflictPolicy = ConflictPolicy.RENAME,
+                encoding = FileNameEncoding.AUTO,
+                password = ""
+            ),
+            onProgress = { _, _ -> }
+        )
+        assertEquals(
+            sourceFile.readText(),
+            File(extracted, "说明.txt").readText()
+        )
+    }
+
+    @Test
     fun createsAndReadsGenericSplitArchives() = runBlocking {
         val engine = CompressionEngine(context)
         val archiveEngine = MultiArchiveEngine(context)

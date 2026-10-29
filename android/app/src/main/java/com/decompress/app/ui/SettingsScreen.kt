@@ -13,6 +13,7 @@ import android.os.PowerManager
 import android.provider.DocumentsContract
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -150,8 +151,10 @@ fun SettingsScreen(
     val versionName = remember {
         runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
-        }.getOrNull() ?: "1.1.9"
+        }.getOrNull() ?: "1.2.0"
     }
+
+    BackHandler(onBack = onBack)
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -510,8 +513,10 @@ fun SettingsScreen(
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "解压：ZIP · 7Z · RAR · TAR · GZ · BZ2 · XZ · LZMA · LZ4 · CPIO\n" +
-                                "创建：ZIP · 7Z · TAR 系列 · GZ · BZ2 · XZ · LZMA · LZ4 · CPIO\n" +
+                            "解压：ZIP · 7Z · RAR · TAR · ZST · BR · " +
+                                "GZ · BZ2 · XZ · LZMA · LZ4 · CPIO\n" +
+                                "创建：ZIP · 7Z · TAR 系列 · ZST · " +
+                                "GZ · BZ2 · XZ · LZMA · LZ4 · CPIO\n" +
                                 "包名：${context.packageName}",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant

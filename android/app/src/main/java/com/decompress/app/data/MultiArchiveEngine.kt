@@ -18,6 +18,7 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import org.apache.commons.compress.compressors.lz4.FramedLZ4CompressorInputStream
 import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream
+import org.brotli.dec.BrotliInputStream
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -84,13 +85,17 @@ class MultiArchiveEngine(private val context: Context) {
                 lower.endsWith(".tbz2") ||
                 lower.endsWith(".tar.xz") ||
                 lower.endsWith(".txz") ||
+                lower.endsWith(".tar.zst") ||
+                lower.endsWith(".tar.br") ||
                 lower.endsWith(".cpio") ->
                 extractStream(uri, lower, name, settings, onProgress)
             lower.endsWith(".gz") ||
                 lower.endsWith(".bz2") ||
                 lower.endsWith(".xz") ||
                 lower.endsWith(".lzma") ||
-                lower.endsWith(".lz4") ->
+                lower.endsWith(".lz4") ||
+                lower.endsWith(".zst") ||
+                lower.endsWith(".br") ->
                 extractSingleCompressed(uri, lower, name, settings)
             else -> throw ArchiveException("暂不支持此压缩格式")
         }
@@ -124,13 +129,17 @@ class MultiArchiveEngine(private val context: Context) {
                 lower.endsWith(".tbz2") ||
                 lower.endsWith(".tar.xz") ||
                 lower.endsWith(".txz") ||
+                lower.endsWith(".tar.zst") ||
+                lower.endsWith(".tar.br") ||
                 lower.endsWith(".cpio") ->
                 testStream(uri, lower, onProgress)
             lower.endsWith(".gz") ||
                 lower.endsWith(".bz2") ||
                 lower.endsWith(".xz") ||
                 lower.endsWith(".lzma") ||
-                lower.endsWith(".lz4") -> {
+                lower.endsWith(".lz4") ||
+                lower.endsWith(".zst") ||
+                lower.endsWith(".br") -> {
                 testSingleCompressed(uri, lower)
                 onProgress(1, 1)
                 1
@@ -387,7 +396,11 @@ class MultiArchiveEngine(private val context: Context) {
                 XZCompressorInputStream(BufferedInputStream(input))
             lowerName.endsWith(".lzma") ->
                 LZMACompressorInputStream(BufferedInputStream(input))
-            else -> FramedLZ4CompressorInputStream(BufferedInputStream(input))
+            lowerName.endsWith(".lz4") ->
+                FramedLZ4CompressorInputStream(BufferedInputStream(input))
+            lowerName.endsWith(".zst") ->
+                ZstdCodec.inputStream(BufferedInputStream(input))
+            else -> BrotliInputStream(BufferedInputStream(input))
         }
         compressed.use { stream ->
             val written = copyWithLimit(
@@ -536,7 +549,9 @@ class MultiArchiveEngine(private val context: Context) {
             lowerName.endsWith(".bz2") && !lowerName.endsWith(".tar.bz2") ||
             lowerName.endsWith(".xz") && !lowerName.endsWith(".tar.xz") ||
             lowerName.endsWith(".lzma") ||
-            lowerName.endsWith(".lz4")
+            lowerName.endsWith(".lz4") ||
+            lowerName.endsWith(".zst") && !lowerName.endsWith(".tar.zst") ||
+            lowerName.endsWith(".br") && !lowerName.endsWith(".tar.br")
         ) {
             return listOf(
                 ArchiveItem(
@@ -616,7 +631,11 @@ class MultiArchiveEngine(private val context: Context) {
             lowerName.endsWith(".bz2") -> BZip2CompressorInputStream(BufferedInputStream(input))
             lowerName.endsWith(".xz") -> XZCompressorInputStream(BufferedInputStream(input))
             lowerName.endsWith(".lzma") -> LZMACompressorInputStream(BufferedInputStream(input))
-            else -> FramedLZ4CompressorInputStream(BufferedInputStream(input))
+            lowerName.endsWith(".lz4") ->
+                FramedLZ4CompressorInputStream(BufferedInputStream(input))
+            lowerName.endsWith(".zst") ->
+                ZstdCodec.inputStream(BufferedInputStream(input))
+            else -> BrotliInputStream(BufferedInputStream(input))
         }
         compressed.use { stream ->
             val output = outputWriter(settings)
@@ -627,7 +646,7 @@ class MultiArchiveEngine(private val context: Context) {
                 ?: return@use
             output.openOutputStream(fileUri)?.use { out ->
                 val written = copyWithLimit(
-                    input = stream,
+                    input = CheckpointInputStream(stream, settings.onCheckpoint),
                     output = out,
                     remainingBytes = MAX_TOTAL_BYTES
                 )
@@ -648,6 +667,10 @@ class MultiArchiveEngine(private val context: Context) {
                 TarArchiveInputStream(BZip2CompressorInputStream(buffered))
             lowerName.endsWith(".tar.xz") || lowerName.endsWith(".txz") ->
                 TarArchiveInputStream(XZCompressorInputStream(buffered))
+            lowerName.endsWith(".tar.zst") ->
+                TarArchiveInputStream(ZstdCodec.inputStream(buffered))
+            lowerName.endsWith(".tar.br") ->
+                TarArchiveInputStream(BrotliInputStream(buffered))
             lowerName.endsWith(".tar") -> TarArchiveInputStream(buffered)
             lowerName.endsWith(".cpio") -> CpioArchiveInputStream(buffered, "UTF-8")
             else -> throw ArchiveException("暂不支持此压缩格式")
@@ -680,7 +703,8 @@ class MultiArchiveEngine(private val context: Context) {
             name = segments.last(),
             conflictPolicy = settings.conflictPolicy
         ) ?: return 0L
-        val input = inputFactory()
+        val rawInput = inputFactory()
+        val input = CheckpointInputStream(rawInput, settings.onCheckpoint)
         val written = try {
             output.openOutputStream(fileUri)?.use { out ->
                 copyWithLimit(
@@ -690,7 +714,7 @@ class MultiArchiveEngine(private val context: Context) {
                 )
             } ?: throw ArchiveException("无法写入文件：${segments.last()}")
         } finally {
-            if (closeInput) input.close()
+            if (closeInput) rawInput.close()
         }
         settings.onFileCreated(fileUri)
         return written
@@ -721,6 +745,8 @@ class MultiArchiveEngine(private val context: Context) {
             lowerName.endsWith(".tar.gz") -> archiveName.dropLast(7)
             lowerName.endsWith(".tar.bz2") -> archiveName.dropLast(8)
             lowerName.endsWith(".tar.xz") -> archiveName.dropLast(7)
+            lowerName.endsWith(".tar.zst") -> archiveName.dropLast(8)
+            lowerName.endsWith(".tar.br") -> archiveName.dropLast(7)
             lowerName.endsWith(".tgz") ||
                 lowerName.endsWith(".tbz2") ||
                 lowerName.endsWith(".txz") -> archiveName.substringBeforeLast('.')
@@ -729,6 +755,8 @@ class MultiArchiveEngine(private val context: Context) {
             lowerName.endsWith(".xz") -> archiveName.dropLast(3)
             lowerName.endsWith(".lzma") -> archiveName.dropLast(5)
             lowerName.endsWith(".lz4") -> archiveName.dropLast(4)
+            lowerName.endsWith(".zst") -> archiveName.dropLast(4)
+            lowerName.endsWith(".br") -> archiveName.dropLast(3)
             else -> archiveName.substringBeforeLast('.', archiveName)
         }
     }

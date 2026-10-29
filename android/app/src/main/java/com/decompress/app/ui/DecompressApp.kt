@@ -19,12 +19,14 @@ import android.media.ThumbnailUtils
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.os.SystemClock
 import android.provider.Settings
 import android.os.StatFs
 import android.provider.OpenableColumns
 import android.text.format.DateUtils
 import android.text.format.Formatter
 import android.util.Size
+import android.webkit.MimeTypeMap
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +34,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -74,6 +77,7 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -126,7 +130,9 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -134,6 +140,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.work.WorkInfo
@@ -147,6 +154,7 @@ import com.decompress.app.data.ThemeMode
 import com.decompress.app.data.TrashRepository
 import com.decompress.app.service.ExtractionScheduler
 import com.decompress.app.service.CompressionScheduler
+import com.decompress.app.service.ArchiveTaskControl
 import com.decompress.app.ui.theme.ZippestTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -196,6 +204,8 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
     var archiveTarget by remember { mutableStateOf<ArchiveTarget?>(null) }
     var extractTarget by remember { mutableStateOf<ExtractTarget?>(null) }
     var showSettings by remember { mutableStateOf(false) }
+    var archiveTasks by remember { mutableStateOf<List<WorkInfo>>(emptyList()) }
+    var showGlobalTaskQueue by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     val settingsFolderPicker = rememberLauncherForActivityResult(
@@ -216,6 +226,14 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
                 .purgeExpired(settingsRepository.settings.trashRetention.days)
         }
         restored = true
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            archiveTasks = runCatching { loadArchiveWorkInfos(context) }
+                .getOrDefault(emptyList())
+            delay(700)
+        }
     }
 
     LaunchedEffect(incomingArchive?.uri, incomingArchive?.displayName, restored) {
@@ -275,6 +293,19 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
     }
 
     val appSettings = settingsRepository.settings
+    val activeTasks = archiveTasks
+        .filter {
+            it.state == WorkInfo.State.RUNNING ||
+                it.state == WorkInfo.State.ENQUEUED ||
+                it.state == WorkInfo.State.BLOCKED
+        }
+        .sortedBy {
+            when (it.state) {
+                WorkInfo.State.RUNNING -> 0
+                WorkInfo.State.ENQUEUED -> 1
+                else -> 2
+            }
+        }
     val darkTheme = when (appSettings.themeMode) {
         ThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
@@ -294,15 +325,18 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
             } else {
                 val currentArchive = archiveTarget
                 if (showSettings) {
-                    SettingsScreen(
-                        repository = settingsRepository,
-                        browserPath = controller.path.joinToString(" / "),
-                        onBack = { showSettings = false },
-                        onChooseBrowserFolder = { settingsFolderPicker.launch(null) },
-                        onNotify = { message ->
-                            scope.launch { snackbarHostState.showSnackbar(message) }
-                        }
-                    )
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        SettingsScreen(
+                            repository = settingsRepository,
+                            browserPath = controller.path.joinToString(" / "),
+                            onBack = { showSettings = false },
+                            onChooseBrowserFolder = { settingsFolderPicker.launch(null) },
+                            onNotify = { message ->
+                                scope.launch { snackbarHostState.showSnackbar(message) }
+                            }
+                        )
+                        EdgeSwipeBackZones(onBack = { showSettings = false })
+                    }
                 } else if (currentArchive != null) {
                     ArchiveScreen(
                         target = currentArchive,
@@ -327,6 +361,7 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
                     FileBrowserScreen(
                         controller = controller,
                         settingsRepository = settingsRepository,
+                        archiveTaskActive = activeTasks.isNotEmpty(),
                         onOpenArchive = { entry ->
                             val parentUri = controller.currentUri
                             val parentTreeUri = controller.treeUri
@@ -356,6 +391,24 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
                     )
                 }
 
+                activeTasks.firstOrNull()?.let { task ->
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .zIndex(20f)
+                    ) {
+                        ActiveArchiveTaskBar(
+                            task = task,
+                            activeCount = activeTasks.size,
+                            onClick = { showGlobalTaskQueue = true }
+                        )
+                    }
+                }
+                if (showGlobalTaskQueue) {
+                    TaskQueueDialog(onDismiss = { showGlobalTaskQueue = false })
+                }
+
                 extractTarget?.let { target ->
                     ExtractSheet(
                         target = target,
@@ -382,6 +435,7 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
 private fun FileBrowserScreen(
     controller: FileBrowserController,
     settingsRepository: AppSettingsRepository,
+    archiveTaskActive: Boolean,
     onOpenArchive: (BrowserEntry) -> Unit,
     onExtract: (List<BrowserEntry>, Uri, Uri, String, String) -> Unit,
     onOpenSettings: () -> Unit,
@@ -408,15 +462,6 @@ private fun FileBrowserScreen(
     var showTaskQueue by remember { mutableStateOf(false) }
     var transferTarget by remember { mutableStateOf<TransferTarget?>(null) }
     var compressTarget by remember { mutableStateOf<CompressTarget?>(null) }
-    var archiveTasks by remember { mutableStateOf<List<WorkInfo>>(emptyList()) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            archiveTasks = runCatching { loadArchiveWorkInfos(context) }
-                .getOrDefault(emptyList())
-            delay(700)
-        }
-    }
 
     val folderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -481,22 +526,7 @@ private fun FileBrowserScreen(
         visibleEntries.all { it.uri in controller.selected }
     val selectedCount = controller.selected.size
     val selectedEntries = controller.entries.filter { it.uri in controller.selected }
-    val activeTasks = archiveTasks
-        .filter {
-            it.state == WorkInfo.State.RUNNING ||
-                it.state == WorkInfo.State.ENQUEUED ||
-                it.state == WorkInfo.State.BLOCKED
-        }
-        .sortedBy {
-            when (it.state) {
-                WorkInfo.State.RUNNING -> 0
-                WorkInfo.State.ENQUEUED -> 1
-                else -> 2
-            }
-        }
-    val activeTask = activeTasks.firstOrNull()
-
-    BackHandler {
+    fun handleBack() {
         when {
             controller.selectionMode -> controller.clearSelection()
             searchMode -> {
@@ -508,6 +538,8 @@ private fun FileBrowserScreen(
             }
         }
     }
+
+    BackHandler { handleBack() }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -726,7 +758,7 @@ private fun FileBrowserScreen(
                                             },
                                             onClick = {
                                                 moreExpanded = false
-                                                notify("Zippest 1.1.9 · 文件浏览与压缩")
+                                                notify("Zippest 1.2.0 · 文件浏览与压缩")
                                             }
                                         )
                                     }
@@ -746,13 +778,6 @@ private fun FileBrowserScreen(
         },
         bottomBar = {
             Column {
-                activeTask?.let { task ->
-                    ActiveArchiveTaskBar(
-                        task = task,
-                        activeCount = activeTasks.size,
-                        onClick = { showTaskQueue = true }
-                    )
-                }
                 when {
                     selectedCount > 0 -> SelectionToolbar(
                     onExtract = {
@@ -860,10 +885,13 @@ private fun FileBrowserScreen(
                         }
                     }
                 )
-                    activeTask == null && controller.treeUri != null -> StorageBar(
+                    !archiveTaskActive && controller.treeUri != null -> StorageBar(
                         context = context,
                         hasFullAccess =
-                            controller.storageMode == FileBrowserController.StorageMode.DIRECT
+                            controller.storageMode == FileBrowserController.StorageMode.DIRECT,
+                        onSwipeUpHome = {
+                            scope.launch { controller.openInternalStorage() }
+                        }
                     )
                 }
             }
@@ -951,7 +979,10 @@ private fun FileBrowserScreen(
                                         )
                                     }
                                 }
-                                else -> notify("暂不支持直接打开此文件")
+                                else -> {
+                                    val opened = openEntryExternally(context, entry)
+                                    if (!opened) notify("没有可打开此文件的应用")
+                                }
                             }
                         },
                         onPreviewArchive = { onOpenArchive(entry) },
@@ -967,6 +998,18 @@ private fun FileBrowserScreen(
                 }
             }
             }
+            EdgeSwipeBackZones(
+                onBack = ::handleBack,
+                onHome = {
+                    scope.launch {
+                        storageExpanded = false
+                        searchMode = false
+                        query = ""
+                        controller.clearSelection()
+                        controller.openInternalStorage()
+                    }
+                }
+            )
             if (
                 storageExpanded &&
                 controller.storageMode == FileBrowserController.StorageMode.DIRECT
@@ -1164,12 +1207,12 @@ private fun FileBrowserScreen(
         TransferDestinationSheet(
             target = target,
             onDismiss = { transferTarget = null },
-            onChoose = { destinationUri ->
+            onChoose = { destinationUri, destinationTreeUri ->
                 transferTarget = null
                 scope.launch {
                     val summary = controller.transferSelectedToDirectory(
                         destinationDirectoryUri = destinationUri,
-                        destinationTreeUri = target.treeUri,
+                        destinationTreeUri = destinationTreeUri,
                         move = target.move
                     )
                     val action = if (target.move) "移动" else "复制"
@@ -1199,12 +1242,16 @@ internal fun TaskQueueDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     var tasks by remember { mutableStateOf<List<WorkInfo>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+    var pausedTaskIds by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     LaunchedEffect(Unit) {
         while (true) {
             tasks = runCatching {
                 loadArchiveWorkInfos(context)
             }.getOrDefault(emptyList())
+            pausedTaskIds = tasks
+                .filter { ArchiveTaskControl.isPaused(context, it.id) }
+                .mapTo(mutableSetOf()) { it.id.toString() }
             loading = false
             delay(1000)
         }
@@ -1256,7 +1303,19 @@ internal fun TaskQueueDialog(onDismiss: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     sortedTasks.forEach { task ->
-                        TaskQueueRow(task)
+                        TaskQueueRow(
+                            task = task,
+                            paused = task.id.toString() in pausedTaskIds,
+                            onTogglePause = {
+                                val paused = task.id.toString() !in pausedTaskIds
+                                ArchiveTaskControl.setPaused(context, task.id, paused)
+                                pausedTaskIds = if (paused) {
+                                    pausedTaskIds + task.id.toString()
+                                } else {
+                                    pausedTaskIds - task.id.toString()
+                                }
+                            }
+                        )
                     }
                     if (hasFinishedTasks) {
                         TextButton(
@@ -1322,9 +1381,11 @@ private fun ActiveArchiveTaskBar(
         ?.removePrefix(ExtractionScheduler.TAG_NAME_PREFIX)
         ?: if (isCompression) "压缩任务" else "解压任务"
     val running = task.state == WorkInfo.State.RUNNING
+    val paused = task.progress.getBoolean(ExtractionScheduler.KEY_PAUSED, false)
     val progress = task.progress.getInt(ExtractionScheduler.KEY_PROGRESS, 0)
         .coerceIn(0, 100)
     val message = when {
+        paused -> "已暂停，点击任务队列继续"
         running -> task.progress.getString(ExtractionScheduler.KEY_MESSAGE)
             ?: if (isCompression) "正在压缩…" else "正在解压…"
         task.state == WorkInfo.State.BLOCKED -> "等待前序任务完成"
@@ -1386,7 +1447,11 @@ private fun ActiveArchiveTaskBar(
                         )
                     }
                     Text(
-                        if (running) "$progress%" else "等待",
+                        when {
+                            paused -> "暂停"
+                            running -> "$progress%"
+                            else -> "等待"
+                        },
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -1418,28 +1483,57 @@ private fun ActiveArchiveTaskBar(
 }
 
 @Composable
-private fun TaskQueueRow(task: WorkInfo) {
+private fun TaskQueueRow(
+    task: WorkInfo,
+    paused: Boolean,
+    onTogglePause: () -> Unit
+) {
     val title = task.tags
         .firstOrNull { it.startsWith(ExtractionScheduler.TAG_NAME_PREFIX) }
         ?.removePrefix(ExtractionScheduler.TAG_NAME_PREFIX)
         ?: "后台任务"
-    val message = when (task.state) {
-        WorkInfo.State.SUCCEEDED ->
-            task.outputData.getString(ExtractionScheduler.KEY_MESSAGE) ?: "解压完成"
-        WorkInfo.State.FAILED ->
-            task.outputData.getString(ExtractionScheduler.KEY_MESSAGE) ?: "解压失败"
-        WorkInfo.State.CANCELLED -> "已取消"
-        WorkInfo.State.BLOCKED -> "等待前序任务"
-        WorkInfo.State.ENQUEUED -> "等待执行"
-        WorkInfo.State.RUNNING ->
-            task.progress.getString(ExtractionScheduler.KEY_MESSAGE) ?: "正在解压"
+    val message = when {
+        paused -> "已暂停"
+        task.state == WorkInfo.State.SUCCEEDED ->
+            task.outputData.getString(ExtractionScheduler.KEY_MESSAGE) ?: "任务完成"
+        task.state == WorkInfo.State.FAILED ->
+            task.outputData.getString(ExtractionScheduler.KEY_MESSAGE) ?: "任务失败"
+        task.state == WorkInfo.State.CANCELLED -> "已取消"
+        task.state == WorkInfo.State.BLOCKED -> "等待前序任务"
+        task.state == WorkInfo.State.ENQUEUED -> "等待执行"
+        else -> task.progress.getString(ExtractionScheduler.KEY_MESSAGE) ?: "正在处理"
     }
-    val progress = when (task.state) {
-        WorkInfo.State.SUCCEEDED -> 100
-        WorkInfo.State.RUNNING ->
+    val progress = when {
+        task.state == WorkInfo.State.SUCCEEDED -> 100
+        task.state == WorkInfo.State.RUNNING ->
             task.progress.getInt(ExtractionScheduler.KEY_PROGRESS, 0)
         else -> 0
     }
+    var previousSample by remember(task.id) {
+        mutableStateOf<Pair<Long, Int>?>(null)
+    }
+    var percentPerSecond by remember(task.id) { mutableStateOf<Float?>(null) }
+    LaunchedEffect(task.id, task.state, progress, paused) {
+        if (task.state == WorkInfo.State.RUNNING && !paused) {
+            val now = SystemClock.elapsedRealtime()
+            previousSample?.let { (previousTime, previousProgress) ->
+                val elapsed = now - previousTime
+                val changed = progress - previousProgress
+                if (elapsed in 250..10_000 && changed > 0) {
+                    percentPerSecond = changed * 1000f / elapsed
+                }
+            }
+            previousSample = now to progress
+        } else {
+            previousSample = null
+        }
+    }
+    val etaSeconds = percentPerSecond?.let { rate ->
+        if (rate > 0.01f) ((100 - progress) / rate).toInt() else null
+    }
+    val active = task.state == WorkInfo.State.RUNNING ||
+        task.state == WorkInfo.State.ENQUEUED ||
+        task.state == WorkInfo.State.BLOCKED
 
     Surface(
         shape = RoundedCornerShape(12.dp),
@@ -1454,13 +1548,45 @@ private fun TaskQueueRow(task: WorkInfo) {
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(3.dp))
-            Text(
-                message,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    message,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (active) {
+                    TextButton(onClick = onTogglePause) {
+                        Icon(
+                            if (paused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
+                            contentDescription = null,
+                            modifier = Modifier.size(17.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (paused) "继续" else "暂停")
+                    }
+                }
+            }
+            if (task.state == WorkInfo.State.RUNNING && !paused) {
+                Text(
+                    buildString {
+                        percentPerSecond?.let {
+                            append("速度 ${"%.1f".format(it)}%/秒")
+                        }
+                        etaSeconds?.let {
+                            if (isNotEmpty()) append(" · ")
+                            append("约 ${formatEta(it)}")
+                        }
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             if (task.state == WorkInfo.State.RUNNING) {
                 Spacer(Modifier.height(7.dp))
                 LinearProgressIndicator(
@@ -1472,6 +1598,17 @@ private fun TaskQueueRow(task: WorkInfo) {
                 )
             }
         }
+    }
+}
+
+private fun formatEta(seconds: Int): String {
+    val safeSeconds = seconds.coerceAtLeast(0)
+    return if (safeSeconds < 60) {
+        "${safeSeconds} 秒"
+    } else if (safeSeconds < 3600) {
+        "${safeSeconds / 60} 分 ${safeSeconds % 60} 秒"
+    } else {
+        "${safeSeconds / 3600} 小时 ${safeSeconds % 3600 / 60} 分"
     }
 }
 
@@ -1848,11 +1985,31 @@ private fun StorageQuickLocation(
 }
 
 @Composable
-private fun StorageBar(context: Context, hasFullAccess: Boolean) {
+private fun StorageBar(
+    context: Context,
+    hasFullAccess: Boolean,
+    onSwipeUpHome: () -> Unit
+) {
     val (used, total) = remember { readStorageStats() }
     val fraction = if (total > 0L) used.toFloat() / total.toFloat() else 0f
 
+    val swipeThreshold = with(LocalDensity.current) { 40.dp.toPx() }
+    var swipeDistance = 0f
     Surface(
+        modifier = Modifier.pointerInput(onSwipeUpHome) {
+            detectVerticalDragGestures(
+                onDragStart = { swipeDistance = 0f },
+                onDragEnd = {
+                    if (swipeDistance < -swipeThreshold) {
+                        onSwipeUpHome()
+                    }
+                },
+                onVerticalDrag = { change, amount ->
+                    swipeDistance += amount
+                    if (swipeDistance < -12f) change.consume()
+                }
+            )
+        },
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp
     ) {
@@ -2146,6 +2303,30 @@ private fun shareEntries(context: Context, entries: List<BrowserEntry>): Boolean
         context.startActivity(Intent.createChooser(intent, "分享所选文件"))
     }.isSuccess
 }
+
+private fun openEntryExternally(context: Context, entry: BrowserEntry): Boolean =
+    runCatching {
+        val viewUri = if (entry.uri.scheme == ContentResolver.SCHEME_FILE) {
+            val path = entry.uri.path ?: error("本地文件路径无效")
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                File(path)
+            )
+        } else {
+            entry.uri
+        }
+        val mimeType = entry.mimeType
+            ?: MimeTypeMap.getSingleton()
+                .getMimeTypeFromExtension(entry.name.substringAfterLast('.', "").lowercase())
+            ?: "*/*"
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(viewUri, mimeType)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            clipData = ClipData.newRawUri(entry.name, viewUri)
+        }
+        context.startActivity(intent)
+    }.isSuccess
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this

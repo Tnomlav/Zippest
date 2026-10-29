@@ -60,7 +60,8 @@ data class ExtractSettings(
     val conflictPolicy: ConflictPolicy,
     val encoding: FileNameEncoding,
     val password: String,
-    val onFileCreated: (Uri) -> Unit = {}
+    val onFileCreated: (Uri) -> Unit = {},
+    val onCheckpoint: () -> Unit = {}
 )
 
 class ArchiveException(message: String, cause: Throwable? = null) : Exception(message, cause)
@@ -283,7 +284,10 @@ class ZipArchiveEngine(private val context: Context) {
                                 if (fileUri != null) {
                                     output.openOutputStream(fileUri)?.use { out ->
                                         writtenBytes += copyWithLimit(
-                                            input = zip,
+                                            input = CheckpointInputStream(
+                                                zip,
+                                                settings.onCheckpoint
+                                            ),
                                             output = out,
                                             remainingBytes = MAX_TOTAL_BYTES - writtenBytes
                                         )
@@ -496,7 +500,7 @@ class ZipArchiveEngine(private val context: Context) {
         archive.getInputStream(header).use { input ->
             output.openOutputStream(fileUri)?.use { out ->
                 val written = copyWithLimit(
-                    input = input,
+                    input = CheckpointInputStream(input, settings.onCheckpoint),
                     output = out,
                     remainingBytes = MAX_TOTAL_BYTES - writtenBytes
                 )

@@ -21,10 +21,10 @@ Access Framework for scoped folder access.
   a scoped SAF folder picker as fallback.
 - Configure theme, hidden files, thumbnails, sorting, persistent extraction
   defaults, clipboard password fill, notifications, and task maintenance.
-- Browse ZIP, 7Z, RAR, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, CPIO, GZ, BZ2, XZ,
-  LZMA, and LZ4.
-- Create ZIP, 7Z, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, CPIO, GZ, BZ2, XZ, LZMA,
-  and LZ4 archives with selectable compression levels.
+- Browse ZIP, 7Z, RAR, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, TAR.ZST, TAR.BR,
+  CPIO, GZ, BZ2, XZ, LZMA, LZ4, ZST, and BR.
+- Create ZIP, 7Z, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, TAR.ZST, CPIO, GZ, BZ2,
+  XZ, LZMA, LZ4, and ZST archives with selectable compression levels.
 - Create password-protected ZIP and 7Z archives.
 - Split any supported created archive into `.001`, `.002`, and later volumes;
   open the first volume in Zippest to combine and extract it.
@@ -91,8 +91,11 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.1.9` shows the current directory path as the top-bar title without a
-second subtitle and removes the redundant quick-location heading. Version
+Version `1.2.0` adds system-app opening for regular files, cross-volume file
+transfer roots, app-wide archive progress with pause/resume and timing, edge and
+bottom navigation gestures, Zstandard creation/opening, and Brotli opening.
+Version `1.1.9` showed the current directory path as the top-bar title without a
+second subtitle and removed the redundant quick-location heading. Version
 `1.1.8` removed the colored background tiles from file and folder icons so file
 names remain the visual focus. Version `1.1.7` attached the full-width
 internal-storage quick-location panel directly below the top app bar. Version

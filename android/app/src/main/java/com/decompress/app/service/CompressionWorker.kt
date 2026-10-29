@@ -193,22 +193,103 @@ class CompressionWorker(
                 workDataOf(
                     ExtractionScheduler.KEY_DISPLAY_NAME to task.displayName,
                     ExtractionScheduler.KEY_PROGRESS to 0,
-                    ExtractionScheduler.KEY_MESSAGE to "准备压缩…"
+                    ExtractionScheduler.KEY_MESSAGE to "准备压缩…",
+                    ExtractionScheduler.KEY_PAUSED to false
                 )
             )
             var lastUpdate = 0L
+            var currentProgress = 0
+            val checkpoint = {
+                val wasPaused = ArchiveTaskControl.isPaused(applicationContext, id)
+                val pauseHandled = ArchiveTaskControl.waitWhilePaused(
+                    applicationContext,
+                    id,
+                    isCancelled = ::isStopped,
+                    onPaused = {
+                        notificationManager.notify(
+                            notificationId,
+                            progressNotification(
+                                task.displayName,
+                                "已暂停，点击任务队列继续",
+                                currentProgress
+                            )
+                        )
+                        setProgressAsync(
+                            workDataOf(
+                                ExtractionScheduler.KEY_DISPLAY_NAME to task.displayName,
+                                ExtractionScheduler.KEY_PROGRESS to currentProgress,
+                                ExtractionScheduler.KEY_MESSAGE to "已暂停",
+                                ExtractionScheduler.KEY_PAUSED to true
+                            )
+                        )
+                    }
+                )
+                if (!pauseHandled) throw CancellationException("压缩已取消")
+                if (wasPaused) {
+                    notificationManager.notify(
+                        notificationId,
+                        progressNotification(
+                            task.displayName,
+                            "正在压缩…",
+                            currentProgress
+                        )
+                    )
+                    setProgressAsync(
+                        workDataOf(
+                            ExtractionScheduler.KEY_DISPLAY_NAME to task.displayName,
+                            ExtractionScheduler.KEY_PROGRESS to currentProgress,
+                            ExtractionScheduler.KEY_MESSAGE to "正在压缩…",
+                            ExtractionScheduler.KEY_PAUSED to false
+                        )
+                    )
+                }
+            }
             val result = CompressionEngine(applicationContext).compress(
                 selected = task.sources,
                 sourceTreeUri = task.sourceTreeUri,
                 targetParentUri = task.targetParentUri,
                 targetTreeUri = task.targetTreeUri,
-                options = task.options
+                options = task.options.copy(onCheckpoint = checkpoint)
             ) { processed, total ->
+                val pauseHandled = ArchiveTaskControl.waitWhilePaused(
+                    applicationContext,
+                    id,
+                    isCancelled = ::isStopped,
+                    onPaused = {
+                        notificationManager.notify(
+                            notificationId,
+                            progressNotification(
+                                task.displayName,
+                                "已暂停，点击任务队列继续",
+                                if (total > 0) {
+                                    (processed * 100 / total).coerceIn(0, 99)
+                                } else {
+                                    0
+                                }
+                            )
+                        )
+                        setProgressAsync(
+                            workDataOf(
+                                ExtractionScheduler.KEY_DISPLAY_NAME to task.displayName,
+                                ExtractionScheduler.KEY_PROGRESS to
+                                    if (total > 0) {
+                                        (processed * 100 / total).coerceIn(0, 99)
+                                    } else {
+                                        0
+                                    },
+                                ExtractionScheduler.KEY_MESSAGE to "已暂停",
+                                ExtractionScheduler.KEY_PAUSED to true
+                            )
+                        )
+                    }
+                )
+                if (!pauseHandled) throw CancellationException("压缩已取消")
                 val progress = if (total > 0) {
                     (processed * 100f / total).toInt().coerceIn(0, 99)
                 } else {
                     0
                 }
+                currentProgress = progress
                 val now = SystemClock.elapsedRealtime()
                 if (now - lastUpdate >= 250 || progress >= 99) {
                     lastUpdate = now
@@ -225,7 +306,8 @@ class CompressionWorker(
                         workDataOf(
                             ExtractionScheduler.KEY_DISPLAY_NAME to task.displayName,
                             ExtractionScheduler.KEY_PROGRESS to progress,
-                            ExtractionScheduler.KEY_MESSAGE to message
+                            ExtractionScheduler.KEY_MESSAGE to message,
+                            ExtractionScheduler.KEY_PAUSED to false
                         )
                     )
                 }
@@ -252,6 +334,7 @@ class CompressionWorker(
                 )
             )
         } finally {
+            ArchiveTaskControl.clear(applicationContext, id)
             if (wakeLock.isHeld) wakeLock.release()
         }
     }

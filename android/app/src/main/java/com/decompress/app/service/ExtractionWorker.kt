@@ -80,6 +80,7 @@ object ExtractionScheduler {
     const val KEY_DISPLAY_NAME = "display_name"
     const val KEY_PROGRESS = "progress"
     const val KEY_MESSAGE = "message"
+    const val KEY_PAUSED = "paused"
 
     private const val KEY_ARCHIVE_URIS = "archive_uris"
     private const val KEY_ARCHIVE_NAMES = "archive_names"
@@ -204,12 +205,90 @@ class ExtractionWorker(
                         "恢复上次未完成的解压…"
                     } else {
                         "准备解压…"
-                    }
+                    },
+                    ExtractionScheduler.KEY_PAUSED to false
                 )
             )
 
             var lastUpdate = 0L
-            val resultMessage = extract(effectiveTask) { progress, message ->
+            var currentProgress = 0
+            val checkpoint = {
+                val wasPaused = ArchiveTaskControl.isPaused(applicationContext, id)
+                val pauseHandled = ArchiveTaskControl.waitWhilePaused(
+                    applicationContext,
+                    id,
+                    isCancelled = ::isStopped,
+                    onPaused = {
+                        notificationManager.notify(
+                            notificationId,
+                            buildProgressNotification(
+                                effectiveTask.displayName,
+                                "已暂停，点击任务队列继续",
+                                currentProgress
+                            )
+                        )
+                        setProgressAsync(
+                            workDataOf(
+                                ExtractionScheduler.KEY_DISPLAY_NAME to
+                                    effectiveTask.displayName,
+                                ExtractionScheduler.KEY_PROGRESS to currentProgress,
+                                ExtractionScheduler.KEY_MESSAGE to "已暂停",
+                                ExtractionScheduler.KEY_PAUSED to true
+                            )
+                        )
+                    }
+                )
+                if (!pauseHandled) throw CancellationException("解压已取消")
+                if (wasPaused) {
+                    notificationManager.notify(
+                        notificationId,
+                        buildProgressNotification(
+                            effectiveTask.displayName,
+                            "正在解压…",
+                            currentProgress
+                        )
+                    )
+                    setProgressAsync(
+                        workDataOf(
+                            ExtractionScheduler.KEY_DISPLAY_NAME to
+                                effectiveTask.displayName,
+                            ExtractionScheduler.KEY_PROGRESS to currentProgress,
+                            ExtractionScheduler.KEY_MESSAGE to "正在解压…",
+                            ExtractionScheduler.KEY_PAUSED to false
+                        )
+                    )
+                }
+            }
+            val resultMessage = extract(
+                task = effectiveTask,
+                onCheckpoint = checkpoint
+            ) { progress, message ->
+                currentProgress = progress
+                val pauseHandled = ArchiveTaskControl.waitWhilePaused(
+                    applicationContext,
+                    id,
+                    isCancelled = ::isStopped,
+                    onPaused = {
+                        notificationManager.notify(
+                            notificationId,
+                            buildProgressNotification(
+                                effectiveTask.displayName,
+                                "已暂停，点击任务队列继续",
+                                progress
+                            )
+                        )
+                        setProgressAsync(
+                            workDataOf(
+                                ExtractionScheduler.KEY_DISPLAY_NAME to
+                                    effectiveTask.displayName,
+                                ExtractionScheduler.KEY_PROGRESS to progress,
+                                ExtractionScheduler.KEY_MESSAGE to "已暂停",
+                                ExtractionScheduler.KEY_PAUSED to true
+                            )
+                        )
+                    }
+                )
+                if (!pauseHandled) throw CancellationException("解压已取消")
                 val now = SystemClock.elapsedRealtime()
                 if (now - lastUpdate >= 250 || progress >= 100) {
                     lastUpdate = now
@@ -226,7 +305,8 @@ class ExtractionWorker(
                             ExtractionScheduler.KEY_DISPLAY_NAME to
                                 effectiveTask.displayName,
                             ExtractionScheduler.KEY_PROGRESS to progress,
-                            ExtractionScheduler.KEY_MESSAGE to message
+                            ExtractionScheduler.KEY_MESSAGE to message,
+                            ExtractionScheduler.KEY_PAUSED to false
                         )
                     )
                 }
@@ -235,7 +315,8 @@ class ExtractionWorker(
                 workDataOf(
                     ExtractionScheduler.KEY_DISPLAY_NAME to effectiveTask.displayName,
                     ExtractionScheduler.KEY_PROGRESS to 100,
-                    ExtractionScheduler.KEY_MESSAGE to resultMessage
+                    ExtractionScheduler.KEY_MESSAGE to resultMessage,
+                    ExtractionScheduler.KEY_PAUSED to false
                 )
             )
             if (shouldNotifyFinished()) {
@@ -264,12 +345,14 @@ class ExtractionWorker(
                 workDataOf(ExtractionScheduler.KEY_MESSAGE to message)
             )
         } finally {
+            ArchiveTaskControl.clear(applicationContext, id)
             if (wakeLock.isHeld) wakeLock.release()
         }
     }
 
     private suspend fun extract(
         task: ExtractionTask,
+        onCheckpoint: () -> Unit,
         onProgress: (Int, String) -> Unit
     ): String {
         val targetParent = if (task.mode == DestinationMode.CUSTOM) {
@@ -305,6 +388,7 @@ class ExtractionWorker(
                     conflictPolicy = task.conflictPolicy,
                     encoding = task.encoding,
                     password = task.passwords[index],
+                    onCheckpoint = onCheckpoint,
                     onFileCreated = { uri ->
                         if (uri.scheme == "file") {
                             createdFiles += uri

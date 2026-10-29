@@ -2,8 +2,14 @@
 
 package com.decompress.app.ui
 
+import android.content.Context
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.os.storage.StorageManager
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +31,7 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,6 +60,7 @@ import com.decompress.app.data.SafFileRepository
 import com.decompress.app.data.localFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 data class TransferTarget(
     val sources: List<BrowserEntry>,
@@ -65,20 +73,32 @@ data class TransferTarget(
 
 private data class PickerFolder(
     val uri: Uri,
-    val name: String
+    val name: String,
+    val treeUri: Uri
+)
+
+private data class StorageRoot(
+    val uri: Uri,
+    val name: String,
+    val treeUri: Uri
 )
 
 @Composable
 fun TransferDestinationSheet(
     target: TransferTarget,
     onDismiss: () -> Unit,
-    onChoose: (Uri) -> Unit
+    onChoose: (directoryUri: Uri, treeUri: Uri) -> Unit
 ) {
     val context = LocalContext.current
     val repository = remember { SafFileRepository(context.applicationContext) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val folders = remember {
-        mutableStateListOf(PickerFolder(target.rootUri, target.rootLabel))
+    val storageRoots = remember(target) {
+        discoverStorageRoots(context, target)
+    }
+    val folders = remember(target) {
+        mutableStateListOf(
+            PickerFolder(target.rootUri, target.rootLabel, target.treeUri)
+        )
     }
     var directories by remember { mutableStateOf<List<BrowserEntry>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
@@ -95,7 +115,7 @@ fun TransferDestinationSheet(
                         throw IllegalStateException("目标文件夹不可用")
                     }
                     repository.listDirectChildren(folder)
-                } ?: repository.listChildren(target.treeUri, current.uri)
+                } ?: repository.listChildren(current.treeUri, current.uri)
                 children.filter { it.isDirectory }
                     .sortedBy { it.name.lowercase() }
             }
@@ -143,6 +163,26 @@ fun TransferDestinationSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                storageRoots.forEach { root ->
+                    FilterChip(
+                        selected = current.treeUri == root.treeUri &&
+                            current.uri == root.uri,
+                        onClick = {
+                            folders.clear()
+                            folders += PickerFolder(root.uri, root.name, root.treeUri)
+                        },
+                        label = { Text(root.name) }
                     )
                 }
             }
@@ -199,7 +239,11 @@ fun TransferDestinationSheet(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        folders += PickerFolder(folder.uri, folder.name)
+                                        folders += PickerFolder(
+                                            folder.uri,
+                                            folder.name,
+                                            current.treeUri
+                                        )
                                     }
                                     .padding(horizontal = 14.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -245,7 +289,7 @@ fun TransferDestinationSheet(
                     Text("取消")
                 }
                 Button(
-                    onClick = { onChoose(current.uri) },
+                    onClick = { onChoose(current.uri, current.treeUri) },
                     enabled = !loading && error == null,
                     modifier = Modifier.weight(1f)
                 ) {
@@ -256,3 +300,43 @@ fun TransferDestinationSheet(
     }
 }
 
+private fun discoverStorageRoots(
+    context: Context,
+    target: TransferTarget
+): List<StorageRoot> {
+    val roots = linkedMapOf<String, StorageRoot>()
+
+    fun addRoot(file: File?, name: String) {
+        val directory = file ?: return
+        if (!directory.isDirectory) return
+        val canonical = runCatching { directory.canonicalFile }.getOrDefault(directory)
+        roots.putIfAbsent(
+            canonical.absolutePath,
+            StorageRoot(Uri.fromFile(canonical), name, Uri.fromFile(canonical))
+        )
+    }
+
+    addRoot(Environment.getExternalStorageDirectory(), "内部存储")
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        val manager = context.getSystemService(StorageManager::class.java)
+        manager.storageVolumes.forEachIndexed { index, volume ->
+            val label = volume.getDescription(context)
+                .takeIf { it.isNotBlank() && index > 0 }
+                ?: "存储卡 ${index}"
+            addRoot(volume.directory, label)
+        }
+    }
+    context.getExternalFilesDirs(null).forEachIndexed { index, appDirectory ->
+        val appDirectoryPath = appDirectory?.absolutePath ?: return@forEachIndexed
+        val rootPath = appDirectoryPath.substringBefore("/Android/", appDirectoryPath)
+        addRoot(File(rootPath), if (index == 0) "内部存储" else "存储卡 $index")
+    }
+
+    val targetFile = target.rootUri.localFile()
+    if (targetFile != null) addRoot(targetFile, target.rootLabel)
+    roots.putIfAbsent(
+        target.rootUri.toString(),
+        StorageRoot(target.rootUri, target.rootLabel, target.treeUri)
+    )
+    return roots.values.toList()
+}

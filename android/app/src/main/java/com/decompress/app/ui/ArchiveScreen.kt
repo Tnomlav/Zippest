@@ -155,7 +155,8 @@ fun ArchiveScreen(
         loading = true
         error = null
         if (!engine.supports(target.archive.name)) {
-            error = "暂不支持此格式。已接入 ZIP / 7Z / RAR / TAR / GZ / BZ2 / XZ / CPIO"
+            error = "暂不支持此格式。已接入 ZIP / 7Z / RAR / TAR / ZST / BR / " +
+                "GZ / BZ2 / XZ / LZMA / LZ4 / CPIO"
             loading = false
             return@LaunchedEffect
         }
@@ -380,6 +381,15 @@ fun ArchiveScreen(
             }
             DreamPreviewBorder(
                 modifier = Modifier.matchParentSize()
+            )
+            EdgeSwipeBackZones(
+                onBack = {
+                    if (currentPath.isNotEmpty()) {
+                        currentPath = parentArchivePath(currentPath)
+                    } else {
+                        onBack()
+                    }
+                }
             )
         }
     }

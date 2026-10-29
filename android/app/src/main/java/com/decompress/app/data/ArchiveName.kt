@@ -4,6 +4,8 @@ private val SPLIT_VOLUME_PATTERN = Regex(""".*\.(\d{3})$""")
 private val NATIVE_ZIP_VOLUME_PATTERN =
     Regex("""(.*)\.z(\d{2,})$""", RegexOption.IGNORE_CASE)
 private val ARCHIVE_SUFFIXES = listOf(
+    ".tar.zst",
+    ".tar.br",
     ".tar.gz",
     ".tar.bz2",
     ".tar.xz",
@@ -20,6 +22,8 @@ private val ARCHIVE_SUFFIXES = listOf(
     ".xz",
     ".lzma",
     ".lz4",
+    ".zst",
+    ".br",
     ".cpio"
 )
 

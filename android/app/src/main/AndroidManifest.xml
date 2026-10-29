@@ -48,6 +48,8 @@
                 <data android:mimeType="application/x-gzip" />
                 <data android:mimeType="application/x-bzip2" />
                 <data android:mimeType="application/x-xz" />
+                <data android:mimeType="application/zstd" />
+                <data android:mimeType="application/x-brotli" />
                 <data android:mimeType="application/x-cpio" />
                 <data android:mimeType="application/java-archive" />
             </intent-filter>
@@ -64,12 +66,16 @@
                 <data android:pathPattern=".*\\.tar\\.gz" />
                 <data android:pathPattern=".*\\.tar\\.bz2" />
                 <data android:pathPattern=".*\\.tar\\.xz" />
+                <data android:pathPattern=".*\\.tar\\.zst" />
+                <data android:pathPattern=".*\\.tar\\.br" />
                 <data android:pathPattern=".*\\.tgz" />
                 <data android:pathPattern=".*\\.tbz2" />
                 <data android:pathPattern=".*\\.txz" />
                 <data android:pathPattern=".*\\.gz" />
                 <data android:pathPattern=".*\\.bz2" />
                 <data android:pathPattern=".*\\.xz" />
+                <data android:pathPattern=".*\\.zst" />
+                <data android:pathPattern=".*\\.br" />
                 <data android:pathPattern=".*\\.cpio" />
                 <data android:pathPattern=".*\\.jar" />
             </intent-filter>
@@ -86,6 +92,8 @@
                 <data android:mimeType="application/x-gzip" />
                 <data android:mimeType="application/x-bzip2" />
                 <data android:mimeType="application/x-xz" />
+                <data android:mimeType="application/zstd" />
+                <data android:mimeType="application/x-brotli" />
                 <data android:mimeType="application/x-cpio" />
                 <data android:mimeType="application/java-archive" />
             </intent-filter>

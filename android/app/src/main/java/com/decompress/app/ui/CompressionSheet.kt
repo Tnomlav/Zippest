@@ -243,7 +243,7 @@ fun CompressionSheet(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    CompressionFormat.entries.forEach { item ->
+                    CompressionFormat.entries.filter { it.supportsCreation }.forEach { item ->
                         val enabled = item.acceptsMultipleSources ||
                             (target.entries.size == 1 && !target.entries.first().isDirectory)
                         FilterChip(

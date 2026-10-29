@@ -43,7 +43,8 @@ enum class CompressionFormat(
     val extension: String,
     val mimeType: String,
     val supportsPassword: Boolean,
-    val acceptsMultipleSources: Boolean = true
+    val acceptsMultipleSources: Boolean = true,
+    val supportsCreation: Boolean = true
 ) {
     ZIP("ZIP", ".zip", "application/zip", true),
     SEVEN_Z("7Z", ".7z", "application/x-7z-compressed", true),
@@ -51,11 +52,15 @@ enum class CompressionFormat(
     TAR_GZ("TAR.GZ", ".tar.gz", "application/gzip", false),
     TAR_BZ2("TAR.BZ2", ".tar.bz2", "application/x-bzip2", false),
     TAR_XZ("TAR.XZ", ".tar.xz", "application/x-xz", false),
+    TAR_ZSTD("TAR.ZST", ".tar.zst", "application/zstd", false),
+    TAR_BROTLI("TAR.BR", ".tar.br", "application/x-brotli", false, true, false),
     GZIP("GZ", ".gz", "application/gzip", false, false),
     BZIP2("BZ2", ".bz2", "application/x-bzip2", false, false),
     XZ("XZ", ".xz", "application/x-xz", false, false),
     LZMA("LZMA", ".lzma", "application/x-lzma", false, false),
     LZ4("LZ4", ".lz4", "application/x-lz4", false, false),
+    ZSTD("ZST", ".zst", "application/zstd", false, false),
+    BROTLI("BR", ".br", "application/x-brotli", false, false, false),
     CPIO("CPIO", ".cpio", "application/x-cpio", false)
 }
 
@@ -71,7 +76,8 @@ data class CompressionOptions(
     val archiveName: String,
     val level: ArchiveCompressionLevel = ArchiveCompressionLevel.NORMAL,
     val password: String = "",
-    val splitSizeBytes: Long? = null
+    val splitSizeBytes: Long? = null,
+    val onCheckpoint: () -> Unit = {}
 )
 
 data class CompressionResult(
@@ -247,15 +253,19 @@ class CompressionEngine(private val context: Context) {
             CompressionFormat.TAR,
             CompressionFormat.TAR_GZ,
             CompressionFormat.TAR_BZ2,
-            CompressionFormat.TAR_XZ ->
+            CompressionFormat.TAR_XZ,
+            CompressionFormat.TAR_ZSTD ->
                 writeTar(output, nodes, options, onProgress)
             CompressionFormat.GZIP,
             CompressionFormat.BZIP2,
             CompressionFormat.XZ,
             CompressionFormat.LZMA,
-            CompressionFormat.LZ4 ->
+            CompressionFormat.LZ4,
+            CompressionFormat.ZSTD ->
                 writeSingleStream(output, nodes.single(), options, onProgress)
-            CompressionFormat.CPIO -> writeCpio(output, nodes, onProgress)
+            CompressionFormat.CPIO -> writeCpio(output, nodes, options, onProgress)
+            CompressionFormat.TAR_BROTLI,
+            CompressionFormat.BROTLI -> error("Brotli creation is not available")
             CompressionFormat.SEVEN_Z -> error("7Z is handled separately")
         }
     }
@@ -305,7 +315,9 @@ class CompressionEngine(private val context: Context) {
                 }
                 zip.putNextEntry(parameters)
                 if (!node.isDirectory) {
-                    openInput(node.uri).use { input -> input.copyTo(zip, BUFFER_SIZE) }
+                    openInput(node.uri, options.onCheckpoint).use {
+                        it.copyTo(zip, BUFFER_SIZE)
+                    }
                 }
                 zip.closeEntry()
                 onProgress(index + 1, nodes.size)
@@ -335,6 +347,7 @@ class CompressionEngine(private val context: Context) {
                 output,
                 options.level.zipLevel.coerceIn(0, 9)
             )
+            CompressionFormat.TAR_ZSTD -> ZstdCodec.outputStream(output)
             else -> error("Not a TAR format")
         }
         TarArchiveOutputStream(BufferedOutputStream(compressed)).use { tar ->
@@ -353,7 +366,9 @@ class CompressionEngine(private val context: Context) {
                 }
                 tar.putArchiveEntry(entry)
                 if (!node.isDirectory) {
-                    openInput(node.uri).use { it.copyTo(tar, BUFFER_SIZE) }
+                    openInput(node.uri, options.onCheckpoint).use {
+                        it.copyTo(tar, BUFFER_SIZE)
+                    }
                 }
                 tar.closeArchiveEntry()
                 onProgress(index + 1, nodes.size)
@@ -364,6 +379,7 @@ class CompressionEngine(private val context: Context) {
     private fun writeCpio(
         output: OutputStream,
         nodes: List<SourceNode>,
+        options: CompressionOptions,
         onProgress: (Int, Int) -> Unit
     ) {
         CpioArchiveOutputStream(
@@ -384,7 +400,9 @@ class CompressionEngine(private val context: Context) {
                 }
                 cpio.putArchiveEntry(entry)
                 if (!node.isDirectory) {
-                    openInput(node.uri).use { it.copyTo(cpio, BUFFER_SIZE) }
+                    openInput(node.uri, options.onCheckpoint).use {
+                        it.copyTo(cpio, BUFFER_SIZE)
+                    }
                 }
                 cpio.closeArchiveEntry()
                 onProgress(index + 1, nodes.size)
@@ -418,10 +436,11 @@ class CompressionEngine(private val context: Context) {
             )
             CompressionFormat.LZMA -> LZMACompressorOutputStream(output)
             CompressionFormat.LZ4 -> FramedLZ4CompressorOutputStream(output)
+            CompressionFormat.ZSTD -> ZstdCodec.outputStream(output)
             else -> error("Not a single stream format")
         }
         compressed.use { stream ->
-            openInput(node.uri).use { input ->
+            openInput(node.uri, options.onCheckpoint).use { input ->
                 input.copyTo(stream, BUFFER_SIZE)
             }
         }
@@ -460,7 +479,9 @@ class CompressionEngine(private val context: Context) {
                 }
                 it.putArchiveEntry(entry)
                 if (!node.isDirectory) {
-                    openInput(node.uri).use { input -> it.write(input) }
+                    openInput(node.uri, options.onCheckpoint).use { input ->
+                        it.write(input)
+                    }
                 }
                 it.closeArchiveEntry()
                 onProgress(index + 1, nodes.size)
@@ -476,14 +497,15 @@ class CompressionEngine(private val context: Context) {
         }
     }
 
-    private fun openInput(uri: Uri): InputStream {
+    private fun openInput(uri: Uri, onCheckpoint: () -> Unit = {}): InputStream {
         val direct = uri.localFile()
         if (direct != null) {
             if (!direct.isFile) throw ArchiveException("无法读取 ${direct.name}")
-            return FileInputStream(direct)
+            return CheckpointInputStream(FileInputStream(direct), onCheckpoint)
         }
-        return resolver.openInputStream(uri)
+        val input = resolver.openInputStream(uri)
             ?: throw ArchiveException("无法读取所选文件")
+        return CheckpointInputStream(input, onCheckpoint)
     }
 
     private fun normalizedArchiveName(name: String, format: CompressionFormat): String {

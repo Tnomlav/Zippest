@@ -69,6 +69,12 @@ class ArchiveCompatibilityDeviceTest {
     @Test
     fun singleXz() = verifyFixture("sample-single.xz")
 
+    @Test
+    fun singleBrotli() = verifyFixture("sample-single.br")
+
+    @Test
+    fun tarBrotli() = verifyFixture("sample-tar.br")
+
     private fun verifyFixture(
         name: String,
         password: String = "",

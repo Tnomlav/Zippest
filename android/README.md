@@ -7,7 +7,7 @@ creating common archive formats. The product UI follows the finalized prototype 
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.1.9`
+- Version: `1.2.0`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct
@@ -23,10 +23,10 @@ creating common archive formats. The product UI follows the finalized prototype 
   legacy storage bridge so read/write access works across shared storage.
 - Persistent settings for appearance, hidden files, thumbnails, sorting,
   extraction defaults, notifications, permissions, and task maintenance.
-- Browse and extract ZIP, 7Z, RAR, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, CPIO, GZ,
-  BZ2, XZ, LZMA, and LZ4 archives.
-- Create ZIP, 7Z, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, CPIO, GZ, BZ2, XZ, LZMA,
-  and LZ4 archives with store/fast/standard/maximum compression levels.
+- Browse and extract ZIP, 7Z, RAR, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, TAR.ZST,
+  TAR.BR, CPIO, GZ, BZ2, XZ, LZMA, LZ4, ZST, and BR archives.
+- Create ZIP, 7Z, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, TAR.ZST, CPIO, GZ, BZ2,
+  XZ, LZMA, LZ4, and ZST archives with selectable compression levels.
 - Create encrypted ZIP and 7Z archives.
 - Split created archives into sequential `.001`, `.002`, and later volumes;
   open `.001` in Zippest to combine and extract it.
@@ -107,8 +107,11 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
-Version `1.1.9` shows the current directory path as the top-bar title without a
-second subtitle and removes the redundant quick-location heading. Version
+Version `1.2.0` adds system-app opening for regular files, cross-volume file
+transfer roots, app-wide archive progress with pause/resume and timing, edge and
+bottom navigation gestures, Zstandard creation/opening, and Brotli opening.
+Version `1.1.9` showed the current directory path as the top-bar title without a
+second subtitle and removed the redundant quick-location heading. Version
 `1.1.8` removed the colored background tiles from file and folder icons so file
 names remain the visual focus. Version `1.1.7` attached the full-width
 internal-storage quick-location panel directly below the top app bar. Version
