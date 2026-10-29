@@ -91,8 +91,9 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.2.1` routes every non-archive file through Android's system app
-chooser so the user can select a compatible viewer or editor. Version `1.2.0`
+Version `1.2.3` groups Open With targets by file type and prioritizes direct
+viewers/editors ahead of share and send targets. Version `1.2.2` added the
+explicit one-time/always Open With dialog and its reset control. Version `1.2.0`
 added system-app opening for regular files, cross-volume file
 transfer roots, app-wide archive progress with pause/resume and timing, edge and
 bottom navigation gestures, Zstandard creation/opening, and Brotli opening.

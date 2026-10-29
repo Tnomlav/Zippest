@@ -26,7 +26,6 @@ import android.provider.OpenableColumns
 import android.text.format.DateUtils
 import android.text.format.Formatter
 import android.util.Size
-import android.webkit.MimeTypeMap
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -462,6 +461,7 @@ private fun FileBrowserScreen(
     var showTaskQueue by remember { mutableStateOf(false) }
     var transferTarget by remember { mutableStateOf<TransferTarget?>(null) }
     var compressTarget by remember { mutableStateOf<CompressTarget?>(null) }
+    var openWithRequest by remember { mutableStateOf<OpenWithRequest?>(null) }
 
     val folderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -758,7 +758,7 @@ private fun FileBrowserScreen(
                                             },
                                             onClick = {
                                                 moreExpanded = false
-                                                notify("Zippest 1.2.1 · 文件浏览与压缩")
+                                                notify("Zippest 1.2.3 · 文件浏览与压缩")
                                             }
                                         )
                                     }
@@ -980,8 +980,26 @@ private fun FileBrowserScreen(
                                     }
                                 }
                                 else -> {
-                                    val opened = openEntryExternally(context, entry)
-                                    if (!opened) notify("没有可打开此文件的应用")
+                                    val viewIntent = createOpenWithIntent(context, entry)
+                                    val options = viewIntent?.let {
+                                        queryOpenWithOptions(context, it)
+                                    }.orEmpty()
+                                    if (viewIntent != null && options.isNotEmpty()) {
+                                        val request = OpenWithRequest(
+                                            displayName = entry.name,
+                                            mimeType = viewIntent.type ?: "*/*",
+                                            extension = entry.name
+                                                .substringAfterLast('.', "")
+                                                .lowercase(),
+                                            intent = viewIntent,
+                                            options = options
+                                        )
+                                        if (!launchRememberedOpenWith(context, request)) {
+                                            openWithRequest = request
+                                        }
+                                    } else {
+                                        notify("没有可打开此文件的应用")
+                                    }
                                 }
                             }
                         },
@@ -1183,6 +1201,23 @@ private fun FileBrowserScreen(
                 TextButton(onClick = { showCustomSuffixDialog = false }) {
                     Text("取消")
                 }
+            }
+        )
+    }
+
+    openWithRequest?.let { request ->
+        OpenWithDialog(
+            request = request,
+            onDismiss = { openWithRequest = null },
+            onLaunch = { option, rememberChoice ->
+                val opened = launchOpenWith(
+                    context,
+                    request,
+                    option,
+                    rememberChoice
+                )
+                openWithRequest = null
+                if (!opened) notify("无法打开此文件")
             }
         )
     }
@@ -2303,41 +2338,6 @@ private fun shareEntries(context: Context, entries: List<BrowserEntry>): Boolean
         context.startActivity(Intent.createChooser(intent, "分享所选文件"))
     }.isSuccess
 }
-
-private fun openEntryExternally(context: Context, entry: BrowserEntry): Boolean =
-    runCatching {
-        val viewUri = if (entry.uri.scheme == ContentResolver.SCHEME_FILE) {
-            val path = entry.uri.path ?: error("本地文件路径无效")
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                File(path)
-            )
-        } else {
-            entry.uri
-        }
-        val mimeType = entry.mimeType
-            ?: MimeTypeMap.getSingleton()
-                .getMimeTypeFromExtension(entry.name.substringAfterLast('.', "").lowercase())
-            ?: "*/*"
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(viewUri, mimeType)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            clipData = ClipData.newRawUri(entry.name, viewUri)
-        }
-        val chooser = Intent.createChooser(
-            intent,
-            if (entry.isDirectory) {
-                "选择打开方式"
-            } else {
-                "选择打开 ${entry.name} 的方式"
-            }
-        ).apply {
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            clipData = intent.clipData
-        }
-        context.startActivity(chooser)
-    }.isSuccess
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this

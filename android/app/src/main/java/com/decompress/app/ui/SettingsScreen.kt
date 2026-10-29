@@ -64,6 +64,7 @@ import com.decompress.app.data.BrowserSortMode
 import com.decompress.app.data.ConflictPolicy
 import com.decompress.app.data.DefaultDestinationMode
 import com.decompress.app.data.FileNameEncoding
+import com.decompress.app.data.OpenWithPreferences
 import com.decompress.app.data.ThemeMode
 import com.decompress.app.data.TrashRetention
 import com.decompress.app.data.TrashRepository
@@ -151,7 +152,7 @@ fun SettingsScreen(
     val versionName = remember {
         runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
-        }.getOrNull() ?: "1.2.1"
+        }.getOrNull() ?: "1.2.3"
     }
 
     BackHandler(onBack = onBack)
@@ -441,6 +442,15 @@ fun SettingsScreen(
                         title = "回收站",
                         detail = "查看、恢复或永久删除已移除的文件",
                         onClick = { showTrash = true }
+                    )
+                    SettingsDivider()
+                    SettingsAction(
+                        title = "清除打开方式偏好",
+                        detail = "下次打开文件时重新选择应用",
+                        onClick = {
+                            OpenWithPreferences.clear(context)
+                            onNotify("已清除打开方式偏好")
+                        }
                     )
                     SettingsDivider()
                     SettingsAction(
