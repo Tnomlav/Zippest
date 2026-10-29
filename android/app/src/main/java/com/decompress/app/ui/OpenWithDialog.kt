@@ -117,11 +117,11 @@ internal fun queryOpenWithOptions(context: Context, intent: Intent): List<OpenWi
                         .toBitmap(64, 64)
                         .asImageBitmap()
                 }.getOrNull(),
-                category = if (isShareLike(label, component)) {
-                    OpenWithCategory.SHARE
-                } else {
-                    OpenWithCategory.DIRECT
-                }
+                category = openWithCategory(
+                    label,
+                    component.packageName,
+                    component.className
+                )
             )
         }
         .distinctBy { it.component.flattenToString() }
@@ -134,18 +134,26 @@ internal fun queryOpenWithOptions(context: Context, intent: Intent): List<OpenWi
     )
 }
 
-private fun isShareLike(label: String, component: ComponentName): Boolean {
+internal fun openWithCategory(
+    label: String,
+    packageName: String,
+    className: String
+): OpenWithCategory {
     val searchable = buildString {
         append(label)
         append(' ')
-        append(component.packageName)
+        append(packageName)
         append(' ')
-        append(component.className)
+        append(className)
     }.lowercase()
-    return listOf(
+    return if (listOf(
         "分享", "发送", "朋友圈", "好友", "聊天", "传输",
         "share", "send", "moment", "friend", "message", "chat", "transfer"
-    ).any(searchable::contains)
+    ).any(searchable::contains)) {
+        OpenWithCategory.SHARE
+    } else {
+        OpenWithCategory.DIRECT
+    }
 }
 
 private fun directPriority(mimeType: String, option: OpenWithOption): Int {

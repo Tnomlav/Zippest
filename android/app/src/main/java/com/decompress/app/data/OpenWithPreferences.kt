@@ -27,8 +27,17 @@ object OpenWithPreferences {
         prefs(context).edit { clear() }
     }
 
-    private fun key(mimeType: String, extension: String): String =
-        "${mimeType.lowercase()}::${extension.lowercase()}"
+    private fun key(mimeType: String, extension: String): String {
+        val lower = mimeType.lowercase()
+        return when {
+            lower.startsWith("image/") -> "image/*"
+            lower.startsWith("video/") -> "video/*"
+            lower.startsWith("audio/") -> "audio/*"
+            lower.startsWith("text/") -> "text/*"
+            lower == "*/*" -> "*/*::${extension.lowercase()}"
+            else -> lower
+        }
+    }
 
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(

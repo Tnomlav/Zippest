@@ -91,8 +91,9 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.2.3` groups Open With targets by file type and prioritizes direct
-viewers/editors ahead of share and send targets. Version `1.2.2` added the
+Version `1.2.4` groups Open With targets by file type, prioritizes direct
+viewers/editors ahead of share and send targets, and remembers always-use
+preferences for the selected file family. Version `1.2.2` added the
 explicit one-time/always Open With dialog and its reset control. Version `1.2.0`
 added system-app opening for regular files, cross-volume file
 transfer roots, app-wide archive progress with pause/resume and timing, edge and

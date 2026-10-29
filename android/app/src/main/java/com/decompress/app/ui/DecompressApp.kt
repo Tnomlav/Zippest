@@ -758,7 +758,7 @@ private fun FileBrowserScreen(
                                             },
                                             onClick = {
                                                 moreExpanded = false
-                                                notify("Zippest 1.2.3 · 文件浏览与压缩")
+                                                notify("Zippest 1.2.4 · 文件浏览与压缩")
                                             }
                                         )
                                     }
