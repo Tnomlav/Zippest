@@ -212,8 +212,8 @@ class SafFileRepository(private val context: Context) {
             }.getOrNull()
             if (firstId != null && firstId == secondId) return true
         }
-        val firstDirectory = localDirectory(first) ?: return false
-        val secondDirectory = localDirectory(second) ?: return false
+        val firstDirectory = localFileForUri(first) ?: return false
+        val secondDirectory = localFileForUri(second) ?: return false
         return runCatching {
             firstDirectory.canonicalFile == secondDirectory.canonicalFile
         }.getOrDefault(false)
@@ -299,11 +299,13 @@ class SafFileRepository(private val context: Context) {
         source: BrowserEntry,
         sourceTreeUri: Uri,
         destinationTreeUri: Uri,
-        move: Boolean
+        move: Boolean,
+        destinationDirectoryUri: Uri? = null
     ): TransferResult = withContext(Dispatchers.IO) {
         var createdDestination: Uri? = null
         try {
-            val destinationRoot = rootDocumentUri(destinationTreeUri)
+            val destinationRoot = destinationDirectoryUri
+                ?: rootDocumentUri(destinationTreeUri)
             if (source.isDirectory && isPotentialSelfCopy(source, destinationRoot)) {
                 throw IllegalArgumentException("不能把文件夹移动到它自身内部")
             }
@@ -348,6 +350,125 @@ class SafFileRepository(private val context: Context) {
             }
         }
         TransferResult(TransferOutcome.COMPLETED)
+    }
+
+    suspend fun copyOrMoveDirect(
+        sourceUri: Uri,
+        destinationDirectoryUri: Uri,
+        move: Boolean
+    ): TransferResult = withContext(Dispatchers.IO) {
+        val source = sourceUri.localFile()
+            ?: return@withContext TransferResult(
+                TransferOutcome.FAILED,
+                "源文件不可用"
+            )
+        val destinationDirectory = destinationDirectoryUri.localFile()
+            ?: return@withContext TransferResult(
+                TransferOutcome.FAILED,
+                "目标文件夹不可用"
+            )
+        if (!source.exists()) {
+            return@withContext TransferResult(
+                TransferOutcome.FAILED,
+                "源文件不存在"
+            )
+        }
+        if (!destinationDirectory.isDirectory) {
+            return@withContext TransferResult(
+                TransferOutcome.FAILED,
+                "目标文件夹不可用"
+            )
+        }
+
+        val sourceCanonical = runCatching { source.canonicalFile }.getOrDefault(source)
+        val destinationCanonical = runCatching {
+            destinationDirectory.canonicalFile
+        }.getOrDefault(destinationDirectory)
+        if (
+            source.isDirectory &&
+            (
+                destinationCanonical == sourceCanonical ||
+                    destinationCanonical.path.startsWith(
+                        sourceCanonical.path + File.separator
+                    )
+                )
+        ) {
+            return@withContext TransferResult(
+                TransferOutcome.FAILED,
+                "不能把文件夹放入它自身内部"
+            )
+        }
+        if (
+            move &&
+            runCatching {
+                source.parentFile?.canonicalFile == destinationCanonical
+            }.getOrDefault(false)
+        ) {
+            return@withContext TransferResult(
+                TransferOutcome.FAILED,
+                "不能把文件移动到当前文件夹"
+            )
+        }
+
+        val target = uniqueFile(destinationDirectory, source.name)
+        if (move && source.renameTo(target)) {
+            return@withContext TransferResult(TransferOutcome.COMPLETED)
+        }
+        runCatching {
+            if (source.isDirectory) {
+                copyDirectory(source, target)
+            } else {
+                source.copyTo(target, overwrite = false)
+                target.setLastModified(source.lastModified())
+            }
+        }.getOrElse { error ->
+            target.deleteRecursively()
+            return@withContext TransferResult(
+                TransferOutcome.FAILED,
+                error.message ?: "复制失败"
+            )
+        }
+        if (move) {
+            val deleted = runCatching { source.deleteRecursively() }.getOrDefault(false)
+            if (!deleted || source.exists()) {
+                return@withContext TransferResult(
+                    TransferOutcome.SOURCE_RETAINED,
+                    "已复制，但无法删除源文件"
+                )
+            }
+        }
+        TransferResult(TransferOutcome.COMPLETED)
+    }
+
+    private fun copyDirectory(source: File, destination: File) {
+        if (!destination.mkdirs()) {
+            throw IllegalStateException("无法创建 ${destination.name}")
+        }
+        source.listFiles().orEmpty().forEach { child ->
+            val target = File(destination, child.name)
+            if (child.isDirectory) {
+                copyDirectory(child, target)
+            } else {
+                child.copyTo(target, overwrite = false)
+                target.setLastModified(child.lastModified())
+            }
+        }
+        destination.setLastModified(source.lastModified())
+    }
+
+    private fun uniqueFile(directory: File, name: String): File {
+        val direct = File(directory, name)
+        if (!direct.exists()) return direct
+        val dot = name.lastIndexOf('.')
+        val base = if (dot > 0) name.substring(0, dot) else name
+        val suffix = if (dot > 0) name.substring(dot) else ""
+        var index = 1
+        while (index < 10_000) {
+            val candidate = File(directory, "$base ($index)$suffix")
+            if (!candidate.exists()) return candidate
+            index++
+        }
+        throw IllegalStateException("无法生成可用文件名")
     }
 
     private fun isPotentialSelfCopy(source: BrowserEntry, destinationRoot: Uri): Boolean {
@@ -454,7 +575,7 @@ class SafFileRepository(private val context: Context) {
             )?.use { cursor -> cursor.moveToFirst() } == true
         }.getOrDefault(false)
 
-    private fun localDirectory(uri: Uri): File? {
+    fun localFileForUri(uri: Uri): File? {
         uri.localFile()?.let { return it }
         if (uri.authority != "com.android.externalstorage.documents") return null
         val documentId = runCatching {
@@ -468,7 +589,20 @@ class SafFileRepository(private val context: Context) {
         } else {
             File("/storage", volume)
         }
-        return if (relativePath.isBlank()) volumeRoot else File(volumeRoot, relativePath)
+        val candidate = if (relativePath.isBlank()) {
+            volumeRoot
+        } else {
+            File(volumeRoot, relativePath)
+        }
+        return runCatching {
+            val rootPath = volumeRoot.canonicalPath + File.separator
+            val candidatePath = candidate.canonicalPath
+            if (candidatePath == volumeRoot.canonicalPath || candidatePath.startsWith(rootPath)) {
+                candidate
+            } else {
+                null
+            }
+        }.getOrNull()
     }
 
     companion object {

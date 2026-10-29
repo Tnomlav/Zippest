@@ -18,6 +18,13 @@ import android.text.format.Formatter
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -46,6 +53,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -94,7 +102,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -104,8 +117,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import com.decompress.app.data.ArchiveItem
 import com.decompress.app.data.ArchiveNode
+import com.decompress.app.data.AppSettings
 import com.decompress.app.data.BrowserEntry
 import com.decompress.app.data.ConflictPolicy
+import com.decompress.app.data.DefaultDestinationMode
 import com.decompress.app.data.DestinationMode
 import com.decompress.app.data.FileNameEncoding
 import com.decompress.app.data.MultiArchiveEngine
@@ -117,11 +132,11 @@ import kotlinx.coroutines.launch
 fun ArchiveScreen(
     target: ArchiveTarget,
     onBack: () -> Unit,
-    onExtract: (BrowserEntry, String) -> Unit
+    onExtract: (BrowserEntry, String) -> Unit,
+    onNotify: (String) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
     val engine = remember { MultiArchiveEngine(context.applicationContext) }
 
     var items by remember { mutableStateOf<List<ArchiveItem>>(emptyList()) }
@@ -145,7 +160,13 @@ fun ArchiveScreen(
             return@LaunchedEffect
         }
         runCatching {
-            engine.list(target.archive.uri, target.archive.name, archivePassword)
+            engine.list(
+                archiveUri = target.archive.uri,
+                archiveName = target.archive.name,
+                password = archivePassword,
+                archiveTreeUri = target.parentTreeUri,
+                archiveParentUri = target.parentUri
+            )
         }
             .onSuccess { items = it }
             .onFailure { error = it.message ?: "无法读取压缩包" }
@@ -153,7 +174,7 @@ fun ArchiveScreen(
     }
 
     fun notify(message: String) {
-        scope.launch { snackbarHostState.showSnackbar(message) }
+        onNotify(message)
     }
 
     fun testArchive() {
@@ -165,7 +186,9 @@ fun ArchiveScreen(
                     archiveUri = target.archive.uri,
                     archiveName = target.archive.name,
                     password = archivePassword,
-                    onProgress = { _, _ -> }
+                    onProgress = { _, _ -> },
+                    archiveTreeUri = target.parentTreeUri,
+                    archiveParentUri = target.parentUri
                 )
             }.onSuccess { count ->
                 notify("压缩包测试通过 · $count 项")
@@ -190,7 +213,6 @@ fun ArchiveScreen(
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 navigationIcon = {
@@ -258,77 +280,107 @@ fun ArchiveScreen(
             }
         }
     ) { padding ->
-        when {
-            loading -> Box(
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-            error != null -> Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    Icons.Outlined.Archive,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(52.dp)
-                )
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    error.orEmpty(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(16.dp))
-                Button(onClick = {
-                    passwordInput = archivePassword
-                    passwordVisible = false
-                    showPasswordDialog = true
-                }) {
-                    Text("输入密码")
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            when {
+                loading -> Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
-            }
-            nodes.isEmpty() -> Box(
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("压缩包为空", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            else -> LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(
-                    horizontal = 12.dp,
-                    vertical = 8.dp
-                )
-            ) {
-                items(nodes, key = { it.path }) { node ->
-                    ArchiveRow(
-                        node = node,
-                        onClick = {
-                            if (node.isDirectory) {
-                                currentPath = node.path
-                            } else {
-                                notify("文件预览将在后续阶段接入")
+                error != null -> Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Outlined.Archive,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(52.dp)
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        error.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Button(onClick = {
+                        passwordInput = archivePassword
+                        passwordVisible = false
+                        showPasswordDialog = true
+                    }) {
+                        Text("输入密码")
+                    }
+                }
+                nodes.isEmpty() -> Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("压缩包为空", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                else -> LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 12.dp,
+                        top = 54.dp,
+                        end = 12.dp,
+                        bottom = 8.dp
+                    )
+                ) {
+                    items(nodes, key = { it.path }) { node ->
+                        ArchiveRow(
+                            node = node,
+                            onClick = {
+                                if (node.isDirectory) {
+                                    currentPath = node.path
+                                } else {
+                                    onExtract(target.archive, archivePassword)
+                                }
                             }
-                        }
+                        )
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.32f)
+                        )
+                    }
+                }
+            }
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 8.dp),
+                shape = RoundedCornerShape(999.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.94f),
+                shadowElevation = 4.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        Icons.Outlined.AutoAwesome,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
                     )
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.32f)
+                    Text(
+                        "仅预览 · 解压后才能使用这些文件",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }
+            DreamPreviewBorder(
+                modifier = Modifier.matchParentSize()
+            )
         }
     }
 
@@ -387,6 +439,44 @@ fun ArchiveScreen(
                     Text("取消")
                 }
             }
+        )
+    }
+}
+
+@Composable
+private fun DreamPreviewBorder(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "preview-border")
+    val glow by transition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "preview-border-glow"
+    )
+    val primary = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
+    val tertiary = MaterialTheme.colorScheme.tertiary
+    Canvas(modifier = modifier.padding(3.dp)) {
+        val stroke = 2.dp.toPx()
+        val inset = stroke / 2f
+        drawRoundRect(
+            brush = Brush.linearGradient(
+                colors = listOf(
+                    primary.copy(alpha = 0.28f + glow * 0.55f),
+                    secondary.copy(alpha = 0.45f + glow * 0.35f),
+                    tertiary.copy(alpha = 0.32f + glow * 0.5f),
+                    primary.copy(alpha = 0.28f + glow * 0.55f)
+                )
+            ),
+            topLeft = Offset(inset, inset),
+            size = Size(
+                width = size.width - stroke,
+                height = size.height - stroke
+            ),
+            cornerRadius = CornerRadius(18.dp.toPx()),
+            style = Stroke(width = stroke)
         )
     }
 }
@@ -532,6 +622,7 @@ private fun ArchiveRow(node: ArchiveNode, onClick: () -> Unit) {
 @Composable
 fun ExtractSheet(
     target: ExtractTarget,
+    settings: AppSettings,
     onDismiss: () -> Unit,
     onExtractionStarted: () -> Unit
 ) {
@@ -545,22 +636,46 @@ fun ExtractSheet(
         target.archives.firstOrNull()?.uri,
         target.initialPassword
     ) {
-        mutableStateOf(target.initialPassword)
+        mutableStateOf(
+            target.initialPassword.ifBlank {
+                if (settings.fillPasswordFromClipboard) {
+                    readClipboard(clipboardManager, context).orEmpty()
+                } else {
+                    ""
+                }
+            }
+        )
     }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var clipboardText by remember { mutableStateOf(readClipboard(clipboardManager, context)) }
     var clipboardExpanded by remember { mutableStateOf(false) }
     var destinationMode by rememberSaveable {
         mutableStateOf(
-            if (target.requiresCustomDestination) DestinationMode.CUSTOM
-            else DestinationMode.NEW_FOLDER
+            when {
+                target.requiresCustomDestination -> DestinationMode.CUSTOM
+                settings.defaultDestinationMode == DefaultDestinationMode.CURRENT_FOLDER ->
+                    DestinationMode.CURRENT_FOLDER
+                settings.defaultDestinationMode == DefaultDestinationMode.CUSTOM ->
+                    DestinationMode.CUSTOM
+                else -> DestinationMode.NEW_FOLDER
+            }
         )
     }
-    var customTreeUri by remember { mutableStateOf<Uri?>(null) }
-    var customRootUri by remember { mutableStateOf<Uri?>(null) }
-    var customName by remember { mutableStateOf<String?>(null) }
-    var conflictPolicy by rememberSaveable { mutableStateOf(ConflictPolicy.RENAME) }
-    var encoding by rememberSaveable { mutableStateOf(FileNameEncoding.AUTO) }
+    var customTreeUri by remember {
+        mutableStateOf(settings.customDestinationTreeUri?.let(Uri::parse))
+    }
+    var customRootUri by remember {
+        mutableStateOf(settings.customDestinationRootUri?.let(Uri::parse))
+    }
+    var customName by remember {
+        mutableStateOf(settings.customDestinationName)
+    }
+    var conflictPolicy by rememberSaveable {
+        mutableStateOf(settings.defaultConflictPolicy)
+    }
+    var encoding by rememberSaveable {
+        mutableStateOf(settings.defaultEncoding)
+    }
     var samePassword by rememberSaveable { mutableStateOf(false) }
     var perArchivePasswords by remember(target.archives) {
         mutableStateOf(List(target.archives.size) { "" })
@@ -731,39 +846,57 @@ fun ExtractSheet(
                 Spacer(Modifier.height(8.dp))
                 Box {
                     Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                clipboardText = readClipboard(clipboardManager, context)
-                                clipboardExpanded = true
-                            },
+                        modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
+                            modifier = Modifier.padding(start = 10.dp, end = 2.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                Icons.Outlined.ContentCopy,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Text(
-                                clipboardText ?: "剪贴板为空",
+                            Row(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .padding(start = 8.dp),
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Icon(
-                                Icons.Outlined.KeyboardArrowDown,
-                                contentDescription = "展开剪贴板",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                                    .clickable {
+                                        val latest =
+                                            readClipboard(clipboardManager, context)
+                                        clipboardText = latest
+                                        if (latest != null) password = latest
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Outlined.ContentCopy,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    clipboardText ?: "剪贴板为空",
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(start = 8.dp),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    clipboardText = readClipboard(
+                                        clipboardManager,
+                                        context
+                                    )
+                                    clipboardExpanded = true
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Outlined.KeyboardArrowDown,
+                                    contentDescription = "打开剪贴板",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                     DropdownMenu(
@@ -1088,12 +1221,12 @@ private fun readClipboard(manager: ClipboardManager, context: Context): String? 
     return clip.getItemAt(0).coerceToText(context)?.toString()?.trim()?.ifBlank { null }
 }
 
-private fun treeRootDocumentUri(treeUri: Uri): Uri {
+internal fun treeRootDocumentUri(treeUri: Uri): Uri {
     val treeId = DocumentsContract.getTreeDocumentId(treeUri)
     return DocumentsContract.buildDocumentUriUsingTree(treeUri, treeId)
 }
 
-private fun queryDisplayName(context: Context, treeUri: Uri): String {
+internal fun queryDisplayName(context: Context, treeUri: Uri): String {
     val root = treeRootDocumentUri(treeUri)
     context.contentResolver.query(
         root,

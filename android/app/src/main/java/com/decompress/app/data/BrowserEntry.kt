@@ -11,21 +11,17 @@ data class BrowserEntry(
     val mimeType: String?
 ) {
     val extension: String
-        get() = name.substringAfterLast('.', "").lowercase()
+        get() = canonicalArchiveName(name).substringAfterLast('.', "").lowercase()
 
     val isArchive: Boolean
-        get() = extension in ARCHIVE_EXTENSIONS
+        get() = isSupportedArchiveName(name)
+
+    val isFirstSplitVolume: Boolean
+        get() = com.decompress.app.data.isFirstSplitVolume(name)
 
     val isImage: Boolean
         get() = mimeType?.startsWith("image/") == true
 
     val isVideo: Boolean
         get() = mimeType?.startsWith("video/") == true
-
-    companion object {
-        val ARCHIVE_EXTENSIONS = setOf(
-            "zip", "rar", "7z", "tar", "gz", "tgz", "bz2", "tbz2",
-            "xz", "txz", "zst", "lz4", "cab", "iso", "jar"
-        )
-    }
 }

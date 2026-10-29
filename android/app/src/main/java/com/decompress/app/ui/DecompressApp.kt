@@ -30,6 +30,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -46,6 +47,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -59,18 +61,27 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.InsertDriveFile
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Sort
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -79,6 +90,7 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -118,15 +130,23 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.decompress.app.IncomingArchive
+import com.decompress.app.data.AppSettingsRepository
+import com.decompress.app.data.BrowserSortMode
 import com.decompress.app.data.BrowserEntry
 import com.decompress.app.data.FileBrowserController
+import com.decompress.app.data.ThemeMode
+import com.decompress.app.data.TrashRepository
 import com.decompress.app.service.ExtractionScheduler
+import com.decompress.app.service.CompressionScheduler
 import com.decompress.app.ui.theme.ZippestTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -134,10 +154,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-private enum class SortMode(val label: String) {
-    NAME("名称"),
-    SIZE("大小"),
-    DATE("日期")
+private enum class StorageDestination(
+    val label: String,
+    val directory: String?
+) {
+    ROOT("目录首页", null),
+    DOWNLOADS("下载", Environment.DIRECTORY_DOWNLOADS),
+    PICTURES("相册", Environment.DIRECTORY_PICTURES),
+    CAMERA("相机", Environment.DIRECTORY_DCIM),
+    MOVIES("视频", Environment.DIRECTORY_MOVIES),
+    MUSIC("音乐", Environment.DIRECTORY_MUSIC),
+    DOCUMENTS("文档", Environment.DIRECTORY_DOCUMENTS)
 }
 
 data class ArchiveTarget(
@@ -163,14 +190,31 @@ data class ExtractTarget(
 fun ZippestApp(incomingArchive: IncomingArchive? = null) {
     val context = LocalContext.current
     val controller = remember { FileBrowserController(context.applicationContext) }
+    val settingsRepository = remember { AppSettingsRepository(context.applicationContext) }
     val scope = rememberCoroutineScope()
     var restored by remember { mutableStateOf(false) }
     var archiveTarget by remember { mutableStateOf<ArchiveTarget?>(null) }
     var extractTarget by remember { mutableStateOf<ExtractTarget?>(null) }
+    var showSettings by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val settingsFolderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                controller.chooseRoot(uri)
+                showSettings = false
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         controller.restore()
+        withContext(Dispatchers.IO) {
+            TrashRepository(context.applicationContext)
+                .purgeExpired(settingsRepository.settings.trashRetention.days)
+        }
         restored = true
     }
 
@@ -195,12 +239,20 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 val successful = intent?.getBooleanExtra(
-                    ExtractionScheduler.EXTRA_EXTRACTION_SUCCESS,
+                    if (intent?.action == CompressionScheduler.ACTION_COMPRESSION_FINISHED) {
+                        CompressionScheduler.EXTRA_COMPRESSION_SUCCESS
+                    } else {
+                        ExtractionScheduler.EXTRA_EXTRACTION_SUCCESS
+                    },
                     false
                 ) == true
                 val message = intent?.getStringExtra(
-                    ExtractionScheduler.EXTRA_EXTRACTION_MESSAGE
-                ) ?: if (successful) "解压完成" else "解压失败"
+                    if (intent?.action == CompressionScheduler.ACTION_COMPRESSION_FINISHED) {
+                        CompressionScheduler.EXTRA_COMPRESSION_MESSAGE
+                    } else {
+                        ExtractionScheduler.EXTRA_EXTRACTION_MESSAGE
+                    }
+                ) ?: if (successful) "后台任务完成" else "后台任务失败"
                 archiveTarget = null
                 scope.launch {
                     controller.refresh()
@@ -211,7 +263,10 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
         ContextCompat.registerReceiver(
             context,
             receiver,
-            IntentFilter(ExtractionScheduler.ACTION_EXTRACTION_FINISHED),
+            IntentFilter().apply {
+                addAction(ExtractionScheduler.ACTION_EXTRACTION_FINISHED)
+                addAction(CompressionScheduler.ACTION_COMPRESSION_FINISHED)
+            },
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
         onDispose {
@@ -219,7 +274,13 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
         }
     }
 
-    ZippestTheme {
+    val appSettings = settingsRepository.settings
+    val darkTheme = when (appSettings.themeMode) {
+        ThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+    ZippestTheme(darkTheme = darkTheme) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (!restored) {
                 Box(
@@ -232,7 +293,17 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
                 }
             } else {
                 val currentArchive = archiveTarget
-                if (currentArchive != null) {
+                if (showSettings) {
+                    SettingsScreen(
+                        repository = settingsRepository,
+                        browserPath = controller.path.joinToString(" / "),
+                        onBack = { showSettings = false },
+                        onChooseBrowserFolder = { settingsFolderPicker.launch(null) },
+                        onNotify = { message ->
+                            scope.launch { snackbarHostState.showSnackbar(message) }
+                        }
+                    )
+                } else if (currentArchive != null) {
                     ArchiveScreen(
                         target = currentArchive,
                         onBack = { archiveTarget = null },
@@ -247,11 +318,15 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
                                     currentArchive.requiresCustomDestination,
                                 initialPassword = password
                             )
+                        },
+                        onNotify = { message ->
+                            scope.launch { snackbarHostState.showSnackbar(message) }
                         }
                     )
                 } else {
                     FileBrowserScreen(
                         controller = controller,
+                        settingsRepository = settingsRepository,
                         onOpenArchive = { entry ->
                             val parentUri = controller.currentUri
                             val parentTreeUri = controller.treeUri
@@ -273,6 +348,10 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
                                 parentPath = parentPath,
                                 parentName = parentName
                             )
+                        },
+                        onOpenSettings = { showSettings = true },
+                        onNotify = { message ->
+                            scope.launch { snackbarHostState.showSnackbar(message) }
                         }
                     )
                 }
@@ -280,6 +359,7 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
                 extractTarget?.let { target ->
                     ExtractSheet(
                         target = target,
+                        settings = settingsRepository.settings,
                         onDismiss = { extractTarget = null },
                         onExtractionStarted = {
                             extractTarget = null
@@ -291,11 +371,8 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
                     )
                 }
             }
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
+            CenteredSnackbarHost(
+                hostState = snackbarHostState
             )
         }
     }
@@ -304,28 +381,42 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
 @Composable
 private fun FileBrowserScreen(
     controller: FileBrowserController,
+    settingsRepository: AppSettingsRepository,
     onOpenArchive: (BrowserEntry) -> Unit,
-    onExtract: (List<BrowserEntry>, Uri, Uri, String, String) -> Unit
+    onExtract: (List<BrowserEntry>, Uri, Uri, String, String) -> Unit,
+    onOpenSettings: () -> Unit,
+    onNotify: (String) -> Unit
 ) {
     val context = LocalContext.current
     val activity = context.findActivity()
     val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
     val haptics = LocalHapticFeedback.current
     val searchFocus = remember { FocusRequester() }
+    val renameFocus = remember { FocusRequester() }
 
     var searchMode by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
-    var sortMode by rememberSaveable { mutableStateOf(SortMode.NAME) }
+    var storageExpanded by remember { mutableStateOf(false) }
     var sortExpanded by remember { mutableStateOf(false) }
     var moreExpanded by remember { mutableStateOf(false) }
     var showNewFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
     var showRenameDialog by remember { mutableStateOf(false) }
-    var renameName by remember { mutableStateOf("") }
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    var renameValue by remember { mutableStateOf(TextFieldValue()) }
+    var showCustomSuffixDialog by remember { mutableStateOf(false) }
+    var customSuffix by remember { mutableStateOf("") }
     var showTaskQueue by remember { mutableStateOf(false) }
-    var transferMove by remember { mutableStateOf(false) }
+    var transferTarget by remember { mutableStateOf<TransferTarget?>(null) }
+    var compressTarget by remember { mutableStateOf<CompressTarget?>(null) }
+    var archiveTasks by remember { mutableStateOf<List<WorkInfo>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            archiveTasks = runCatching { loadArchiveWorkInfos(context) }
+                .getOrDefault(emptyList())
+            delay(700)
+        }
+    }
 
     val folderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -341,9 +432,7 @@ private fun FileBrowserScreen(
         if (controller.hasDirectStorageAccess()) {
             scope.launch { controller.openInternalStorage() }
         } else {
-            scope.launch {
-                snackbarHostState.showSnackbar("尚未获得所有文件访问权限")
-            }
+            onNotify("尚未获得所有文件访问权限")
         }
     }
 
@@ -353,50 +442,12 @@ private fun FileBrowserScreen(
         if (grants.values.all { it } && controller.hasDirectStorageAccess()) {
             scope.launch { controller.openInternalStorage() }
         } else {
-            scope.launch {
-                snackbarHostState.showSnackbar("存储权限被拒绝，可改为选择一个文件夹")
-            }
-        }
-    }
-
-    val transferPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        if (uri != null) {
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                )
-            }
-            val moving = transferMove
-            scope.launch {
-                val summary = controller.transferSelected(uri, moving)
-                val action = if (moving) "移动" else "复制"
-                val message = when {
-                    summary.completed > 0 &&
-                        summary.sourceRetained == 0 &&
-                        summary.failed == 0 ->
-                        "已${action} ${summary.completed} 项"
-                    summary.completed + summary.sourceRetained > 0 ->
-                        "已复制 ${summary.completed + summary.sourceRetained} 项" +
-                            if (summary.sourceRetained > 0) {
-                                "，${summary.sourceRetained} 项源文件未能删除"
-                            } else {
-                                "，${summary.failed} 项失败"
-                            }
-                    else -> summary.firstError ?: "${action}失败"
-                }
-                snackbarHostState.showSnackbar(
-                    message
-                )
-            }
+            onNotify("存储权限被拒绝，可改为选择一个文件夹")
         }
     }
 
     fun notify(message: String) {
-        scope.launch { snackbarHostState.showSnackbar(message) }
+        onNotify(message)
     }
 
     LaunchedEffect(controller.treeUri) {
@@ -406,15 +457,23 @@ private fun FileBrowserScreen(
     LaunchedEffect(searchMode) {
         if (searchMode) searchFocus.requestFocus()
     }
+    LaunchedEffect(showRenameDialog) {
+        if (showRenameDialog) {
+            delay(100)
+            runCatching { renameFocus.requestFocus() }
+        }
+    }
 
+    val appSettings = settingsRepository.settings
     val visibleEntries = controller.entries
+        .filter { appSettings.showHiddenFiles || !it.name.startsWith(".") }
         .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
         .sortedWith(
             compareByDescending<BrowserEntry> { it.isDirectory }.then(
-                when (sortMode) {
-                    SortMode.NAME -> compareBy { it.name.lowercase() }
-                    SortMode.SIZE -> compareByDescending { it.size }
-                    SortMode.DATE -> compareByDescending { it.lastModified }
+                when (appSettings.defaultSortMode) {
+                    BrowserSortMode.NAME -> compareBy { it.name.lowercase() }
+                    BrowserSortMode.SIZE -> compareByDescending { it.size }
+                    BrowserSortMode.DATE -> compareByDescending { it.lastModified }
                 }
             )
         )
@@ -422,6 +481,20 @@ private fun FileBrowserScreen(
         visibleEntries.all { it.uri in controller.selected }
     val selectedCount = controller.selected.size
     val selectedEntries = controller.entries.filter { it.uri in controller.selected }
+    val activeTasks = archiveTasks
+        .filter {
+            it.state == WorkInfo.State.RUNNING ||
+                it.state == WorkInfo.State.ENQUEUED ||
+                it.state == WorkInfo.State.BLOCKED
+        }
+        .sortedBy {
+            when (it.state) {
+                WorkInfo.State.RUNNING -> 0
+                WorkInfo.State.ENQUEUED -> 1
+                else -> 2
+            }
+        }
+    val activeTask = activeTasks.firstOrNull()
 
     BackHandler {
         when {
@@ -438,7 +511,6 @@ private fun FileBrowserScreen(
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             when {
                 controller.selectionMode -> {
@@ -534,20 +606,36 @@ private fun FileBrowserScreen(
                             if (controller.treeUri == null) {
                                 Text("Zippest", style = MaterialTheme.typography.titleLarge)
                             } else {
-                                Column {
+                                val directStorage =
+                                    controller.storageMode ==
+                                        FileBrowserController.StorageMode.DIRECT
+                                Row(
+                                    modifier = Modifier
+                                        .clickable(enabled = directStorage) {
+                                            storageExpanded = !storageExpanded
+                                        }
+                                        .padding(end = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Text(
-                                        controller.folderName,
+                                        controller.path.joinToString(" / "),
                                         style = MaterialTheme.typography.titleMedium,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                    Text(
-                                        controller.path.joinToString(" / "),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                                    if (directStorage) {
+                                        Spacer(Modifier.size(2.dp))
+                                        Icon(
+                                            Icons.Outlined.KeyboardArrowDown,
+                                            contentDescription = if (storageExpanded) {
+                                                "收起固定位置"
+                                            } else {
+                                                "展开固定位置"
+                                            },
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(21.dp)
+                                        )
+                                    }
                                 }
                             }
                         },
@@ -564,15 +652,19 @@ private fun FileBrowserScreen(
                                         expanded = sortExpanded,
                                         onDismissRequest = { sortExpanded = false }
                                     ) {
-                                        SortMode.entries.forEach { mode ->
+                                        BrowserSortMode.entries.forEach { mode ->
                                             DropdownMenuItem(
                                                 text = { Text(mode.label) },
                                                 onClick = {
-                                                    sortMode = mode
+                                                    settingsRepository.update {
+                                                        it.copy(defaultSortMode = mode)
+                                                    }
                                                     sortExpanded = false
                                                 },
                                                 trailingIcon = {
-                                                    if (sortMode == mode) {
+                                                    if (
+                                                        appSettings.defaultSortMode == mode
+                                                    ) {
                                                         Icon(
                                                             Icons.Outlined.Check,
                                                             contentDescription = null
@@ -597,6 +689,16 @@ private fun FileBrowserScreen(
                                         expanded = moreExpanded,
                                         onDismissRequest = { moreExpanded = false }
                                     ) {
+                                        DropdownMenuItem(
+                                            text = { Text("设置") },
+                                            leadingIcon = {
+                                                Icon(Icons.Outlined.Tune, null)
+                                            },
+                                            onClick = {
+                                                moreExpanded = false
+                                                onOpenSettings()
+                                            }
+                                        )
                                         DropdownMenuItem(
                                             text = { Text("后台任务") },
                                             leadingIcon = {
@@ -624,10 +726,14 @@ private fun FileBrowserScreen(
                                             },
                                             onClick = {
                                                 moreExpanded = false
-                                                notify("Zippest 1.0.3 · 文件浏览")
+                                                notify("Zippest 1.1.9 · 文件浏览与压缩")
                                             }
                                         )
                                     }
+                                }
+                            } else {
+                                IconButton(onClick = onOpenSettings) {
+                                    Icon(Icons.Outlined.Tune, contentDescription = "设置")
                                 }
                             }
                         },
@@ -639,8 +745,16 @@ private fun FileBrowserScreen(
             }
         },
         bottomBar = {
-            when {
-                selectedCount > 0 -> SelectionToolbar(
+            Column {
+                activeTask?.let { task ->
+                    ActiveArchiveTaskBar(
+                        task = task,
+                        activeCount = activeTasks.size,
+                        onClick = { showTaskQueue = true }
+                    )
+                }
+                when {
+                    selectedCount > 0 -> SelectionToolbar(
                     onExtract = {
                         val selectedArchives = controller.entries.filter {
                             it.uri in controller.selected && it.isArchive
@@ -660,37 +774,103 @@ private fun FileBrowserScreen(
                         }
                     },
                     onCopy = {
-                        transferMove = false
-                        transferPicker.launch(null)
+                        val mode = controller.storageMode
+                        val treeUri = controller.treeUri
+                        val rootUri = treeUri?.let {
+                            if (mode == FileBrowserController.StorageMode.DIRECT) {
+                                it
+                            } else {
+                                runCatching { treeRootDocumentUri(it) }.getOrNull()
+                            }
+                        }
+                        if (mode == null || treeUri == null || rootUri == null) {
+                            notify("当前存储位置不可用")
+                        } else {
+                            transferTarget = TransferTarget(
+                                sources = selectedEntries,
+                                storageMode = mode,
+                                treeUri = treeUri,
+                                rootUri = rootUri,
+                                rootLabel = controller.path.firstOrNull() ?: "根目录",
+                                move = false
+                            )
+                        }
                     },
                     onMove = {
-                        transferMove = true
-                        transferPicker.launch(null)
+                        val mode = controller.storageMode
+                        val treeUri = controller.treeUri
+                        val rootUri = treeUri?.let {
+                            if (mode == FileBrowserController.StorageMode.DIRECT) {
+                                it
+                            } else {
+                                runCatching { treeRootDocumentUri(it) }.getOrNull()
+                            }
+                        }
+                        if (mode == null || treeUri == null || rootUri == null) {
+                            notify("当前存储位置不可用")
+                        } else {
+                            transferTarget = TransferTarget(
+                                sources = selectedEntries,
+                                storageMode = mode,
+                                treeUri = treeUri,
+                                rootUri = rootUri,
+                                rootLabel = controller.path.firstOrNull() ?: "根目录",
+                                move = true
+                            )
+                        }
                     },
                     onRename = {
                         val entry = selectedEntries.singleOrNull()
                         if (entry == null) {
                             notify("请只选择一个项目")
                         } else {
-                            renameName = entry.name
+                            renameValue = fileNameWithSuffixSelected(entry.name)
                             showRenameDialog = true
                         }
                     },
-                    onDelete = { showDeleteDialog = true },
+                    onDelete = {
+                        scope.launch {
+                            val count = controller.deleteSelected()
+                            notify(
+                                if (count > 0) {
+                                    "已删除 $count 项"
+                                } else {
+                                    "删除失败，目标可能位于 Android 受保护目录"
+                                }
+                            )
+                        }
+                    },
                     onShare = {
                         val shared = shareEntries(context, selectedEntries)
                         if (!shared) notify("系统中没有可用的分享应用")
+                    },
+                    onCompress = {
+                        val parentUri = controller.currentUri
+                        val treeUri = controller.treeUri
+                        if (selectedEntries.isEmpty()) {
+                            notify("请选择要压缩的文件")
+                        } else if (parentUri != null && treeUri != null) {
+                            compressTarget = CompressTarget(
+                                entries = selectedEntries,
+                                sourceTreeUri = treeUri,
+                                parentUri = parentUri,
+                                parentTreeUri = treeUri,
+                                parentPath = controller.path.joinToString(" / ")
+                            )
+                        }
                     }
                 )
-                controller.treeUri != null -> StorageBar(
-                    context = context,
-                    hasFullAccess =
-                        controller.storageMode == FileBrowserController.StorageMode.DIRECT
-                )
+                    activeTask == null && controller.treeUri != null -> StorageBar(
+                        context = context,
+                        hasFullAccess =
+                            controller.storageMode == FileBrowserController.StorageMode.DIRECT
+                    )
+                }
             }
         }
     ) { padding ->
-        when {
+        Box(modifier = Modifier.fillMaxSize()) {
+            when {
             controller.treeUri == null -> Onboarding(
                 modifier = Modifier
                     .fillMaxSize()
@@ -753,14 +933,28 @@ private fun FileBrowserScreen(
                         entry = entry,
                         selectionMode = controller.selectionMode,
                         selected = entry.uri in controller.selected,
+                        showThumbnail = appSettings.showThumbnails,
                         onClick = {
                             when {
                                 controller.selectionMode -> controller.toggleSelection(entry.uri)
                                 entry.isDirectory -> scope.launch { controller.open(entry) }
-                                entry.isArchive -> onOpenArchive(entry)
+                                entry.isArchive -> {
+                                    val parentUri = controller.currentUri
+                                    val parentTreeUri = controller.treeUri
+                                    if (parentUri != null && parentTreeUri != null) {
+                                        onExtract(
+                                            listOf(entry),
+                                            parentUri,
+                                            parentTreeUri,
+                                            controller.path.joinToString(" / "),
+                                            controller.folderName
+                                        )
+                                    }
+                                }
                                 else -> notify("暂不支持直接打开此文件")
                             }
                         },
+                        onPreviewArchive = { onOpenArchive(entry) },
                         onLongClick = {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                             controller.startSelection(entry.uri)
@@ -771,6 +965,29 @@ private fun FileBrowserScreen(
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.32f)
                     )
                 }
+            }
+            }
+            if (
+                storageExpanded &&
+                controller.storageMode == FileBrowserController.StorageMode.DIRECT
+            ) {
+                StorageQuickLocationPanel(
+                    topInset = padding.calculateTopPadding(),
+                    currentUri = controller.currentUri,
+                    onDismiss = { storageExpanded = false },
+                    onOpen = { destination ->
+                        storageExpanded = false
+                        scope.launch {
+                            val opened = controller.openFixedLocation(
+                                destination.label,
+                                destination.directory
+                            )
+                            if (!opened) {
+                                notify("${destination.label}不可用")
+                            }
+                        }
+                    }
+                )
             }
         }
     }
@@ -814,19 +1031,62 @@ private fun FileBrowserScreen(
             onDismissRequest = { showRenameDialog = false },
             title = { Text("重命名") },
             text = {
-                OutlinedTextField(
-                    value = renameName,
-                    onValueChange = { renameName = it },
-                    singleLine = true,
-                    label = { Text("新名称") }
-                )
+                Column {
+                    OutlinedTextField(
+                        value = renameValue,
+                        onValueChange = { renameValue = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(renameFocus),
+                        singleLine = true,
+                        label = { Text("新名称") }
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "后缀",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        listOf(".7z", ".zip", ".rar").forEach { suffix ->
+                            FilterChip(
+                                selected = selectedFileSuffix(renameValue)
+                                    .equals(suffix, ignoreCase = true),
+                                onClick = {
+                                    renameValue = replaceSelectedFileSuffix(
+                                        renameValue,
+                                        suffix
+                                    )
+                                },
+                                modifier = Modifier.weight(1f),
+                                label = { Text(suffix.uppercase(), maxLines = 1) }
+                            )
+                        }
+                        FilterChip(
+                            selected = selectedFileSuffix(renameValue).lowercase() !in
+                                setOf(".7z", ".zip", ".rar"),
+                            onClick = {
+                                customSuffix = selectedFileSuffix(renameValue)
+                                showCustomSuffixDialog = true
+                            },
+                            modifier = Modifier.weight(1f),
+                            label = { Text("自定义", maxLines = 1) }
+                        )
+                    }
+                }
             },
             confirmButton = {
                 TextButton(
-                    enabled = renameName.isNotBlank(),
+                    enabled = renameValue.text.isNotBlank(),
                     onClick = {
                         scope.launch {
-                            val renamed = controller.renameSelected(renameName)
+                            val renamed = controller.renameSelected(
+                                renameValue.text.trim()
+                            )
                             showRenameDialog = false
                             notify(
                                 if (renamed) {
@@ -849,26 +1109,35 @@ private fun FileBrowserScreen(
         )
     }
 
-    if (showDeleteDialog) {
+    if (showCustomSuffixDialog) {
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("删除 $selectedCount 项？") },
-            text = { Text("删除后不会保留副本。") },
+            onDismissRequest = { showCustomSuffixDialog = false },
+            title = { Text("自定义后缀") },
+            text = {
+                OutlinedTextField(
+                    value = customSuffix,
+                    onValueChange = { customSuffix = it },
+                    singleLine = true,
+                    label = { Text("后缀") },
+                    supportingText = { Text("统一使用一个前导点，如 .tar.gz") }
+                )
+            },
             confirmButton = {
                 TextButton(
+                    enabled = sanitizeFileSuffix(customSuffix).isNotEmpty(),
                     onClick = {
-                        scope.launch {
-                            val count = controller.deleteSelected()
-                            showDeleteDialog = false
-                            notify("已删除 $count 项")
-                        }
+                        renameValue = replaceSelectedFileSuffix(
+                            renameValue,
+                            sanitizeFileSuffix(customSuffix)
+                        )
+                        showCustomSuffixDialog = false
                     }
                 ) {
-                    Text("删除", color = MaterialTheme.colorScheme.error)
+                    Text("应用")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
+                TextButton(onClick = { showCustomSuffixDialog = false }) {
                     Text("取消")
                 }
             }
@@ -878,10 +1147,55 @@ private fun FileBrowserScreen(
     if (showTaskQueue) {
         TaskQueueDialog(onDismiss = { showTaskQueue = false })
     }
+
+    compressTarget?.let { target ->
+        CompressionSheet(
+            target = target,
+            onDismiss = { compressTarget = null },
+            onStarted = {
+                compressTarget = null
+                controller.clearSelection()
+                notify("压缩任务已加入后台队列")
+            }
+        )
+    }
+
+    transferTarget?.let { target ->
+        TransferDestinationSheet(
+            target = target,
+            onDismiss = { transferTarget = null },
+            onChoose = { destinationUri ->
+                transferTarget = null
+                scope.launch {
+                    val summary = controller.transferSelectedToDirectory(
+                        destinationDirectoryUri = destinationUri,
+                        destinationTreeUri = target.treeUri,
+                        move = target.move
+                    )
+                    val action = if (target.move) "移动" else "复制"
+                    val message = when {
+                        summary.completed > 0 &&
+                            summary.sourceRetained == 0 &&
+                            summary.failed == 0 ->
+                            "已${action} ${summary.completed} 项"
+                        summary.completed + summary.sourceRetained > 0 ->
+                            "已复制 ${summary.completed + summary.sourceRetained} 项" +
+                                if (summary.sourceRetained > 0) {
+                                    "，${summary.sourceRetained} 项源文件未能删除"
+                                } else {
+                                    "，${summary.failed} 项失败"
+                                }
+                        else -> summary.firstError ?: "${action}失败"
+                    }
+                    notify(message)
+                }
+            }
+        )
+    }
 }
 
 @Composable
-private fun TaskQueueDialog(onDismiss: () -> Unit) {
+internal fun TaskQueueDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     var tasks by remember { mutableStateOf<List<WorkInfo>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
@@ -889,11 +1203,7 @@ private fun TaskQueueDialog(onDismiss: () -> Unit) {
     LaunchedEffect(Unit) {
         while (true) {
             tasks = runCatching {
-                withContext(Dispatchers.IO) {
-                    WorkManager.getInstance(context.applicationContext)
-                        .getWorkInfosForUniqueWork(ExtractionScheduler.QUEUE_NAME)
-                        .get()
-                }
+                loadArchiveWorkInfos(context)
             }.getOrDefault(emptyList())
             loading = false
             delay(1000)
@@ -935,7 +1245,7 @@ private fun TaskQueueDialog(onDismiss: () -> Unit) {
                     CircularProgressIndicator()
                 }
                 sortedTasks.isEmpty() -> Text(
-                    "暂无后台解压任务",
+                    "暂无后台任务",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 else -> Column(
@@ -966,8 +1276,10 @@ private fun TaskQueueDialog(onDismiss: () -> Unit) {
             if (hasActiveTasks) {
                 TextButton(
                     onClick = {
-                        WorkManager.getInstance(context.applicationContext)
-                            .cancelUniqueWork(ExtractionScheduler.QUEUE_NAME)
+                        WorkManager.getInstance(context.applicationContext).apply {
+                            cancelUniqueWork(ExtractionScheduler.QUEUE_NAME)
+                            cancelUniqueWork(CompressionScheduler.QUEUE_NAME)
+                        }
                     }
                 ) {
                     Text("取消全部", color = MaterialTheme.colorScheme.error)
@@ -980,12 +1292,137 @@ private fun TaskQueueDialog(onDismiss: () -> Unit) {
     )
 }
 
+private suspend fun loadArchiveWorkInfos(context: Context): List<WorkInfo> =
+    withContext(Dispatchers.IO) {
+        val workManager = WorkManager.getInstance(context.applicationContext)
+        buildList {
+            addAll(
+                workManager
+                    .getWorkInfosForUniqueWork(ExtractionScheduler.QUEUE_NAME)
+                    .get()
+            )
+            addAll(
+                workManager
+                    .getWorkInfosForUniqueWork(CompressionScheduler.QUEUE_NAME)
+                    .get()
+            )
+        }
+    }
+
+@Composable
+private fun ActiveArchiveTaskBar(
+    task: WorkInfo,
+    activeCount: Int,
+    onClick: () -> Unit
+) {
+    val isCompression =
+        task.tags.contains(CompressionScheduler.TAG_ALL_TASKS)
+    val title = task.tags
+        .firstOrNull { it.startsWith(ExtractionScheduler.TAG_NAME_PREFIX) }
+        ?.removePrefix(ExtractionScheduler.TAG_NAME_PREFIX)
+        ?: if (isCompression) "压缩任务" else "解压任务"
+    val running = task.state == WorkInfo.State.RUNNING
+    val progress = task.progress.getInt(ExtractionScheduler.KEY_PROGRESS, 0)
+        .coerceIn(0, 100)
+    val message = when {
+        running -> task.progress.getString(ExtractionScheduler.KEY_MESSAGE)
+            ?: if (isCompression) "正在压缩…" else "正在解压…"
+        task.state == WorkInfo.State.BLOCKED -> "等待前序任务完成"
+        else -> "等待后台任务开始"
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 7.dp)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
+            shape = RoundedCornerShape(18.dp),
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 10.dp,
+            tonalElevation = 3.dp
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Box(
+                            modifier = Modifier.size(34.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                if (isCompression) Icons.Outlined.Archive
+                                else Icons.Outlined.Unarchive,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            if (activeCount > 1) "$title · 另有 ${activeCount - 1} 项"
+                            else title,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            message,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Text(
+                        if (running) "$progress%" else "等待",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                if (running) {
+                    LinearProgressIndicator(
+                        progress = { progress / 100f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(99.dp)),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                } else {
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(99.dp)),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun TaskQueueRow(task: WorkInfo) {
     val title = task.tags
         .firstOrNull { it.startsWith(ExtractionScheduler.TAG_NAME_PREFIX) }
         ?.removePrefix(ExtractionScheduler.TAG_NAME_PREFIX)
-        ?: "解压任务"
+        ?: "后台任务"
     val message = when (task.state) {
         WorkInfo.State.SUCCEEDED ->
             task.outputData.getString(ExtractionScheduler.KEY_MESSAGE) ?: "解压完成"
@@ -1043,7 +1480,9 @@ private fun EntryRow(
     entry: BrowserEntry,
     selectionMode: Boolean,
     selected: Boolean,
+    showThumbnail: Boolean,
     onClick: () -> Unit,
+    onPreviewArchive: () -> Unit,
     onLongClick: () -> Unit,
     onCheckedChange: (Boolean) -> Unit
 ) {
@@ -1075,7 +1514,7 @@ private fun EntryRow(
             )
         }
 
-        EntryLeading(entry)
+        EntryLeading(entry, showThumbnail)
 
         Column(
             modifier = Modifier
@@ -1099,32 +1538,38 @@ private fun EntryRow(
             )
         }
 
-        if (entry.isDirectory || entry.isArchive) {
+        if (entry.isDirectory) {
             Icon(
                 Icons.Outlined.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        } else if (entry.isArchive) {
+            IconButton(
+                onClick = onPreviewArchive,
+                enabled = !selectionMode
+            ) {
+                Icon(
+                    Icons.Outlined.ChevronRight,
+                    contentDescription = "预览压缩包",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun EntryLeading(entry: BrowserEntry) {
-    if (entry.isImage || entry.isVideo) {
+private fun EntryLeading(entry: BrowserEntry, showThumbnail: Boolean) {
+    if (showThumbnail && (entry.isImage || entry.isVideo)) {
         MediaThumbnail(entry)
         return
     }
 
-    val background = when {
-        entry.isDirectory -> MaterialTheme.colorScheme.secondaryContainer
-        entry.isArchive -> MaterialTheme.colorScheme.primaryContainer
-        else -> MaterialTheme.colorScheme.surfaceVariant
-    }
     val tint = when {
-        entry.isDirectory -> MaterialTheme.colorScheme.onSecondaryContainer
-        entry.isArchive -> MaterialTheme.colorScheme.onPrimaryContainer
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
+        entry.isDirectory -> MaterialTheme.colorScheme.primary
+        entry.isArchive -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
     }
     val icon = when {
         entry.isDirectory -> Icons.Outlined.Folder
@@ -1133,13 +1578,10 @@ private fun EntryLeading(entry: BrowserEntry) {
     }
 
     Box(
-        modifier = Modifier
-            .size(44.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(background),
+        modifier = Modifier.size(44.dp),
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(23.dp))
     }
 }
 
@@ -1182,8 +1624,7 @@ private fun MediaThumbnail(entry: BrowserEntry) {
     Box(
         modifier = Modifier
             .size(44.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant),
+            .clip(RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center
     ) {
         if (bitmap != null) {
@@ -1225,7 +1666,8 @@ private fun SelectionToolbar(
     onMove: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    onCompress: () -> Unit
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -1239,6 +1681,7 @@ private fun SelectionToolbar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             SelectionAction(Icons.Outlined.Unarchive, "解压", onExtract)
+            SelectionAction(Icons.Outlined.Archive, "压缩", onCompress)
             SelectionAction(Icons.Outlined.ContentCopy, "复制", onCopy)
             SelectionAction(Icons.Outlined.DriveFileMove, "移动", onMove)
             SelectionAction(Icons.Outlined.Edit, "重命名", onRename)
@@ -1273,6 +1716,134 @@ private fun androidx.compose.foundation.layout.RowScope.SelectionAction(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
+    }
+}
+
+@Composable
+private fun StorageQuickLocationPanel(
+    topInset: Dp,
+    currentUri: Uri?,
+    onDismiss: () -> Unit,
+    onOpen: (StorageDestination) -> Unit
+) {
+    val root = Environment.getExternalStorageDirectory()
+    val directoryLocations = StorageDestination.entries.filter {
+        it != StorageDestination.ROOT
+    }
+
+    fun isCurrent(destination: StorageDestination): Boolean {
+        val expected = destination.directory?.let { File(root, it) } ?: root
+        return currentUri == Uri.fromFile(expected)
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = topInset)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.38f))
+                .clickable(onClick = onDismiss)
+        )
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp),
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 14.dp,
+            tonalElevation = 2.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(
+                    start = 12.dp,
+                    top = 12.dp,
+                    end = 12.dp,
+                    bottom = 14.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StorageQuickLocation(
+                    destination = StorageDestination.ROOT,
+                    selected = isCurrent(StorageDestination.ROOT),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { onOpen(StorageDestination.ROOT) }
+                )
+                directoryLocations.chunked(2).forEach { rowDestinations ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        rowDestinations.forEach { destination ->
+                            StorageQuickLocation(
+                                destination = destination,
+                                selected = isCurrent(destination),
+                                modifier = Modifier.weight(1f),
+                                onClick = { onOpen(destination) }
+                            )
+                        }
+                        if (rowDestinations.size == 1) {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StorageQuickLocation(
+    destination: StorageDestination,
+    selected: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    val icon = when (destination) {
+        StorageDestination.ROOT -> Icons.Outlined.Home
+        StorageDestination.DOWNLOADS -> Icons.Outlined.Download
+        StorageDestination.PICTURES -> Icons.Outlined.PhotoLibrary
+        StorageDestination.CAMERA -> Icons.Outlined.PhotoCamera
+        StorageDestination.MOVIES -> Icons.Outlined.Movie
+        StorageDestination.MUSIC -> Icons.Outlined.MusicNote
+        StorageDestination.DOCUMENTS -> Icons.Outlined.Description
+    }
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = if (selected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+        }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = if (selected) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+                modifier = Modifier.size(21.dp)
+            )
+            Text(
+                destination.label,
+                modifier = Modifier.padding(start = 8.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -1447,6 +2018,50 @@ private fun entryMeta(context: Context, entry: BrowserEntry): String {
         ).filter { it.isNotBlank() }.joinToString(" · ")
     }
 }
+
+internal fun fileNameWithSuffixSelected(name: String): TextFieldValue {
+    val dot = name.lastIndexOf('.')
+    val start = if (dot >= 0) dot else name.length
+    return TextFieldValue(
+        text = name,
+        selection = TextRange(start, name.length)
+    )
+}
+
+private fun selectedFileSuffix(value: TextFieldValue): String {
+    val range = effectiveSuffixRange(value)
+    return value.text.substring(range.start, range.end)
+}
+
+internal fun replaceSelectedFileSuffix(
+    value: TextFieldValue,
+    suffix: String
+): TextFieldValue {
+    val cleanSuffix = sanitizeFileSuffix(suffix)
+    if (cleanSuffix.isEmpty()) return value
+    val range = effectiveSuffixRange(value)
+    val newText = value.text.replaceRange(range.start, range.end, cleanSuffix)
+    return TextFieldValue(
+        text = newText,
+        selection = TextRange(range.start, range.start + cleanSuffix.length)
+    )
+}
+
+private fun effectiveSuffixRange(value: TextFieldValue): TextRange {
+    if (!value.selection.collapsed) return value.selection
+    val dot = value.text.lastIndexOf('.')
+    val start = if (dot >= 0) dot else value.text.length
+    return TextRange(start, value.text.length)
+}
+
+internal fun sanitizeFileSuffix(value: String): String =
+    value.trim()
+        .replace(Regex("""[\\/:*?"<>|\u0000-\u001F\s]"""), "")
+        .trimEnd('.')
+        .let { clean ->
+            val withoutLeadingDots = clean.trimStart('.')
+            if (withoutLeadingDots.isEmpty()) "" else ".$withoutLeadingDots"
+        }
 
 @Suppress("DEPRECATION")
 private fun readStorageStats(): Pair<Long, Long> {

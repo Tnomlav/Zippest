@@ -110,6 +110,25 @@ class FileBrowserController(context: Context) {
         return true
     }
 
+    suspend fun openFixedLocation(label: String, directoryName: String?): Boolean {
+        if (storageMode != StorageMode.DIRECT) return false
+        val root = Environment.getExternalStorageDirectory()
+        val target = directoryName?.let { File(root, it) } ?: root
+        if (!target.isDirectory) return false
+
+        backStack.clear()
+        if (target != root) {
+            backStack.addLast(Uri.fromFile(root) to "内部存储")
+        }
+        treeUri = Uri.fromFile(root)
+        currentUri = Uri.fromFile(target)
+        folderName = label
+        path = if (target == root) listOf("内部存储") else listOf("内部存储", label)
+        clearSelection()
+        loadCurrent()
+        return true
+    }
+
     suspend fun open(entry: BrowserEntry) {
         if (!entry.isDirectory) return
         val current = currentUri ?: return
@@ -193,12 +212,17 @@ class FileBrowserController(context: Context) {
     suspend fun createFolder(name: String): Boolean {
         val cleanName = validFileName(name) ?: return false
         val current = currentUri ?: return false
-        val created = when (storageMode) {
-            StorageMode.DIRECT -> current.localFile()?.let {
-                repository.createDirectoryDirect(it, cleanName)
-            } ?: false
-            StorageMode.SAF -> repository.createDirectory(current, cleanName)
-            null -> false
+        val directDirectory = if (hasDirectStorageAccess()) {
+            repository.localFileForUri(current)
+        } else {
+            null
+        }
+        val created = when {
+            directDirectory != null ->
+                repository.createDirectoryDirect(directDirectory, cleanName)
+            storageMode == StorageMode.SAF ->
+                repository.createDirectory(current, cleanName)
+            else -> false
         }
         if (created) loadCurrent()
         return created
@@ -207,10 +231,17 @@ class FileBrowserController(context: Context) {
     suspend fun renameSelected(name: String): Boolean {
         val selectedUri = selected.singleOrNull() ?: return false
         val cleanName = validFileName(name) ?: return false
-        val renamed = when (storageMode) {
-            StorageMode.DIRECT -> repository.renameDirect(selectedUri, cleanName)
-            StorageMode.SAF -> repository.rename(selectedUri, cleanName)
-            null -> false
+        val directFile = if (hasDirectStorageAccess()) {
+            repository.localFileForUri(selectedUri)
+        } else {
+            null
+        }
+        val renamed = when {
+            directFile != null ->
+                repository.renameDirect(Uri.fromFile(directFile), cleanName)
+            storageMode == StorageMode.SAF ->
+                repository.rename(selectedUri, cleanName)
+            else -> false
         }
         if (renamed) {
             clearSelection()
@@ -220,12 +251,24 @@ class FileBrowserController(context: Context) {
     }
 
     suspend fun deleteSelected(): Int {
+        val useTrash = AppSettingsRepository.read(appContext).useTrash
+        val trash = TrashRepository(appContext)
         var deleted = 0
         selected.forEach { uri ->
-            val success = when (storageMode) {
-                StorageMode.DIRECT -> repository.deleteDirect(uri)
-                StorageMode.SAF -> repository.delete(uri)
-                null -> false
+            val directFile = if (hasDirectStorageAccess()) {
+                repository.localFileForUri(uri)
+            } else {
+                null
+            }
+            val success = when {
+                useTrash && directFile != null ->
+                    trash.moveToTrash(directFile)
+                useTrash -> false
+                directFile != null ->
+                    repository.deleteDirect(Uri.fromFile(directFile))
+                storageMode == StorageMode.SAF ->
+                    repository.delete(uri)
+                else -> false
             }
             if (success) deleted++
         }
@@ -272,6 +315,68 @@ class FileBrowserController(context: Context) {
                     )
                 }
                 null -> TransferResult(TransferOutcome.FAILED, "存储位置不可用")
+            }
+            when (result.outcome) {
+                TransferOutcome.COMPLETED -> completed++
+                TransferOutcome.SOURCE_RETAINED -> sourceRetained++
+                TransferOutcome.FAILED -> failed++
+            }
+            firstError = firstError ?: result.message
+        }
+        clearSelection()
+        loadCurrent()
+        return TransferSummary(completed, sourceRetained, failed, firstError)
+    }
+
+    suspend fun transferSelectedToDirectory(
+        destinationDirectoryUri: Uri,
+        destinationTreeUri: Uri,
+        move: Boolean
+    ): TransferSummary {
+        val sources = entries.filter { it.uri in selected }
+        if (
+            move &&
+            currentUri?.let {
+                repository.isSameDirectory(it, destinationDirectoryUri)
+            } == true
+        ) {
+            return TransferSummary(
+                completed = 0,
+                sourceRetained = 0,
+                failed = sources.size,
+                firstError = "不能把文件移动到当前文件夹"
+            )
+        }
+        var completed = 0
+        var sourceRetained = 0
+        var failed = 0
+        var firstError: String? = null
+        for (source in sources) {
+            val directSource = if (hasDirectStorageAccess()) {
+                repository.localFileForUri(source.uri)
+            } else {
+                null
+            }
+            val directDestination = if (hasDirectStorageAccess()) {
+                repository.localFileForUri(destinationDirectoryUri)
+            } else {
+                null
+            }
+            val result = when {
+                directSource != null && directDestination != null ->
+                    repository.copyOrMoveDirect(
+                        sourceUri = Uri.fromFile(directSource),
+                        destinationDirectoryUri = Uri.fromFile(directDestination),
+                        move = move
+                    )
+                storageMode == StorageMode.SAF -> repository.copyOrMove(
+                    source = source,
+                    sourceTreeUri = treeUri ?: break,
+                    destinationTreeUri = destinationTreeUri,
+                    move = move,
+                    destinationDirectoryUri = destinationDirectoryUri
+                )
+                else -> TransferResult(TransferOutcome.FAILED, "存储位置不可用")
             }
             when (result.outcome) {
                 TransferOutcome.COMPLETED -> completed++

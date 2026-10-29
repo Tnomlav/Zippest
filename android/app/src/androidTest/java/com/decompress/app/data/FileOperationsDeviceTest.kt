@@ -64,8 +64,26 @@ class FileOperationsDeviceTest {
         controller.refresh()
         val renamedEntry = controller.entries.single { it.name == "renamed" }
         controller.startSelection(renamedEntry.uri)
+        val trash = TrashRepository(context).apply { empty() }
         assertEquals(1, controller.deleteSelected())
         assertFalse(renamed.exists())
+        val trashed = trash.list().single()
+        assertEquals("renamed", trashed.name)
+        assertTrue(trash.restore(trashed.id))
+        assertTrue(renamed.isDirectory)
+    }
+
+    @Test
+    fun externalStorageDocumentMapsToDirectFilePath() {
+        val relative = "Download/${baseDirectory.name}"
+        val treeUri = DocumentsContract.buildTreeDocumentUri(
+            "com.android.externalstorage.documents",
+            "primary:$relative"
+        )
+        val documentUri = SafFileRepository(context).rootDocumentUri(treeUri)
+        val mapped = SafFileRepository(context).localFileForUri(documentUri)
+
+        assertEquals(baseDirectory.canonicalPath, mapped?.canonicalPath)
     }
 
     @Test
@@ -109,6 +127,40 @@ class FileOperationsDeviceTest {
         assertEquals(1, summary.failed)
         assertTrue(source.exists())
         assertEquals("keep", source.readText())
+    }
+
+    @Test
+    fun inAppDestinationCopyAndMoveStayInsideTheCurrentTree() = runBlocking {
+        val sourceDirectory = File(baseDirectory, "in-app-source").apply {
+            assertTrue(mkdirs())
+        }
+        val destinationDirectory = File(baseDirectory, "in-app-destination").apply {
+            assertTrue(mkdirs())
+        }
+        val copySource = File(sourceDirectory, "copy.txt").apply { writeText("copy") }
+        val moveSource = File(sourceDirectory, "move.txt").apply { writeText("move") }
+
+        openFolder("Download", baseDirectory.name, sourceDirectory.name)
+        controller.startSelection(Uri.fromFile(copySource))
+        val copySummary = controller.transferSelectedToDirectory(
+            destinationDirectoryUri = Uri.fromFile(destinationDirectory),
+            destinationTreeUri = controller.treeUri!!,
+            move = false
+        )
+        assertEquals(1, copySummary.completed)
+        assertTrue(copySource.exists())
+        assertEquals("copy", File(destinationDirectory, "copy.txt").readText())
+
+        openFolder("Download", baseDirectory.name, sourceDirectory.name)
+        controller.startSelection(Uri.fromFile(moveSource))
+        val moveSummary = controller.transferSelectedToDirectory(
+            destinationDirectoryUri = Uri.fromFile(destinationDirectory),
+            destinationTreeUri = controller.treeUri!!,
+            move = true
+        )
+        assertEquals(1, moveSummary.completed)
+        assertFalse(moveSource.exists())
+        assertEquals("move", File(destinationDirectory, "move.txt").readText())
     }
 
     @Test
@@ -190,6 +242,49 @@ class FileOperationsDeviceTest {
             repository.listChildren(destinationTree, destinationRoot)
                 .map { it.name }
                 .toSet()
+        )
+    }
+
+    @Test
+    fun inAppSafDestinationUsesADocumentSubfolder() = runBlocking {
+        val repository = SafFileRepository(context)
+        val sourceTree = createProviderDirectory("saf-in-app")
+        val sourceRoot = repository.rootDocumentUri(sourceTree)
+        val destination = DocumentsContract.createDocument(
+            context.contentResolver,
+            sourceRoot,
+            Document.MIME_TYPE_DIR,
+            "Destination"
+        )!!
+        DocumentsContract.createDocument(
+            context.contentResolver,
+            sourceRoot,
+            "text/plain",
+            "source.txt"
+        )!!.let { fileUri ->
+            context.contentResolver.openOutputStream(fileUri)?.use {
+                it.write("saf-payload".toByteArray())
+            }
+        }
+
+        controller.chooseRoot(sourceTree)
+        controller.refresh()
+        val source = controller.entries.single { it.name == "source.txt" }
+        controller.startSelection(source.uri)
+        val summary = controller.transferSelectedToDirectory(
+            destinationDirectoryUri = destination,
+            destinationTreeUri = sourceTree,
+            move = false
+        )
+
+        assertEquals(1, summary.completed)
+        val copied = repository.listChildren(sourceTree, destination).single()
+        assertEquals("source.txt", copied.name)
+        assertEquals(
+            "saf-payload",
+            context.contentResolver.openInputStream(copied.uri)!!
+                .bufferedReader()
+                .use { it.readText() }
         )
     }
 

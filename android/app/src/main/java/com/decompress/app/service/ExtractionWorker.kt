@@ -24,6 +24,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.decompress.app.MainActivity
 import com.decompress.app.R
+import com.decompress.app.data.AppSettingsRepository
 import com.decompress.app.data.ConflictPolicy
 import com.decompress.app.data.DestinationMode
 import com.decompress.app.data.ExtractSettings
@@ -162,11 +163,13 @@ class ExtractionWorker(
     override suspend fun doWork(): Result {
         val task = runCatching { ExtractionScheduler.readTask(inputData) }
             .getOrElse { error ->
-                notifyFinished(
-                    title = "解压失败",
-                    text = error.message ?: "任务数据损坏",
-                    successful = false
-                )
+                if (shouldNotifyFinished()) {
+                    notifyFinished(
+                        title = "解压失败",
+                        text = error.message ?: "任务数据损坏",
+                        successful = false
+                    )
+                }
                 broadcastFinished(false, error.message ?: "任务数据损坏")
                 return Result.failure(
                     workDataOf(
@@ -183,6 +186,7 @@ class ExtractionWorker(
         } else {
             task
         }
+        val wakeLock = ArchiveWorkWakeLock.acquire(applicationContext, id.toString())
 
         return try {
             setForeground(
@@ -234,25 +238,33 @@ class ExtractionWorker(
                     ExtractionScheduler.KEY_MESSAGE to resultMessage
                 )
             )
-            notifyFinished("解压完成", resultMessage, successful = true)
+            if (shouldNotifyFinished()) {
+                notifyFinished("解压完成", resultMessage, successful = true)
+            }
             broadcastFinished(true, resultMessage)
             ExtractionCheckpointStore.clear(applicationContext, id)
             Result.success(
                 workDataOf(ExtractionScheduler.KEY_MESSAGE to resultMessage)
             )
         } catch (error: CancellationException) {
-            notifyFinished("解压已取消", effectiveTask.displayName, successful = false)
+            if (shouldNotifyFinished()) {
+                notifyFinished("解压已取消", effectiveTask.displayName, successful = false)
+            }
             broadcastFinished(false, "解压已取消")
             ExtractionCheckpointStore.clear(applicationContext, id)
             throw error
         } catch (error: Exception) {
             val message = error.message ?: "无法完成解压"
-            notifyFinished("解压失败", message, successful = false)
+            if (shouldNotifyFinished()) {
+                notifyFinished("解压失败", message, successful = false)
+            }
             broadcastFinished(false, message)
             ExtractionCheckpointStore.clear(applicationContext, id)
             Result.failure(
                 workDataOf(ExtractionScheduler.KEY_MESSAGE to message)
             )
+        } finally {
+            if (wakeLock.isHeld) wakeLock.release()
         }
     }
 
@@ -310,7 +322,9 @@ class ExtractionWorker(
                         overall,
                         "正在解压 ${index + 1}/$total · ${task.archiveNames[index]}"
                     )
-                }
+                },
+                archiveTreeUri = task.parentTreeUri,
+                archiveParentUri = task.parentUri
             )
         }
         scanCreatedFiles(createdFiles)
@@ -418,6 +432,9 @@ class ExtractionWorker(
                 .putExtra(ExtractionScheduler.EXTRA_EXTRACTION_MESSAGE, message)
         )
     }
+
+    private fun shouldNotifyFinished(): Boolean =
+        AppSettingsRepository.read(applicationContext).notifyOnComplete
 
     companion object {
         private const val CHANNEL_ID = "extraction_tasks"

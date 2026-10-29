@@ -149,6 +149,11 @@ class ZipArchiveEngine(private val context: Context) {
 
     suspend fun list(archiveUri: Uri): List<ArchiveItem> = withContext(Dispatchers.IO) {
         runCatching {
+            archiveUri.localFile()?.takeIf { it.isFile }?.let { localFile ->
+                if (Zip4jFile(localFile).isSplitArchive) {
+                    return@withContext listWithCentralDirectory(archiveUri)
+                }
+            }
             val input = resolver.openInputStream(archiveUri)
                 ?: throw ArchiveException("无法读取压缩包")
             BufferedInputStream(input).use { buffered ->
@@ -183,14 +188,22 @@ class ZipArchiveEngine(private val context: Context) {
     }
 
     private fun listWithCentralDirectory(archiveUri: Uri): List<ArchiveItem> {
-        val temp = File.createTempFile("zip-index-", ".zip", context.cacheDir)
+        val direct = archiveUri.localFile()?.takeIf { it.isFile }
+        val temp = if (direct == null) {
+            File.createTempFile("zip-index-", ".zip", context.cacheDir)
+        } else {
+            null
+        }
         try {
-            resolver.openInputStream(archiveUri)?.use { input ->
-                temp.outputStream().use { output ->
-                    input.copyTo(output, DEFAULT_BUFFER_SIZE)
-                }
-            } ?: throw ArchiveException("无法读取压缩包")
-            val headers = Zip4jFile(temp).fileHeaders
+            val archiveFile = direct ?: temp!!
+            if (direct == null) {
+                resolver.openInputStream(archiveUri)?.use { input ->
+                    archiveFile.outputStream().use { output ->
+                        input.copyTo(output, DEFAULT_BUFFER_SIZE)
+                    }
+                } ?: throw ArchiveException("无法读取压缩包")
+            }
+            val headers = Zip4jFile(archiveFile).fileHeaders
             if (headers.size > MAX_ENTRIES) {
                 throw ArchiveException("压缩包条目过多，已停止读取")
             }
@@ -202,7 +215,7 @@ class ZipArchiveEngine(private val context: Context) {
                 )
             }
         } finally {
-            temp.delete()
+            temp?.delete()
         }
     }
 
@@ -212,7 +225,11 @@ class ZipArchiveEngine(private val context: Context) {
         settings: ExtractSettings,
         onProgress: (Int, Int) -> Unit
     ) {
-        if (settings.password.isNotEmpty()) {
+        val localZip = archiveUri.localFile()?.takeIf { it.isFile }
+        val splitZip = localZip?.let {
+            runCatching { Zip4jFile(it).isSplitArchive }.getOrDefault(false)
+        } == true
+        if (settings.password.isNotEmpty() || splitZip) {
             extractPasswordProtected(archiveUri, archiveName, settings, onProgress)
             return
         }
@@ -293,7 +310,11 @@ class ZipArchiveEngine(private val context: Context) {
         password: String,
         onProgress: (Int, Int) -> Unit
     ): Int = withContext(Dispatchers.IO) {
-        if (password.isNotEmpty()) {
+        val localZip = archiveUri.localFile()?.takeIf { it.isFile }
+        val splitZip = localZip?.let {
+            runCatching { Zip4jFile(it).isSplitArchive }.getOrDefault(false)
+        } == true
+        if (password.isNotEmpty() || splitZip) {
             return@withContext testPasswordProtected(archiveUri, password, onProgress)
         }
         val input = resolver.openInputStream(archiveUri)
@@ -333,13 +354,21 @@ class ZipArchiveEngine(private val context: Context) {
         password: String,
         onProgress: (Int, Int) -> Unit
     ): Int {
-        val temp = File.createTempFile("zip-test-", ".zip", context.cacheDir)
+        val direct = archiveUri.localFile()?.takeIf { it.isFile }
+        val temp = if (direct == null) {
+            File.createTempFile("zip-test-", ".zip", context.cacheDir)
+        } else {
+            null
+        }
         try {
-            resolver.openInputStream(archiveUri)?.use { input ->
-                temp.outputStream().use { output -> input.copyTo(output) }
-            } ?: throw ArchiveException("无法读取压缩包")
+            val archiveFile = direct ?: temp!!
+            if (direct == null) {
+                resolver.openInputStream(archiveUri)?.use { input ->
+                    archiveFile.outputStream().use { output -> input.copyTo(output) }
+                } ?: throw ArchiveException("无法读取压缩包")
+            }
             return runCatching {
-                val archive = Zip4jFile(temp, password.toCharArray())
+                val archive = Zip4jFile(archiveFile, password.toCharArray())
                 val headers = archive.fileHeaders
                 if (headers.size > MAX_ENTRIES) {
                     throw ArchiveException("压缩包条目过多，已停止测试")
@@ -347,7 +376,7 @@ class ZipArchiveEngine(private val context: Context) {
                 val declaredBytes = headers.sumOf {
                     it.uncompressedSize.coerceAtLeast(0L)
                 }
-                ensureSafeExpansion(declaredBytes, temp.length())
+                ensureSafeExpansion(declaredBytes, archiveFile.length())
                 var writtenBytes = 0L
                 headers.forEachIndexed { index, header ->
                     if (!header.isDirectory) {
@@ -370,7 +399,7 @@ class ZipArchiveEngine(private val context: Context) {
                 )
             }
         } finally {
-            temp.delete()
+            temp?.delete()
         }
     }
 
@@ -380,16 +409,24 @@ class ZipArchiveEngine(private val context: Context) {
         settings: ExtractSettings,
         onProgress: (Int, Int) -> Unit
     ) = withContext(Dispatchers.IO) {
-        val temp = File.createTempFile("encrypted-zip-", ".zip", context.cacheDir)
+        val direct = archiveUri.localFile()?.takeIf { it.isFile }
+        val temp = if (direct == null) {
+            File.createTempFile("encrypted-zip-", ".zip", context.cacheDir)
+        } else {
+            null
+        }
         try {
-            resolver.openInputStream(archiveUri)?.use { input ->
-                temp.outputStream().use { output ->
-                    input.copyTo(output, DEFAULT_BUFFER_SIZE)
-                }
-            } ?: throw ArchiveException("无法读取压缩包")
+            val archiveFile = direct ?: temp!!
+            if (direct == null) {
+                resolver.openInputStream(archiveUri)?.use { input ->
+                    archiveFile.outputStream().use { output ->
+                        input.copyTo(output, DEFAULT_BUFFER_SIZE)
+                    }
+                } ?: throw ArchiveException("无法读取压缩包")
+            }
 
             runCatching {
-                val archive = Zip4jFile(temp, settings.password.toCharArray())
+                val archive = Zip4jFile(archiveFile, settings.password.toCharArray())
                 val headers = archive.fileHeaders
                 if (headers.size > MAX_ENTRIES) {
                     throw ArchiveException("压缩包条目过多，已停止解压")
@@ -397,7 +434,7 @@ class ZipArchiveEngine(private val context: Context) {
                 val declaredBytes = headers.sumOf {
                     it.uncompressedSize.coerceAtLeast(0L)
                 }
-                ensureSafeExpansion(declaredBytes, temp.length())
+                ensureSafeExpansion(declaredBytes, archiveFile.length())
                 ensureLocalFreeSpace(context, settings.targetTreeUri, declaredBytes)
 
                 val output = SafOutput(
@@ -428,7 +465,7 @@ class ZipArchiveEngine(private val context: Context) {
                 )
             }
         } finally {
-            temp.delete()
+            temp?.delete()
         }
     }
 

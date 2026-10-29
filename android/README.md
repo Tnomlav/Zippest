@@ -1,13 +1,13 @@
 # Zippest for Android
 
-An Android file manager and archive browser for opening and extracting common
-archive formats. The product UI follows the finalized prototype in
+An Android file manager and archive utility for opening, extracting, and
+creating common archive formats. The product UI follows the finalized prototype in
 `C:\Decompress\design`.
 
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.0.3`
+- Version: `1.1.9`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct
@@ -21,16 +21,46 @@ archive formats. The product UI follows the finalized prototype in
 - Use all-files access to browse the internal storage directly on Android 11+,
   with scoped SAF folder access as an explicit fallback. Android 10 uses the
   legacy storage bridge so read/write access works across shared storage.
+- Persistent settings for appearance, hidden files, thumbnails, sorting,
+  extraction defaults, notifications, permissions, and task maintenance.
 - Browse and extract ZIP, 7Z, RAR, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, CPIO, GZ,
-  BZ2, and XZ archives.
+  BZ2, XZ, LZMA, and LZ4 archives.
+- Create ZIP, 7Z, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, CPIO, GZ, BZ2, XZ, LZMA,
+  and LZ4 archives with store/fast/standard/maximum compression levels.
+- Create encrypted ZIP and 7Z archives.
+- Split created archives into sequential `.001`, `.002`, and later volumes;
+  open `.001` in Zippest to combine and extract it.
 - Open archive files from another app through Android's standard "Open with"
   flow.
 - Extract to the archive folder, a new same-name folder, or any folder selected
   through the system picker.
 - Extract password-protected ZIP, 7Z, RAR4, and RAR5 archives. Multi-archive
   jobs can reuse one password or collect a password for every archive.
-- Queue extraction through WorkManager with notification progress, encrypted
+- Queue extraction and compression through WorkManager with notification progress, encrypted
   password storage, and recovery after a process stop.
+- Hold a foreground service and partial CPU wake lock so archive jobs continue when
+  Zippest is in the background or the phone screen is off.
+- Replace the storage bar with a live task card and progress bar while compression
+  or extraction is active.
+- Preselect the text after the last dot when renaming and replace it with 7Z, ZIP,
+  RAR, or a user-defined suffix.
+- Browse copy and move destinations inside Zippest with breadcrumb navigation and
+  no system document picker.
+- Prefer direct filesystem operations for create, rename, delete, copy, and move
+  when all-files access is available, even when browsing through SAF.
+- Delete selected files immediately without an additional in-app confirmation.
+- Keep deleted files in a recycle bin with restore, permanent deletion, clear-all,
+  and configurable retention.
+- Render operation notices as compact cards centered in the app window.
+- Paste clipboard text directly from the left side of the extraction clipboard row;
+  the right-side arrow opens the clipboard list.
+- Hide the duplicated internal-storage subtitle and use a quick-location grid with
+  dedicated icons for root, downloads, media, and documents.
+- Tap an archive row to open extraction directly; use its trailing chevron to preview.
+  Preview mode shows an animated border and a clear extraction-required notice.
+- Tap any file inside the preview to open extraction settings for the complete archive.
+- Create standard ZIP split archives as `.z01/.z02/.../.zip`; open either the first
+  volume or the final `.zip`. Numeric `.zip.001` volume sets remain supported.
 - Refresh Android's media index for files extracted into direct shared storage.
 - Inspect active, queued, completed, failed, and canceled jobs from the in-app
   background task dialog.
@@ -77,10 +107,20 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
-Version `1.0.3` focuses on reliable on-device file modification for direct
-storage and SAF providers, including rename and safe move/copy outcomes.
-Archive creation is
-not included yet.
+Version `1.1.9` shows the current directory path as the top-bar title without a
+second subtitle and removes the redundant quick-location heading. Version
+`1.1.8` removed the colored background tiles from file and folder icons so file
+names remain the visual focus. Version `1.1.7` attached the full-width
+internal-storage quick-location panel directly below the top app bar. Version
+`1.1.6` added native ZIP split-volume output and reading for `.z01/.zip`
+sets while retaining numeric `.001` volume support. It opens whole-archive extraction when a previewed file is tapped. It separates direct extraction from archive preview and marks preview mode with an animated border. It redesigns the internal-storage location picker as a compact grid and removes its duplicate root subtitle. It separates direct clipboard paste from the clipboard expansion control in the extraction sheet. It centers compact operation notices across every screen and includes a persistent recycle bin with restore and retention settings, plus unrestricted direct file modifications across standard internal
+storage and removes delete confirmation prompts. It includes an in-app destination browser for copy and move operations.
+It includes the dot in automatic suffix selection and one-tap 7Z/ZIP/RAR/custom
+extension replacement in the rename dialog. It retains screen-off background execution safeguards and an in-app floating
+progress bar for active archive tasks. It retains archive creation, password-protected ZIP/7Z output,
+split-volume output and reading, plus LZMA/LZ4 support. It retains persistent settings for appearance, browsing, extraction
+defaults, permissions, notifications, and maintenance. Archive creation is
+available from the multi-select bottom toolbar.
 Cloud-backed SAF providers may offer less information or different performance
 than local storage.
 

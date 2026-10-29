@@ -15,48 +15,44 @@ import org.apache.commons.compress.archivers.sevenz.SevenZFile
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
+import org.apache.commons.compress.compressors.lz4.FramedLZ4CompressorInputStream
+import org.apache.commons.compress.compressors.lzma.LZMACompressorInputStream
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.nio.file.Files
 
 class MultiArchiveEngine(private val context: Context) {
     private val resolver: ContentResolver = context.contentResolver
     private val zipEngine = ZipArchiveEngine(context)
+    private val repository = SafFileRepository(context)
 
     fun supports(name: String): Boolean {
-        val lower = name.lowercase()
-        return lower.endsWith(".zip") ||
-            lower.endsWith(".jar") ||
-            lower.endsWith(".7z") ||
-            lower.endsWith(".rar") ||
-            lower.endsWith(".tar") ||
-            lower.endsWith(".tar.gz") ||
-            lower.endsWith(".tgz") ||
-            lower.endsWith(".tar.bz2") ||
-            lower.endsWith(".tbz2") ||
-            lower.endsWith(".tar.xz") ||
-            lower.endsWith(".txz") ||
-            lower.endsWith(".gz") ||
-            lower.endsWith(".bz2") ||
-            lower.endsWith(".xz") ||
-            lower.endsWith(".cpio")
+        return isSupportedArchiveName(name)
     }
 
     suspend fun list(
         archiveUri: Uri,
         archiveName: String,
-        password: String = ""
-    ): List<ArchiveItem> {
-        val lower = archiveName.lowercase()
-        return when {
+        password: String = "",
+        archiveTreeUri: Uri? = null,
+        archiveParentUri: Uri? = null
+    ): List<ArchiveItem> = withResolvedArchive(
+        archiveUri,
+        archiveName,
+        archiveTreeUri,
+        archiveParentUri
+    ) { uri, name ->
+        val lower = name.lowercase()
+        when {
             lower.endsWith(".zip") || lower.endsWith(".jar") ->
-                zipEngine.list(archiveUri)
-            lower.endsWith(".7z") -> listSevenZ(archiveUri, password)
-            lower.endsWith(".rar") -> listRar(archiveUri, password)
-            else -> listStream(archiveUri, lower, archiveName)
+                zipEngine.list(uri)
+            lower.endsWith(".7z") -> listSevenZ(uri, password)
+            lower.endsWith(".rar") -> listRar(uri, password)
+            else -> listStream(uri, name.lowercase(), name)
         }
     }
 
@@ -64,16 +60,23 @@ class MultiArchiveEngine(private val context: Context) {
         archiveUri: Uri,
         archiveName: String,
         settings: ExtractSettings,
-        onProgress: (Int, Int) -> Unit
-    ) {
-        val lower = archiveName.lowercase()
+        onProgress: (Int, Int) -> Unit,
+        archiveTreeUri: Uri? = null,
+        archiveParentUri: Uri? = null
+    ) = withResolvedArchive(
+        archiveUri,
+        archiveName,
+        archiveTreeUri,
+        archiveParentUri
+    ) { uri, name ->
+        val lower = name.lowercase()
         when {
             lower.endsWith(".zip") || lower.endsWith(".jar") ->
-                zipEngine.extract(archiveUri, archiveName, settings, onProgress)
+                zipEngine.extract(uri, name, settings, onProgress)
             lower.endsWith(".7z") ->
-                extractSevenZ(archiveUri, archiveName, settings, onProgress)
+                extractSevenZ(uri, name, settings, onProgress)
             lower.endsWith(".rar") ->
-                extractRar(archiveUri, archiveName, settings, onProgress)
+                extractRar(uri, name, settings, onProgress)
             lower.endsWith(".tar") ||
                 lower.endsWith(".tar.gz") ||
                 lower.endsWith(".tgz") ||
@@ -82,11 +85,13 @@ class MultiArchiveEngine(private val context: Context) {
                 lower.endsWith(".tar.xz") ||
                 lower.endsWith(".txz") ||
                 lower.endsWith(".cpio") ->
-                extractStream(archiveUri, lower, archiveName, settings, onProgress)
+                extractStream(uri, lower, name, settings, onProgress)
             lower.endsWith(".gz") ||
                 lower.endsWith(".bz2") ||
-                lower.endsWith(".xz") ->
-                extractSingleCompressed(archiveUri, lower, archiveName, settings)
+                lower.endsWith(".xz") ||
+                lower.endsWith(".lzma") ||
+                lower.endsWith(".lz4") ->
+                extractSingleCompressed(uri, lower, name, settings)
             else -> throw ArchiveException("暂不支持此压缩格式")
         }
     }
@@ -95,16 +100,23 @@ class MultiArchiveEngine(private val context: Context) {
         archiveUri: Uri,
         archiveName: String,
         password: String,
-        onProgress: (Int, Int) -> Unit
-    ): Int {
-        val lower = archiveName.lowercase()
-        return when {
+        onProgress: (Int, Int) -> Unit,
+        archiveTreeUri: Uri? = null,
+        archiveParentUri: Uri? = null
+    ): Int = withResolvedArchive(
+        archiveUri,
+        archiveName,
+        archiveTreeUri,
+        archiveParentUri
+    ) { uri, name ->
+        val lower = name.lowercase()
+        when {
             lower.endsWith(".zip") || lower.endsWith(".jar") ->
-                zipEngine.test(archiveUri, password, onProgress)
+                zipEngine.test(uri, password, onProgress)
             lower.endsWith(".7z") ->
-                testSevenZ(archiveUri, password, onProgress)
+                testSevenZ(uri, password, onProgress)
             lower.endsWith(".rar") ->
-                testRar(archiveUri, password, onProgress)
+                testRar(uri, password, onProgress)
             lower.endsWith(".tar") ||
                 lower.endsWith(".tar.gz") ||
                 lower.endsWith(".tgz") ||
@@ -113,16 +125,148 @@ class MultiArchiveEngine(private val context: Context) {
                 lower.endsWith(".tar.xz") ||
                 lower.endsWith(".txz") ||
                 lower.endsWith(".cpio") ->
-                testStream(archiveUri, lower, onProgress)
+                testStream(uri, lower, onProgress)
             lower.endsWith(".gz") ||
                 lower.endsWith(".bz2") ||
-                lower.endsWith(".xz") -> {
-                testSingleCompressed(archiveUri, lower)
+                lower.endsWith(".xz") ||
+                lower.endsWith(".lzma") ||
+                lower.endsWith(".lz4") -> {
+                testSingleCompressed(uri, lower)
                 onProgress(1, 1)
                 1
             }
             else -> throw ArchiveException("暂不支持此压缩格式")
         }
+    }
+
+    private suspend fun <T> withResolvedArchive(
+        archiveUri: Uri,
+        archiveName: String,
+        archiveTreeUri: Uri?,
+        archiveParentUri: Uri?,
+        block: suspend (Uri, String) -> T
+    ): T {
+        val nativeZip = resolveNativeSplitZip(
+            archiveName,
+            archiveTreeUri,
+            archiveParentUri
+        )
+        if (nativeZip != null) {
+            val directory = Files.createTempDirectory(
+                context.cacheDir.toPath(),
+                "zippest-zip-volumes-"
+            ).toFile()
+            try {
+                withContext(Dispatchers.IO) {
+                    nativeZip.forEach { (name, partUri) ->
+                        resolver.openInputStream(partUri)?.use { input ->
+                            File(directory, name).outputStream().use { output ->
+                                input.copyTo(output, 64 * 1024)
+                            }
+                        } ?: throw ArchiveException("无法读取分卷：$name")
+                    }
+                }
+                val finalName = canonicalArchiveName(archiveName)
+                return block(Uri.fromFile(File(directory, finalName)), finalName)
+            } finally {
+                directory.deleteRecursively()
+            }
+        }
+        if (!isFirstSplitVolume(archiveName)) {
+            return block(archiveUri, archiveName)
+        }
+        val parts = findSplitParts(archiveName, archiveTreeUri, archiveParentUri)
+        if (parts.isEmpty()) throw ArchiveException("找不到完整的分卷文件")
+        val temp = File.createTempFile("zippest-parts-", ".tmp", context.cacheDir)
+        try {
+            withContext(Dispatchers.IO) {
+                temp.outputStream().buffered().use { output ->
+                    parts.forEach { part ->
+                        resolver.openInputStream(part.uri)?.use { input ->
+                            input.copyTo(output, 64 * 1024)
+                        } ?: throw ArchiveException("无法读取分卷：${part.name}")
+                    }
+                }
+            }
+            return block(Uri.fromFile(temp), canonicalArchiveName(archiveName))
+        } finally {
+            temp.delete()
+        }
+    }
+
+    private suspend fun resolveNativeSplitZip(
+        archiveName: String,
+        treeUri: Uri?,
+        parentUri: Uri?
+    ): List<Pair<String, Uri>>? {
+        val baseName = nativeZipBaseName(archiveName)
+            ?: if (archiveName.endsWith(".zip", ignoreCase = true)) {
+                archiveName.dropLast(4)
+            } else {
+                null
+            }
+            ?: return null
+        val volumePattern = Regex(
+            Regex.escape(baseName) + """\.z(\d{2,})$""",
+            RegexOption.IGNORE_CASE
+        )
+        val finalName = baseName + ".zip"
+        val children = parentUri?.localFile()?.let { parent ->
+            parent.listFiles().orEmpty().map { repository.directEntry(it) }
+        } ?: if (treeUri != null && parentUri != null) {
+            repository.listChildren(treeUri, parentUri)
+        } else {
+            emptyList()
+        }
+        val volumes = children.filter { volumePattern.matches(it.name) }
+            .sortedBy { entry ->
+                volumePattern.matchEntire(entry.name)
+                    ?.groupValues?.get(1)?.toIntOrNull() ?: Int.MAX_VALUE
+            }
+        if (volumes.isEmpty()) return null
+        val numbers = volumes.mapNotNull { entry ->
+            volumePattern.matchEntire(entry.name)
+                ?.groupValues?.get(1)?.toIntOrNull()
+        }
+        if (numbers.firstOrNull() != 1 || numbers != (1..numbers.size).toList()) {
+            throw ArchiveException("ZIP 分卷编号不连续，请确保从 .z01 开始")
+        }
+        val finalPart = children.firstOrNull {
+            it.name.equals(finalName, ignoreCase = true)
+        } ?: throw ArchiveException("缺少 ZIP 分卷末端文件：$finalName")
+        return volumes.map { it.name to it.uri } + (finalPart.name to finalPart.uri)
+    }
+
+    private suspend fun findSplitParts(
+        firstName: String,
+        treeUri: Uri?,
+        parentUri: Uri?
+    ): List<BrowserEntry> {
+        val baseName = canonicalArchiveName(firstName)
+        val pattern = Regex(
+            Regex.escape(baseName) + """\.(\d{3,})$""",
+            RegexOption.IGNORE_CASE
+        )
+        val candidates: List<BrowserEntry> = parentUri?.localFile()?.let { parent ->
+            parent.listFiles().orEmpty()
+                .filter { pattern.matches(it.name) }
+                .map { repository.directEntry(it) }
+        } ?: if (treeUri != null && parentUri != null) {
+            repository.listChildren(treeUri, parentUri)
+                .filter { pattern.matches(it.name) }
+        } else {
+            emptyList()
+        }
+        val sorted = candidates.sortedBy { entry ->
+            pattern.matchEntire(entry.name)?.groupValues?.get(1)?.toIntOrNull() ?: Int.MAX_VALUE
+        }
+        val numbers = sorted.mapNotNull { entry ->
+            pattern.matchEntire(entry.name)?.groupValues?.get(1)?.toIntOrNull()
+        }
+        if (numbers.firstOrNull() != 1 || numbers != (1..numbers.size).toList()) {
+            throw ArchiveException("分卷编号不连续，请确保从 .001 开始且没有缺失")
+        }
+        return sorted
     }
 
     private suspend fun testSevenZ(
@@ -239,7 +383,11 @@ class MultiArchiveEngine(private val context: Context) {
                 GzipCompressorInputStream(BufferedInputStream(input))
             lowerName.endsWith(".bz2") ->
                 BZip2CompressorInputStream(BufferedInputStream(input))
-            else -> XZCompressorInputStream(BufferedInputStream(input))
+            lowerName.endsWith(".xz") ->
+                XZCompressorInputStream(BufferedInputStream(input))
+            lowerName.endsWith(".lzma") ->
+                LZMACompressorInputStream(BufferedInputStream(input))
+            else -> FramedLZ4CompressorInputStream(BufferedInputStream(input))
         }
         compressed.use { stream ->
             val written = copyWithLimit(
@@ -386,7 +534,9 @@ class MultiArchiveEngine(private val context: Context) {
     ): List<ArchiveItem> {
         if (lowerName.endsWith(".gz") && !lowerName.endsWith(".tar.gz") ||
             lowerName.endsWith(".bz2") && !lowerName.endsWith(".tar.bz2") ||
-            lowerName.endsWith(".xz") && !lowerName.endsWith(".tar.xz")
+            lowerName.endsWith(".xz") && !lowerName.endsWith(".tar.xz") ||
+            lowerName.endsWith(".lzma") ||
+            lowerName.endsWith(".lz4")
         ) {
             return listOf(
                 ArchiveItem(
@@ -464,7 +614,9 @@ class MultiArchiveEngine(private val context: Context) {
         val compressed: InputStream = when {
             lowerName.endsWith(".gz") -> GzipCompressorInputStream(BufferedInputStream(input))
             lowerName.endsWith(".bz2") -> BZip2CompressorInputStream(BufferedInputStream(input))
-            else -> XZCompressorInputStream(BufferedInputStream(input))
+            lowerName.endsWith(".xz") -> XZCompressorInputStream(BufferedInputStream(input))
+            lowerName.endsWith(".lzma") -> LZMACompressorInputStream(BufferedInputStream(input))
+            else -> FramedLZ4CompressorInputStream(BufferedInputStream(input))
         }
         compressed.use { stream ->
             val output = outputWriter(settings)
@@ -497,7 +649,7 @@ class MultiArchiveEngine(private val context: Context) {
             lowerName.endsWith(".tar.xz") || lowerName.endsWith(".txz") ->
                 TarArchiveInputStream(XZCompressorInputStream(buffered))
             lowerName.endsWith(".tar") -> TarArchiveInputStream(buffered)
-            lowerName.endsWith(".cpio") -> CpioArchiveInputStream(buffered)
+            lowerName.endsWith(".cpio") -> CpioArchiveInputStream(buffered, "UTF-8")
             else -> throw ArchiveException("暂不支持此压缩格式")
         }
     }
@@ -575,6 +727,8 @@ class MultiArchiveEngine(private val context: Context) {
             lowerName.endsWith(".gz") -> archiveName.dropLast(3)
             lowerName.endsWith(".bz2") -> archiveName.dropLast(4)
             lowerName.endsWith(".xz") -> archiveName.dropLast(3)
+            lowerName.endsWith(".lzma") -> archiveName.dropLast(5)
+            lowerName.endsWith(".lz4") -> archiveName.dropLast(4)
             else -> archiveName.substringBeforeLast('.', archiveName)
         }
     }
