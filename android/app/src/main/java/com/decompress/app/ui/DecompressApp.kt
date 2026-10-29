@@ -758,7 +758,7 @@ private fun FileBrowserScreen(
                                             },
                                             onClick = {
                                                 moreExpanded = false
-                                                notify("Zippest 1.2.0 · 文件浏览与压缩")
+                                                notify("Zippest 1.2.1 · 文件浏览与压缩")
                                             }
                                         )
                                     }
@@ -2325,7 +2325,18 @@ private fun openEntryExternally(context: Context, entry: BrowserEntry): Boolean 
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             clipData = ClipData.newRawUri(entry.name, viewUri)
         }
-        context.startActivity(intent)
+        val chooser = Intent.createChooser(
+            intent,
+            if (entry.isDirectory) {
+                "选择打开方式"
+            } else {
+                "选择打开 ${entry.name} 的方式"
+            }
+        ).apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            clipData = intent.clipData
+        }
+        context.startActivity(chooser)
     }.isSuccess
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {

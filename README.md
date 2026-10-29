@@ -91,7 +91,9 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.2.0` adds system-app opening for regular files, cross-volume file
+Version `1.2.1` routes every non-archive file through Android's system app
+chooser so the user can select a compatible viewer or editor. Version `1.2.0`
+added system-app opening for regular files, cross-volume file
 transfer roots, app-wide archive progress with pause/resume and timing, edge and
 bottom navigation gestures, Zstandard creation/opening, and Brotli opening.
 Version `1.1.9` showed the current directory path as the top-bar title without a
