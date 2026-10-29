@@ -58,4 +58,3 @@ fun archiveNameWithoutExtension(name: String): String {
         ?: return canonical.substringBeforeLast('.', canonical)
     return canonical.dropLast(suffix.length).ifBlank { "压缩包" }
 }
-
