@@ -173,7 +173,7 @@ private enum class StorageDestination(
     DOCUMENTS("文档", Environment.DIRECTORY_DOCUMENTS)
 }
 
-private val TopBarMenuOffset = DpOffset((-4).dp, 8.dp)
+private val TopBarMenuOffset = DpOffset((-4).dp, 5.dp)
 
 data class ArchiveTarget(
     val archive: BrowserEntry,
@@ -787,7 +787,7 @@ private fun FileBrowserScreen(
                                             },
                                             onClick = {
                                                 moreExpanded = false
-                                                notify("Zippest 1.4.0 · 文件浏览与压缩")
+                                                notify("Zippest 1.4.2 · 文件浏览与压缩")
                                             }
                                         )
                                     }

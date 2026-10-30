@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
@@ -42,7 +43,7 @@ internal fun ZippestDropdownMenu(
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
-        modifier = modifier.widthIn(min = 220.dp, max = 340.dp),
+        modifier = modifier.widthIn(min = 190.dp, max = 220.dp),
         offset = offset,
         shape = RoundedCornerShape(18.dp),
         containerColor = MaterialTheme.colorScheme.background,
@@ -64,14 +65,18 @@ internal fun ZippestBottomAnchoredMenu(
 ) {
     if (!expanded) return
     val layoutDirection = LocalLayoutDirection.current
+    val verticalLift = with(LocalDensity.current) { 8.dp.roundToPx() }
     Popup(
         onDismissRequest = onDismissRequest,
         properties = PopupProperties(focusable = true),
-        popupPositionProvider = BottomToolbarMenuPosition(layoutDirection)
+        popupPositionProvider = BottomToolbarMenuPosition(
+            layoutDirection,
+            verticalLift
+        )
     ) {
         Surface(
             modifier = Modifier
-                .widthIn(min = 220.dp, max = 340.dp),
+                .widthIn(min = 190.dp, max = 220.dp),
             shape = RoundedCornerShape(18.dp),
             color = MaterialTheme.colorScheme.background,
             tonalElevation = 0.dp,
@@ -92,7 +97,8 @@ internal fun ZippestBottomAnchoredMenu(
 }
 
 private class BottomToolbarMenuPosition(
-    private val layoutDirection: LayoutDirection
+    private val layoutDirection: LayoutDirection,
+    private val verticalLift: Int
 ) : PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: IntRect,
@@ -109,7 +115,9 @@ private class BottomToolbarMenuPosition(
             margin,
             (windowSize.width - popupContentSize.width - margin).coerceAtLeast(margin)
         )
-        val y = (anchorBounds.top - popupContentSize.height).coerceAtLeast(margin)
+        val y = (
+            anchorBounds.top - popupContentSize.height - verticalLift
+            ).coerceAtLeast(margin)
         return IntOffset(x, y)
     }
 }
