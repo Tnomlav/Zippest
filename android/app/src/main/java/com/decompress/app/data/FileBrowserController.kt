@@ -250,6 +250,29 @@ class FileBrowserController(context: Context) {
         return renamed
     }
 
+    suspend fun renameEntry(entry: BrowserEntry, name: String): BrowserEntry? {
+        val cleanName = validFileName(name) ?: return null
+        val directFile = if (hasDirectStorageAccess()) {
+            repository.localFileForUri(entry.uri)
+        } else {
+            null
+        }
+        if (directFile != null) {
+            val renamed = repository.renameDirect(Uri.fromFile(directFile), cleanName)
+            if (!renamed) return null
+            val target = File(directFile.parentFile ?: return null, cleanName)
+            loadCurrent()
+            return repository.directEntry(target)
+        }
+        if (storageMode == StorageMode.SAF) {
+            val renamedUri = repository.renameWithUri(entry.uri, cleanName)
+                ?: return null
+            loadCurrent()
+            return entry.copy(uri = renamedUri, name = cleanName)
+        }
+        return null
+    }
+
     suspend fun deleteSelected(): Int {
         val useTrash = AppSettingsRepository.read(appContext).useTrash
         val trash = TrashRepository(appContext)

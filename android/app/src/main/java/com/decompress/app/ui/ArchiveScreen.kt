@@ -631,6 +631,7 @@ private fun ArchiveRow(node: ArchiveNode, onClick: () -> Unit) {
 fun ExtractSheet(
     target: ExtractTarget,
     settings: AppSettings,
+    onRenameArchive: suspend (BrowserEntry, String) -> BrowserEntry?,
     onDismiss: () -> Unit,
     onExtractionStarted: () -> Unit
 ) {
@@ -691,7 +692,22 @@ fun ExtractSheet(
     var passwordDialogIndex by remember { mutableStateOf<Int?>(null) }
     var passwordDialogValue by remember { mutableStateOf("") }
     var pendingPasswords by remember { mutableStateOf<List<String>?>(null) }
+    var pendingArchives by remember { mutableStateOf<List<BrowserEntry>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    var archives by remember(target.archives) { mutableStateOf(target.archives) }
+    var archiveNameValue by remember(target.archives) {
+        mutableStateOf(
+            fileNameWithSuffixSelected(
+                target.archives.singleOrNull()?.name.orEmpty()
+            )
+        )
+    }
+    var showCustomSuffixDialog by remember { mutableStateOf(false) }
+    var customSuffix by remember { mutableStateOf("") }
+    var renamingArchive by remember { mutableStateOf(false) }
+    val canRenameArchive =
+        archives.size == 1 && target.parentUri != null && target.parentTreeUri != null
 
     val customPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -711,11 +727,11 @@ fun ExtractSheet(
         }
     }
 
-    val launchExtraction: (List<String>) -> Unit = { passwords ->
+    val launchExtraction: (List<BrowserEntry>, List<String>) -> Unit = { selectedArchives, passwords ->
         if (destinationMode == DestinationMode.CUSTOM && customTreeUri == null) {
             error = "请先选择自定义位置"
         } else {
-            val unsupported = target.archives.firstOrNull { !engine.supports(it.name) }
+            val unsupported = selectedArchives.firstOrNull { !engine.supports(it.name) }
             if (unsupported != null) {
                 error = "暂不支持 ${unsupported.name}"
             } else {
@@ -737,8 +753,8 @@ fun ExtractSheet(
                         ExtractionScheduler.enqueue(
                             context,
                             ExtractionTask(
-                                archiveUris = target.archives.map { it.uri },
-                                archiveNames = target.archives.map { it.name },
+                                archiveUris = selectedArchives.map { it.uri },
+                                archiveNames = selectedArchives.map { it.name },
                                 parentUri = parentUri,
                                 parentTreeUri = treeUri,
                                 mode = destinationMode,
@@ -764,12 +780,17 @@ fun ExtractSheet(
         ActivityResultContracts.RequestPermission()
     ) {
         pendingPasswords?.let { passwords ->
+            val selectedArchives = pendingArchives ?: archives
+            pendingArchives = null
             pendingPasswords = null
-            launchExtraction(passwords)
+            launchExtraction(selectedArchives, passwords)
         }
     }
 
-    fun requestPermissionAndLaunch(passwords: List<String>) {
+    fun requestPermissionAndLaunch(
+        selectedArchives: List<BrowserEntry>,
+        passwords: List<String>
+    ) {
         if (
             android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(
@@ -777,10 +798,29 @@ fun ExtractSheet(
                 Manifest.permission.POST_NOTIFICATIONS
             ) != PackageManager.PERMISSION_GRANTED
         ) {
+            pendingArchives = selectedArchives
             pendingPasswords = passwords
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
-            launchExtraction(passwords)
+            launchExtraction(selectedArchives, passwords)
+        }
+    }
+
+    fun continueExtraction(selectedArchives: List<BrowserEntry>) {
+        val unsupported = selectedArchives.firstOrNull { !engine.supports(it.name) }
+        if (unsupported != null) {
+            error = "暂不支持 ${unsupported.name}"
+            return
+        }
+        error = null
+        if (selectedArchives.size > 1 && !samePassword) {
+            if (perArchivePasswords.size != selectedArchives.size) {
+                perArchivePasswords = List(selectedArchives.size) { "" }
+            }
+            passwordDialogValue = ""
+            passwordDialogIndex = 0
+        } else {
+            requestPermissionAndLaunch(selectedArchives, selectedArchives.map { password })
         }
     }
 
@@ -789,20 +829,37 @@ fun ExtractSheet(
             error = "请先选择自定义位置"
             return
         }
-        val unsupported = target.archives.firstOrNull { !engine.supports(it.name) }
-        if (unsupported != null) {
-            error = "暂不支持 ${unsupported.name}"
+        val entry = archives.singleOrNull()
+        val requestedName = archiveNameValue.text.trim()
+        if (
+            canRenameArchive &&
+            entry != null &&
+            requestedName != entry.name &&
+            !engine.supports(requestedName)
+        ) {
+            error = "新名称需要使用受支持的压缩包后缀"
             return
         }
-        error = null
-        if (target.archives.size > 1 && !samePassword) {
-            if (perArchivePasswords.size != target.archives.size) {
-                perArchivePasswords = List(target.archives.size) { "" }
+        if (
+            canRenameArchive &&
+            entry != null &&
+            !requestedName.isNullOrBlank() &&
+            requestedName != entry.name
+        ) {
+            renamingArchive = true
+            scope.launch {
+                val renamed = onRenameArchive(entry, requestedName)
+                renamingArchive = false
+                if (renamed == null) {
+                    error = "重命名失败，名称无效或已存在"
+                } else {
+                    archives = listOf(renamed)
+                    archiveNameValue = fileNameWithSuffixSelected(renamed.name)
+                    continueExtraction(listOf(renamed))
+                }
             }
-            passwordDialogValue = ""
-            passwordDialogIndex = 0
         } else {
-            requestPermissionAndLaunch(target.archives.map { password })
+            continueExtraction(archives)
         }
     }
 
@@ -935,6 +992,58 @@ fun ExtractSheet(
                     }
                 }
 
+                if (canRenameArchive) {
+                    Spacer(Modifier.height(18.dp))
+                    Text(
+                        "压缩包名称",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = archiveNameValue,
+                        onValueChange = { archiveNameValue = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("文件名") }
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        listOf(".7z", ".zip", ".rar").forEach { suffix ->
+                            FilterChip(
+                                selected = selectedFileSuffix(archiveNameValue)
+                                    .equals(suffix, ignoreCase = true),
+                                onClick = {
+                                    archiveNameValue = replaceSelectedFileSuffix(
+                                        archiveNameValue,
+                                        suffix
+                                    )
+                                },
+                                modifier = Modifier.weight(1f),
+                                label = { Text(suffix.uppercase(), maxLines = 1) }
+                            )
+                        }
+                        FilterChip(
+                            selected = selectedFileSuffix(archiveNameValue).lowercase() !in
+                                setOf(".7z", ".zip", ".rar"),
+                            onClick = {
+                                customSuffix = selectedFileSuffix(archiveNameValue)
+                                showCustomSuffixDialog = true
+                            },
+                            modifier = Modifier.weight(1f),
+                            label = { Text("自定义", maxLines = 1) }
+                        )
+                    }
+                    Text(
+                        "点击“开始解压”时会先保存新名称",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 Spacer(Modifier.height(18.dp))
                 Text(
                     "解压到",
@@ -953,10 +1062,10 @@ fun ExtractSheet(
                 Spacer(Modifier.height(8.dp))
                 DestinationChoice(
                     title = "新建同名文件夹",
-                    detail = if (target.archives.size == 1) {
+                    detail = if (archives.size == 1) {
                         listOf(
                             target.parentPath,
-                            archiveBaseName(target.archives.first().name)
+                            archiveBaseName(archives.first().name)
                         ).filter { it.isNotBlank() }.joinToString(" / ")
                     } else {
                         listOf(target.parentPath, "每个压缩包同名文件夹")
@@ -1008,7 +1117,7 @@ fun ExtractSheet(
                     }
                 }
 
-                if (target.archives.size > 1) {
+                if (archives.size > 1) {
                     Spacer(Modifier.height(14.dp))
                     Row(
                         modifier = Modifier
@@ -1029,7 +1138,7 @@ fun ExtractSheet(
                             )
                             Text(
                                 if (samePassword) {
-                                    "本次选择的 ${target.archives.size} 个压缩包复用此密码"
+                                    "本次选择的 ${archives.size} 个压缩包复用此密码"
                                 } else {
                                     "关闭时，将逐个输入密码"
                                 },
@@ -1066,20 +1175,56 @@ fun ExtractSheet(
                 }
                 Button(
                     onClick = { startExtraction() },
+                    enabled = !renamingArchive,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("开始解压")
+                    Text(if (renamingArchive) "正在重命名…" else "开始解压")
                 }
             }
         }
     }
 
+    if (showCustomSuffixDialog) {
+        AlertDialog(
+            onDismissRequest = { showCustomSuffixDialog = false },
+            title = { Text("自定义后缀") },
+            text = {
+                OutlinedTextField(
+                    value = customSuffix,
+                    onValueChange = { customSuffix = it },
+                    singleLine = true,
+                    label = { Text("后缀") },
+                    supportingText = { Text("使用一个前导点，如 .tar.gz") }
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = sanitizeFileSuffix(customSuffix).isNotEmpty(),
+                    onClick = {
+                        archiveNameValue = replaceSelectedFileSuffix(
+                            archiveNameValue,
+                            sanitizeFileSuffix(customSuffix)
+                        )
+                        showCustomSuffixDialog = false
+                    }
+                ) {
+                    Text("应用")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCustomSuffixDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
     passwordDialogIndex?.let { index ->
-        val archive = target.archives.getOrNull(index)
+        val archive = archives.getOrNull(index)
         if (archive != null) {
             AlertDialog(
                 onDismissRequest = { passwordDialogIndex = null },
-                title = { Text("输入第 ${index + 1}/${target.archives.size} 个密码") },
+                title = { Text("输入第 ${index + 1}/${archives.size} 个密码") },
                 text = {
                     Column {
                         Text(
@@ -1114,16 +1259,16 @@ fun ExtractSheet(
                             }
                             perArchivePasswords = updated
                             val next = index + 1
-                            if (next < target.archives.size) {
+                            if (next < archives.size) {
                                 passwordDialogValue = ""
                                 passwordDialogIndex = next
                             } else {
                                 passwordDialogIndex = null
-                                requestPermissionAndLaunch(updated)
+                                requestPermissionAndLaunch(archives, updated)
                             }
                         }
                     ) {
-                        Text(if (index + 1 == target.archives.size) "开始解压" else "下一个")
+                        Text(if (index + 1 == archives.size) "开始解压" else "下一个")
                     }
                 },
                 dismissButton = {

@@ -127,17 +127,33 @@ class SafFileRepository(private val context: Context) {
         }.getOrDefault(false)
     }
 
-    suspend fun rename(documentUri: Uri, name: String): Boolean =
+    suspend fun renameWithUri(documentUri: Uri, name: String): Uri? =
         withContext(Dispatchers.IO) {
             runCatching {
                 val renamedUri = DocumentsContract.renameDocument(
                     resolver,
                     documentUri,
                     name
-                ) ?: return@runCatching false
-                queryDisplayName(renamedUri) == name
-            }.getOrDefault(false)
+                ) ?: return@runCatching null
+                if (queryDisplayName(renamedUri) != name) {
+                    return@runCatching null
+                }
+                if (
+                    DocumentsContract.isTreeUri(documentUri) &&
+                    renamedUri.authority == documentUri.authority
+                ) {
+                    DocumentsContract.buildDocumentUriUsingTree(
+                        documentUri,
+                        DocumentsContract.getDocumentId(renamedUri)
+                    )
+                } else {
+                    renamedUri
+                }
+            }.getOrNull()
         }
+
+    suspend fun rename(documentUri: Uri, name: String): Boolean =
+        renameWithUri(documentUri, name) != null
 
     suspend fun listDirectChildren(directory: File): List<BrowserEntry> =
         withContext(Dispatchers.IO) {

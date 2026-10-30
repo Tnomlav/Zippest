@@ -411,6 +411,9 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
                     ExtractSheet(
                         target = target,
                         settings = settingsRepository.settings,
+                        onRenameArchive = { entry, name ->
+                            controller.renameEntry(entry, name)
+                        },
                         onDismiss = { extractTarget = null },
                         onExtractionStarted = {
                             extractTarget = null
@@ -1052,7 +1055,7 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {
                             moreExpanded = false
-                            notify("Zippest 1.4.4 · 文件浏览与压缩")
+                            notify("Zippest 1.5.0 · 文件浏览与压缩")
                         }
                     )
                 }
@@ -2299,7 +2302,7 @@ internal fun fileNameWithSuffixSelected(name: String): TextFieldValue {
     )
 }
 
-private fun selectedFileSuffix(value: TextFieldValue): String {
+internal fun selectedFileSuffix(value: TextFieldValue): String {
     val range = effectiveSuffixRange(value)
     return value.text.substring(range.start, range.end)
 }

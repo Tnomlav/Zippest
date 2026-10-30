@@ -12,6 +12,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -71,6 +72,22 @@ class FileOperationsDeviceTest {
         assertEquals("renamed", trashed.name)
         assertTrue(trash.restore(trashed.id))
         assertTrue(renamed.isDirectory)
+    }
+
+    @Test
+    fun renameEntryReturnsTheLiveRenamedFile() = runBlocking {
+        openFolder("Download", baseDirectory.name)
+        val source = File(baseDirectory, "sample.7z").apply { writeText("archive") }
+        controller.refresh()
+        val entry = controller.entries.single { it.name == source.name }
+
+        val renamed = controller.renameEntry(entry, "sample.zip")
+
+        assertNotNull(renamed)
+        assertEquals("sample.zip", renamed!!.name)
+        assertEquals(Uri.fromFile(File(baseDirectory, "sample.zip")), renamed.uri)
+        assertFalse(source.exists())
+        assertEquals("archive", File(baseDirectory, "sample.zip").readText())
     }
 
     @Test
@@ -180,15 +197,17 @@ class FileOperationsDeviceTest {
         val entry = repository.listChildren(treeUri, root)
             .single { it.name == "before.txt" }
 
-        assertTrue(repository.rename(entry.uri, "after.txt"))
+        val renamedUri = repository.renameWithUri(entry.uri, "after.txt")
+        assertNotNull(renamedUri)
+        assertEquals("saf", context.contentResolver.openInputStream(renamedUri!!)!!
+            .bufferedReader()
+            .use { it.readText() })
         val renamedEntry = repository.listChildren(
             treeUri,
             root
         ).single { it.name == "after.txt" }
-        assertEquals("saf", context.contentResolver.openInputStream(renamedEntry.uri)!!
-            .bufferedReader()
-            .use { it.readText() })
-        assertTrue(repository.delete(renamedEntry.uri))
+        assertEquals(renamedUri, renamedEntry.uri)
+        assertTrue(repository.delete(renamedUri))
         assertTrue(repository.listChildren(treeUri, root).isEmpty())
     }
 
@@ -299,9 +318,13 @@ class FileOperationsDeviceTest {
     }
 
     private fun allowAllFilesAccess(instrumentation: Instrumentation) {
-        instrumentation.uiAutomation.executeShellCommand(
-            "appops set ${context.packageName} MANAGE_EXTERNAL_STORAGE allow"
-        ).close()
+        repeat(20) {
+            instrumentation.uiAutomation.executeShellCommand(
+                "appops set --uid ${context.packageName} MANAGE_EXTERNAL_STORAGE allow"
+            ).close()
+            if (Environment.isExternalStorageManager()) return
+            Thread.sleep(250)
+        }
     }
 
     private fun createProviderDirectory(name: String): Uri {
