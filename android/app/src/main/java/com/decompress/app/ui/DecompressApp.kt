@@ -91,8 +91,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -705,12 +703,12 @@ private fun FileBrowserScreen(
                                     IconButton(onClick = { sortExpanded = true }) {
                                         Icon(Icons.Outlined.Sort, contentDescription = "排序")
                                     }
-                                    DropdownMenu(
+                                    ZippestDropdownMenu(
                                         expanded = sortExpanded,
                                         onDismissRequest = { sortExpanded = false }
                                     ) {
                                         BrowserSortMode.entries.forEach { mode ->
-                                            DropdownMenuItem(
+                                            ZippestMenuItem(
                                                 text = { Text(mode.label) },
                                                 onClick = {
                                                     settingsRepository.update {
@@ -718,6 +716,7 @@ private fun FileBrowserScreen(
                                                     }
                                                     sortExpanded = false
                                                 },
+                                                selected = appSettings.defaultSortMode == mode,
                                                 trailingIcon = {
                                                     if (
                                                         appSettings.defaultSortMode == mode
@@ -742,11 +741,11 @@ private fun FileBrowserScreen(
                                     IconButton(onClick = { moreExpanded = true }) {
                                         Icon(Icons.Outlined.MoreVert, contentDescription = "更多")
                                     }
-                                    DropdownMenu(
+                                    ZippestDropdownMenu(
                                         expanded = moreExpanded,
                                         onDismissRequest = { moreExpanded = false }
                                     ) {
-                                        DropdownMenuItem(
+                                        ZippestMenuItem(
                                             text = { Text("设置") },
                                             leadingIcon = {
                                                 Icon(Icons.Outlined.Tune, null)
@@ -756,7 +755,7 @@ private fun FileBrowserScreen(
                                                 onOpenSettings()
                                             }
                                         )
-                                        DropdownMenuItem(
+                                        ZippestMenuItem(
                                             text = { Text("后台任务") },
                                             leadingIcon = {
                                                 Icon(Icons.Outlined.Schedule, null)
@@ -766,7 +765,7 @@ private fun FileBrowserScreen(
                                                 showTaskQueue = true
                                             }
                                         )
-                                        DropdownMenuItem(
+                                        ZippestMenuItem(
                                             text = { Text("重新选择文件夹") },
                                             leadingIcon = {
                                                 Icon(Icons.Outlined.FolderOpen, null)
@@ -776,14 +775,14 @@ private fun FileBrowserScreen(
                                                 folderPicker.launch(null)
                                             }
                                         )
-                                        DropdownMenuItem(
+                                        ZippestMenuItem(
                                             text = { Text("关于") },
                                             leadingIcon = {
                                                 Icon(Icons.Outlined.Info, null)
                                             },
                                             onClick = {
                                                 moreExpanded = false
-                                                notify("Zippest 1.3.1 · 文件浏览与压缩")
+                                                notify("Zippest 1.3.2 · 文件浏览与压缩")
                                             }
                                         )
                                     }
@@ -1915,11 +1914,11 @@ private fun androidx.compose.foundation.layout.RowScope.SelectionMenu(
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
-        DropdownMenu(
+        ZippestDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            DropdownMenuItem(
+            ZippestMenuItem(
                 text = { Text("打开方式") },
                 enabled = canOpenWith,
                 onClick = {
@@ -1927,7 +1926,7 @@ private fun androidx.compose.foundation.layout.RowScope.SelectionMenu(
                     onOpenWith()
                 }
             )
-            DropdownMenuItem(
+            ZippestMenuItem(
                 text = { Text("分享") },
                 onClick = {
                     expanded = false

@@ -7,7 +7,7 @@ creating common archive formats. The product UI follows the finalized prototype 
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.3.1`
+- Version: `1.3.2`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct
@@ -107,8 +107,10 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
-Version `1.3.1` replaces the selected-items share shortcut with a menu that
-contains Open With and Share. Version `1.3.0` opened indexed media through MediaStore and
+Version `1.3.2` unifies every dropdown menu with the rounded, elevated panel
+style used by the internal-storage chooser, including sort, overflow,
+selection, and clipboard menus. Version `1.3.1` replaced the selected-items
+share shortcut with a menu containing Open With and Share. Version `1.3.0` opened indexed media through MediaStore and
 includes same-folder media URIs so capable galleries and players can navigate
 between siblings; write grants enable direct editing where supported.
 Version `1.2.4` grouped Open With targets by file type, prioritized direct

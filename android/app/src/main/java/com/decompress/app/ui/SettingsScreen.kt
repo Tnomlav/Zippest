@@ -152,7 +152,7 @@ fun SettingsScreen(
     val versionName = remember {
         runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
-        }.getOrNull() ?: "1.3.1"
+        }.getOrNull() ?: "1.3.2"
     }
 
     BackHandler(onBack = onBack)
