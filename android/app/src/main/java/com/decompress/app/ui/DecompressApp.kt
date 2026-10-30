@@ -495,6 +495,31 @@ private fun FileBrowserScreen(
         onNotify(message)
     }
 
+    fun openWithFile(entry: BrowserEntry) {
+        scope.launch {
+            val viewIntent = createOpenWithIntent(context, entry)
+            val options = viewIntent?.let {
+                queryOpenWithOptions(context, it)
+            }.orEmpty()
+            if (viewIntent != null && options.isNotEmpty()) {
+                val request = OpenWithRequest(
+                    displayName = entry.name,
+                    mimeType = viewIntent.type ?: "*/*",
+                    extension = entry.name
+                        .substringAfterLast('.', "")
+                        .lowercase(),
+                    intent = viewIntent,
+                    options = options
+                )
+                if (!launchRememberedOpenWith(context, request)) {
+                    openWithRequest = request
+                }
+            } else {
+                notify("没有可打开此文件的应用")
+            }
+        }
+    }
+
     LaunchedEffect(controller.treeUri) {
         searchMode = false
         query = ""
@@ -758,7 +783,7 @@ private fun FileBrowserScreen(
                                             },
                                             onClick = {
                                                 moreExpanded = false
-                                                notify("Zippest 1.3.0 · 文件浏览与压缩")
+                                                notify("Zippest 1.3.1 · 文件浏览与压缩")
                                             }
                                         )
                                     }
@@ -863,6 +888,15 @@ private fun FileBrowserScreen(
                                     "删除失败，目标可能位于 Android 受保护目录"
                                 }
                             )
+                        }
+                    },
+                    canOpenWith = selectedEntries.singleOrNull()?.let {
+                        !it.isDirectory && !it.isArchive
+                    } == true,
+                    onOpenWith = {
+                        val entry = selectedEntries.singleOrNull()
+                        if (entry != null && !entry.isDirectory && !entry.isArchive) {
+                            openWithFile(entry)
                         }
                     },
                     onShare = {
@@ -980,28 +1014,7 @@ private fun FileBrowserScreen(
                                     }
                                 }
                                 else -> {
-                                    scope.launch {
-                                        val viewIntent = createOpenWithIntent(context, entry)
-                                        val options = viewIntent?.let {
-                                            queryOpenWithOptions(context, it)
-                                        }.orEmpty()
-                                        if (viewIntent != null && options.isNotEmpty()) {
-                                            val request = OpenWithRequest(
-                                                displayName = entry.name,
-                                                mimeType = viewIntent.type ?: "*/*",
-                                                extension = entry.name
-                                                    .substringAfterLast('.', "")
-                                                    .lowercase(),
-                                                intent = viewIntent,
-                                                options = options
-                                            )
-                                            if (!launchRememberedOpenWith(context, request)) {
-                                                openWithRequest = request
-                                            }
-                                        } else {
-                                            notify("没有可打开此文件的应用")
-                                        }
-                                    }
+                                    openWithFile(entry)
                                 }
                             }
                         },
@@ -1840,6 +1853,8 @@ private fun SelectionToolbar(
     onMove: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
+    canOpenWith: Boolean,
+    onOpenWith: () -> Unit,
     onShare: () -> Unit,
     onCompress: () -> Unit
 ) {
@@ -1860,7 +1875,65 @@ private fun SelectionToolbar(
             SelectionAction(Icons.Outlined.DriveFileMove, "移动", onMove)
             SelectionAction(Icons.Outlined.Edit, "重命名", onRename)
             SelectionAction(Icons.Outlined.Delete, "删除", onDelete)
-            SelectionAction(Icons.Outlined.Share, "分享", onShare)
+            SelectionMenu(
+                canOpenWith = canOpenWith,
+                onOpenWith = onOpenWith,
+                onShare = onShare
+            )
+        }
+    }
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.RowScope.SelectionMenu(
+    canOpenWith: Boolean,
+    onOpenWith: () -> Unit,
+    onShare: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(
+        modifier = Modifier.weight(1f),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(onClick = { expanded = true })
+                .padding(vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                Icons.Outlined.MoreVert,
+                contentDescription = "菜单",
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(23.dp)
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                "菜单",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("打开方式") },
+                enabled = canOpenWith,
+                onClick = {
+                    expanded = false
+                    onOpenWith()
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("分享") },
+                onClick = {
+                    expanded = false
+                    onShare()
+                }
+            )
         }
     }
 }

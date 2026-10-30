@@ -91,7 +91,8 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.3.0` opens indexed images, videos, and audio through MediaStore and
+Version `1.3.1` replaces the selected-items share shortcut with a menu that
+contains Open With and Share. Version `1.3.0` opened indexed media through MediaStore and
 includes same-folder media URIs so capable galleries and players can navigate
 between siblings; write grants enable direct editing where supported.
 Version `1.2.4` grouped Open With targets by file type, prioritized direct
