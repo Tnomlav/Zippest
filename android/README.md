@@ -7,7 +7,7 @@ creating common archive formats. The product UI follows the finalized prototype 
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.2.4`
+- Version: `1.3.0`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct
@@ -107,8 +107,11 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
-Version `1.2.4` groups Open With targets by file type, prioritizes direct
-viewers/editors ahead of share and send targets, and remembers always-use
+Version `1.3.0` opens indexed images, videos, and audio through MediaStore and
+includes same-folder media URIs so capable galleries and players can navigate
+between siblings; write grants enable direct editing where supported.
+Version `1.2.4` grouped Open With targets by file type, prioritized direct
+viewers/editors ahead of share and send targets, and remembered always-use
 preferences for the selected file family. Version `1.2.2` added the
 explicit one-time/always Open With dialog and its reset control. Version `1.2.0`
 added system-app opening for regular files, cross-volume file

@@ -1,11 +1,17 @@
 package com.decompress.app.ui
 
 import android.content.ComponentName
+import android.content.ClipData
 import android.content.Context
+import android.content.ContentUris
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import android.net.Uri
+import android.webkit.MimeTypeMap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -42,18 +48,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
+import androidx.core.content.FileProvider
 import com.decompress.app.data.BrowserEntry
 import com.decompress.app.data.OpenWithPreferences
 import com.decompress.app.data.localFile
-import androidx.core.content.FileProvider
-import android.webkit.MimeTypeMap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 internal data class OpenWithOption(
     val label: String,
     val component: ComponentName,
     val icon: ImageBitmap?,
-    val category: OpenWithCategory
+    val category: OpenWithCategory,
+    val action: String
 )
 
 internal enum class OpenWithCategory {
@@ -69,62 +77,218 @@ internal data class OpenWithRequest(
     val options: List<OpenWithOption>
 )
 
-internal fun createOpenWithIntent(context: Context, entry: BrowserEntry): Intent? {
-    val viewUri = if (entry.uri.scheme == "file") {
-        val file = entry.uri.localFile() ?: return null
-        FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            File(file.absolutePath)
-        )
-    } else {
-        entry.uri
-    }
+internal suspend fun createOpenWithIntent(
+    context: Context,
+    entry: BrowserEntry
+): Intent? = withContext(Dispatchers.IO) {
     val extension = entry.name.substringAfterLast('.', "").lowercase()
     val mimeType = entry.mimeType
         ?: MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
         ?: "*/*"
-    return Intent(Intent.ACTION_VIEW).apply {
-        setDataAndType(viewUri, mimeType)
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        clipData = android.content.ClipData.newRawUri(entry.name, viewUri)
+    val localFile = entry.uri.localFile()
+    val viewUri = localFile?.let { mediaStoreUri(context, it, mimeType) }
+        ?: if (entry.uri.scheme == "file") {
+            val file = localFile ?: return@withContext null
+            fileProviderUri(context, file)
+        } else {
+            entry.uri
+        }
+    val clipData = ClipData.newRawUri(entry.name, viewUri)
+    if (localFile != null) {
+        siblingMediaUris(context, localFile, mimeType).forEach { sibling ->
+            if (sibling != viewUri) {
+                clipData.addItem(ClipData.Item(sibling))
+            }
+        }
     }
+    Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(viewUri, mimeType)
+        addFlags(
+            Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        )
+        this.clipData = clipData
+    }
+}
+
+private fun fileProviderUri(context: Context, file: File) =
+    FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        file
+    )
+
+private fun siblingMediaUris(
+    context: Context,
+    selectedFile: File,
+    selectedMimeType: String
+): List<Uri> {
+    val parent = selectedFile.parentFile ?: return emptyList()
+    val family = selectedMimeType.substringBefore('/')
+    val selectedExtension = selectedFile.extension.lowercase()
+    return parent.listFiles()
+        .orEmpty()
+        .asSequence()
+        .filter { it.isFile && it.absolutePath != selectedFile.absolutePath }
+        .filter { candidate ->
+            val candidateMime = MimeTypeMap.getSingleton()
+                .getMimeTypeFromExtension(candidate.extension.lowercase())
+                ?: ""
+            if (family in setOf("image", "video", "audio")) {
+                candidateMime.startsWith("$family/")
+            } else {
+                candidate.extension.equals(selectedExtension, ignoreCase = true)
+            }
+        }
+        .sortedBy { it.name.lowercase() }
+        .take(300)
+        .mapNotNull { candidate ->
+            mediaStoreUri(context, candidate, selectedMimeTypeFor(candidate))
+                ?: runCatching { fileProviderUri(context, candidate) }.getOrNull()
+        }
+        .toList()
+}
+
+private fun selectedMimeTypeFor(file: File): String =
+    MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase())
+        ?: "*/*"
+
+private fun mediaStoreUri(context: Context, file: File, mimeType: String): Uri? {
+    val collection = when {
+        mimeType.startsWith("image/") -> mediaCollection("image")
+        mimeType.startsWith("video/") -> mediaCollection("video")
+        mimeType.startsWith("audio/") -> mediaCollection("audio")
+        else -> null
+    } ?: return null
+    val projection = arrayOf(MediaStore.MediaColumns._ID)
+    val directMatch = runCatching<Uri?> {
+        context.contentResolver.query(
+            collection,
+            projection,
+            "${MediaStore.MediaColumns.DATA}=?",
+            arrayOf(file.absolutePath),
+            null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                return@runCatching ContentUris.withAppendedId(
+                    collection,
+                    cursor.getLong(0)
+                )
+            }
+            null
+        }
+    }.getOrNull()
+    if (directMatch != null) return directMatch
+
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+    val root = storageRootFor(context, file) ?: return null
+    val relativePath = runCatching {
+        file.parentFile
+            ?.relativeTo(root)
+            ?.invariantSeparatorsPath
+            ?.trim('/')
+            ?.let { if (it.isEmpty()) "" else "$it/" }
+    }.getOrNull() ?: return null
+    return runCatching {
+        context.contentResolver.query(
+            collection,
+            projection,
+            "${MediaStore.MediaColumns.DISPLAY_NAME}=? AND " +
+                "${MediaStore.MediaColumns.RELATIVE_PATH}=?",
+            arrayOf(file.name, relativePath),
+            null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                ContentUris.withAppendedId(collection, cursor.getLong(0))
+            } else {
+                null
+            }
+        }
+    }.getOrNull()
+}
+
+private fun mediaCollection(type: String): Uri =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        when (type) {
+            "image" -> MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+            "video" -> MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+            else -> MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+        }
+    } else {
+        when (type) {
+            "image" -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            "video" -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            else -> MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        }
+    }
+
+private fun storageRootFor(context: Context, file: File): File? {
+    val candidates = buildList {
+        add(Environment.getExternalStorageDirectory())
+        context.getExternalFilesDirs(null).forEach { appDirectory ->
+            val path = appDirectory?.absolutePath ?: return@forEach
+            add(File(path.substringBefore("/Android/", path)))
+        }
+    }
+    val filePath = runCatching { file.canonicalPath }.getOrDefault(file.absolutePath)
+    return candidates
+        .distinctBy { it.absolutePath }
+        .filter { candidate ->
+            filePath == candidate.absolutePath ||
+                filePath.startsWith(candidate.absolutePath + File.separator)
+        }
+        .maxByOrNull { it.absolutePath.length }
 }
 
 internal fun queryOpenWithOptions(context: Context, intent: Intent): List<OpenWithOption> {
     val packageManager = context.packageManager
-    val infos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        packageManager.queryIntentActivities(
-            intent,
-            PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong())
-        )
-    } else {
-        @Suppress("DEPRECATION")
-        packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+    val candidates = linkedMapOf<ComponentName, Pair<String, ResolveInfo>>()
+    listOf(Intent.ACTION_VIEW, Intent.ACTION_EDIT).forEach { action ->
+        val actionIntent = Intent(intent).setAction(action)
+        val infos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.queryIntentActivities(
+                actionIntent,
+                PackageManager.ResolveInfoFlags.of(
+                    PackageManager.MATCH_DEFAULT_ONLY.toLong()
+                )
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.queryIntentActivities(
+                actionIntent,
+                PackageManager.MATCH_DEFAULT_ONLY
+            )
+        }
+        infos.forEach { info ->
+            val activityInfo = info.activityInfo
+            if (activityInfo.packageName == context.packageName) return@forEach
+            val component = ComponentName(activityInfo.packageName, activityInfo.name)
+            candidates.putIfAbsent(component, action to info)
+        }
     }
-    val options = infos
+    val options = candidates
         .asSequence()
-        .filter { it.activityInfo.packageName != context.packageName }
-        .map { resolveInfo ->
+        .map { (component, actionAndInfo) ->
+            val (action, resolveInfo) = actionAndInfo
             val activityInfo = resolveInfo.activityInfo
             val label = resolveInfo.loadLabel(packageManager).toString()
-            val component = ComponentName(activityInfo.packageName, activityInfo.name)
+            val category = openWithCategory(
+                label,
+                component.packageName,
+                component.className
+            )
             OpenWithOption(
-                label = label,
+                label = if (action == Intent.ACTION_EDIT) "$label（编辑）" else label,
                 component = component,
                 icon = runCatching {
                     resolveInfo.loadIcon(packageManager)
                         .toBitmap(64, 64)
                         .asImageBitmap()
                 }.getOrNull(),
-                category = openWithCategory(
-                    label,
-                    component.packageName,
-                    component.className
-                )
+                category = category,
+                action = action
             )
         }
-        .distinctBy { it.component.flattenToString() }
         .toList()
     val mimeType = intent.type.orEmpty()
     return options.sortedWith(
@@ -222,7 +386,11 @@ internal fun launchOpenWith(
             option.component
         )
     }
-    context.startActivity(Intent(request.intent).setComponent(option.component))
+    context.startActivity(
+        Intent(request.intent)
+            .setAction(option.action)
+            .setComponent(option.component)
+    )
 }.isSuccess
 
 @Composable

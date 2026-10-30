@@ -758,7 +758,7 @@ private fun FileBrowserScreen(
                                             },
                                             onClick = {
                                                 moreExpanded = false
-                                                notify("Zippest 1.2.4 · 文件浏览与压缩")
+                                                notify("Zippest 1.3.0 · 文件浏览与压缩")
                                             }
                                         )
                                     }
@@ -980,25 +980,27 @@ private fun FileBrowserScreen(
                                     }
                                 }
                                 else -> {
-                                    val viewIntent = createOpenWithIntent(context, entry)
-                                    val options = viewIntent?.let {
-                                        queryOpenWithOptions(context, it)
-                                    }.orEmpty()
-                                    if (viewIntent != null && options.isNotEmpty()) {
-                                        val request = OpenWithRequest(
-                                            displayName = entry.name,
-                                            mimeType = viewIntent.type ?: "*/*",
-                                            extension = entry.name
-                                                .substringAfterLast('.', "")
-                                                .lowercase(),
-                                            intent = viewIntent,
-                                            options = options
-                                        )
-                                        if (!launchRememberedOpenWith(context, request)) {
-                                            openWithRequest = request
+                                    scope.launch {
+                                        val viewIntent = createOpenWithIntent(context, entry)
+                                        val options = viewIntent?.let {
+                                            queryOpenWithOptions(context, it)
+                                        }.orEmpty()
+                                        if (viewIntent != null && options.isNotEmpty()) {
+                                            val request = OpenWithRequest(
+                                                displayName = entry.name,
+                                                mimeType = viewIntent.type ?: "*/*",
+                                                extension = entry.name
+                                                    .substringAfterLast('.', "")
+                                                    .lowercase(),
+                                                intent = viewIntent,
+                                                options = options
+                                            )
+                                            if (!launchRememberedOpenWith(context, request)) {
+                                                openWithRequest = request
+                                            }
+                                        } else {
+                                            notify("没有可打开此文件的应用")
                                         }
-                                    } else {
-                                        notify("没有可打开此文件的应用")
                                     }
                                 }
                             }
