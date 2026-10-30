@@ -91,8 +91,9 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.4.2` lifts both menu anchors and narrows all menus for a
-more compact layout. Version `1.4.0` aligned top-bar and selection-toolbar
+Version `1.4.3` positions top and bottom menus directly from the visible
+Scaffold bar boundaries instead of popup icon anchors, then lifts and narrows
+the resulting compact panels. Version `1.4.0` aligned top-bar and selection-toolbar
 menus flush with their adjacent app bars. Version `1.3.8` aligned top-bar dropdowns beneath the anchor
 icon, removed menu shadows, and retained the full theme-colored border.
 Version `1.3.5` aligned top-bar dropdowns beneath the app bar and used

@@ -136,7 +136,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
@@ -172,8 +171,6 @@ private enum class StorageDestination(
     MUSIC("音乐", Environment.DIRECTORY_MUSIC),
     DOCUMENTS("文档", Environment.DIRECTORY_DOCUMENTS)
 }
-
-private val TopBarMenuOffset = DpOffset((-4).dp, 5.dp)
 
 data class ArchiveTarget(
     val archive: BrowserEntry,
@@ -453,6 +450,7 @@ private fun FileBrowserScreen(
     var storageExpanded by remember { mutableStateOf(false) }
     var sortExpanded by remember { mutableStateOf(false) }
     var moreExpanded by remember { mutableStateOf(false) }
+    var selectionMenuExpanded by remember { mutableStateOf(false) }
     var showNewFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
     var showRenameDialog by remember { mutableStateOf(false) }
@@ -533,6 +531,9 @@ private fun FileBrowserScreen(
             delay(100)
             runCatching { renameFocus.requestFocus() }
         }
+    }
+    LaunchedEffect(controller.selectionMode) {
+        if (!controller.selectionMode) selectionMenuExpanded = false
     }
 
     val appSettings = settingsRepository.settings
@@ -706,34 +707,6 @@ private fun FileBrowserScreen(
                                     IconButton(onClick = { sortExpanded = true }) {
                                         Icon(Icons.Outlined.Sort, contentDescription = "排序")
                                     }
-                                    ZippestDropdownMenu(
-                                        expanded = sortExpanded,
-                                        onDismissRequest = { sortExpanded = false },
-                                        offset = TopBarMenuOffset
-                                    ) {
-                                        BrowserSortMode.entries.forEach { mode ->
-                                            ZippestMenuItem(
-                                                text = { Text(mode.label) },
-                                                onClick = {
-                                                    settingsRepository.update {
-                                                        it.copy(defaultSortMode = mode)
-                                                    }
-                                                    sortExpanded = false
-                                                },
-                                                selected = appSettings.defaultSortMode == mode,
-                                                trailingIcon = {
-                                                    if (
-                                                        appSettings.defaultSortMode == mode
-                                                    ) {
-                                                        Icon(
-                                                            Icons.Outlined.Check,
-                                                            contentDescription = null
-                                                        )
-                                                    }
-                                                }
-                                            )
-                                        }
-                                    }
                                 }
                                 IconButton(onClick = {
                                     newFolderName = ""
@@ -744,52 +717,6 @@ private fun FileBrowserScreen(
                                 Box {
                                     IconButton(onClick = { moreExpanded = true }) {
                                         Icon(Icons.Outlined.MoreVert, contentDescription = "更多")
-                                    }
-                                    ZippestDropdownMenu(
-                                        expanded = moreExpanded,
-                                        onDismissRequest = { moreExpanded = false },
-                                        offset = TopBarMenuOffset
-                                    ) {
-                                        ZippestMenuItem(
-                                            text = { Text("设置") },
-                                            leadingIcon = {
-                                                Icon(Icons.Outlined.Tune, null)
-                                            },
-                                            onClick = {
-                                                moreExpanded = false
-                                                onOpenSettings()
-                                            }
-                                        )
-                                        ZippestMenuItem(
-                                            text = { Text("后台任务") },
-                                            leadingIcon = {
-                                                Icon(Icons.Outlined.Schedule, null)
-                                            },
-                                            onClick = {
-                                                moreExpanded = false
-                                                showTaskQueue = true
-                                            }
-                                        )
-                                        ZippestMenuItem(
-                                            text = { Text("重新选择文件夹") },
-                                            leadingIcon = {
-                                                Icon(Icons.Outlined.FolderOpen, null)
-                                            },
-                                            onClick = {
-                                                moreExpanded = false
-                                                folderPicker.launch(null)
-                                            }
-                                        )
-                                        ZippestMenuItem(
-                                            text = { Text("关于") },
-                                            leadingIcon = {
-                                                Icon(Icons.Outlined.Info, null)
-                                            },
-                                            onClick = {
-                                                moreExpanded = false
-                                                notify("Zippest 1.4.2 · 文件浏览与压缩")
-                                            }
-                                        )
                                     }
                                 }
                             } else {
@@ -894,19 +821,8 @@ private fun FileBrowserScreen(
                             )
                         }
                     },
-                    canOpenWith = selectedEntries.singleOrNull()?.let {
-                        !it.isDirectory && !it.isArchive
-                    } == true,
-                    onOpenWith = {
-                        val entry = selectedEntries.singleOrNull()
-                        if (entry != null && !entry.isDirectory && !entry.isArchive) {
-                            openWithFile(entry)
-                        }
-                    },
-                    onShare = {
-                        val shared = shareEntries(context, selectedEntries)
-                        if (!shared) notify("系统中没有可用的分享应用")
-                    },
+                    menuExpanded = selectionMenuExpanded,
+                    onMenuExpandedChange = { selectionMenuExpanded = it },
                     onCompress = {
                         val parentUri = controller.currentUri
                         val treeUri = controller.treeUri
@@ -1068,6 +984,111 @@ private fun FileBrowserScreen(
                         }
                     }
                 )
+            }
+            if (sortExpanded) {
+                ZippestBarAttachedMenu(
+                    alignment = Alignment.TopEnd,
+                    panelModifier = Modifier.padding(
+                        top = padding.calculateTopPadding(),
+                        end = 4.dp
+                    ),
+                    onDismissRequest = { sortExpanded = false }
+                ) {
+                    BrowserSortMode.entries.forEach { mode ->
+                        ZippestMenuItem(
+                            text = { Text(mode.label) },
+                            onClick = {
+                                settingsRepository.update {
+                                    it.copy(defaultSortMode = mode)
+                                }
+                                sortExpanded = false
+                            },
+                            selected = appSettings.defaultSortMode == mode,
+                            trailingIcon = {
+                                if (appSettings.defaultSortMode == mode) {
+                                    Icon(Icons.Outlined.Check, contentDescription = null)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+            if (moreExpanded) {
+                ZippestBarAttachedMenu(
+                    alignment = Alignment.TopEnd,
+                    panelModifier = Modifier.padding(
+                        top = padding.calculateTopPadding(),
+                        end = 4.dp
+                    ),
+                    onDismissRequest = { moreExpanded = false }
+                ) {
+                    ZippestMenuItem(
+                        text = { Text("设置") },
+                        leadingIcon = { Icon(Icons.Outlined.Tune, null) },
+                        onClick = {
+                            moreExpanded = false
+                            onOpenSettings()
+                        }
+                    )
+                    ZippestMenuItem(
+                        text = { Text("后台任务") },
+                        leadingIcon = { Icon(Icons.Outlined.Schedule, null) },
+                        onClick = {
+                            moreExpanded = false
+                            showTaskQueue = true
+                        }
+                    )
+                    ZippestMenuItem(
+                        text = { Text("重新选择文件夹") },
+                        leadingIcon = { Icon(Icons.Outlined.FolderOpen, null) },
+                        onClick = {
+                            moreExpanded = false
+                            folderPicker.launch(null)
+                        }
+                    )
+                    ZippestMenuItem(
+                        text = { Text("关于") },
+                        leadingIcon = { Icon(Icons.Outlined.Info, null) },
+                        onClick = {
+                            moreExpanded = false
+                            notify("Zippest 1.4.3 · 文件浏览与压缩")
+                        }
+                    )
+                }
+            }
+            if (selectionMenuExpanded) {
+                ZippestBarAttachedMenu(
+                    alignment = Alignment.BottomEnd,
+                    panelModifier = Modifier.padding(
+                        bottom = padding.calculateBottomPadding(),
+                        end = 4.dp
+                    ),
+                    onDismissRequest = { selectionMenuExpanded = false }
+                ) {
+                    val canOpenWith = selectedEntries.singleOrNull()?.let {
+                        !it.isDirectory && !it.isArchive
+                    } == true
+                    ZippestMenuItem(
+                        text = { Text("打开方式") },
+                        enabled = canOpenWith,
+                        onClick = {
+                            selectionMenuExpanded = false
+                            selectedEntries.singleOrNull()?.let { entry ->
+                                if (!entry.isDirectory && !entry.isArchive) {
+                                    openWithFile(entry)
+                                }
+                            }
+                        }
+                    )
+                    ZippestMenuItem(
+                        text = { Text("分享") },
+                        onClick = {
+                            selectionMenuExpanded = false
+                            val shared = shareEntries(context, selectedEntries)
+                            if (!shared) notify("系统中没有可用的分享应用")
+                        }
+                    )
+                }
             }
         }
     }
@@ -1857,9 +1878,8 @@ private fun SelectionToolbar(
     onMove: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
-    canOpenWith: Boolean,
-    onOpenWith: () -> Unit,
-    onShare: () -> Unit,
+    menuExpanded: Boolean,
+    onMenuExpandedChange: (Boolean) -> Unit,
     onCompress: () -> Unit
 ) {
     Surface(
@@ -1880,9 +1900,8 @@ private fun SelectionToolbar(
             SelectionAction(Icons.Outlined.Edit, "重命名", onRename)
             SelectionAction(Icons.Outlined.Delete, "删除", onDelete)
             SelectionMenu(
-                canOpenWith = canOpenWith,
-                onOpenWith = onOpenWith,
-                onShare = onShare
+                expanded = menuExpanded,
+                onClick = { onMenuExpandedChange(true) }
             )
         }
     }
@@ -1890,11 +1909,9 @@ private fun SelectionToolbar(
 
 @Composable
 private fun androidx.compose.foundation.layout.RowScope.SelectionMenu(
-    canOpenWith: Boolean,
-    onOpenWith: () -> Unit,
-    onShare: () -> Unit
+    expanded: Boolean,
+    onClick: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
     Box(
         modifier = Modifier.weight(1f),
         contentAlignment = Alignment.Center
@@ -1902,7 +1919,7 @@ private fun androidx.compose.foundation.layout.RowScope.SelectionMenu(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .combinedClickable(onClick = { expanded = true })
+                .combinedClickable(onClick = onClick)
                 .padding(vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -1917,26 +1934,6 @@ private fun androidx.compose.foundation.layout.RowScope.SelectionMenu(
                 "菜单",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-        ZippestBottomAnchoredMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            ZippestMenuItem(
-                text = { Text("打开方式") },
-                enabled = canOpenWith,
-                onClick = {
-                    expanded = false
-                    onOpenWith()
-                }
-            )
-            ZippestMenuItem(
-                text = { Text("分享") },
-                onClick = {
-                    expanded = false
-                    onShare()
-                }
             )
         }
     }
