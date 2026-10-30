@@ -91,7 +91,8 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.4.3` positions top and bottom menus directly from the visible
+Version `1.4.4` adds matching linear icons to the selection-toolbar menu.
+Version `1.4.3` positioned top and bottom menus directly from the visible
 Scaffold bar boundaries instead of popup icon anchors, then lifts and narrows
 the resulting compact panels. Version `1.4.0` aligned top-bar and selection-toolbar
 menus flush with their adjacent app bars. Version `1.3.8` aligned top-bar dropdowns beneath the anchor

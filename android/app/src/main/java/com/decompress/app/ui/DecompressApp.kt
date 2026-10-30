@@ -76,6 +76,7 @@ import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PhotoLibrary
@@ -1051,7 +1052,7 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {
                             moreExpanded = false
-                            notify("Zippest 1.4.3 · 文件浏览与压缩")
+                            notify("Zippest 1.4.4 · 文件浏览与压缩")
                         }
                     )
                 }
@@ -1070,6 +1071,7 @@ private fun FileBrowserScreen(
                     } == true
                     ZippestMenuItem(
                         text = { Text("打开方式") },
+                        leadingIcon = { Icon(Icons.Outlined.OpenInNew, null) },
                         enabled = canOpenWith,
                         onClick = {
                             selectionMenuExpanded = false
@@ -1082,6 +1084,7 @@ private fun FileBrowserScreen(
                     )
                     ZippestMenuItem(
                         text = { Text("分享") },
+                        leadingIcon = { Icon(Icons.Outlined.Share, null) },
                         onClick = {
                             selectionMenuExpanded = false
                             val shared = shareEntries(context, selectedEntries)

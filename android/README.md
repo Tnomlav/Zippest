@@ -7,7 +7,7 @@ creating common archive formats. The product UI follows the finalized prototype 
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.4.3`
+- Version: `1.4.4`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct
@@ -107,7 +107,8 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
-Version `1.4.3` positions top and bottom menus directly from the visible
+Version `1.4.4` adds matching linear icons to the selection-toolbar menu.
+Version `1.4.3` positioned top and bottom menus directly from the visible
 Scaffold bar boundaries instead of popup icon anchors, then lifts and narrows
 the resulting compact panels. Version `1.4.0` aligned top-bar and selection-toolbar
 menus flush with their adjacent app bars. Version `1.3.8` aligned top-bar dropdowns beneath the anchor
