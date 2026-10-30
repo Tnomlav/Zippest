@@ -7,7 +7,7 @@ creating common archive formats. The product UI follows the finalized prototype 
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.5.0`
+- Version: `1.5.1`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct
@@ -107,7 +107,9 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
-Version `1.5.0` adds archive renaming and suffix shortcuts directly to the
+Version `1.5.1` moves compression into the selection menu and presents
+extraction as a circular action above the selection toolbar.
+Version `1.5.0` added archive renaming and suffix shortcuts directly to the
 single-archive extraction sheet; the rename is committed before extraction.
 Version `1.4.4` added matching linear icons to the selection-toolbar menu.
 Version `1.4.3` positioned top and bottom menus directly from the visible

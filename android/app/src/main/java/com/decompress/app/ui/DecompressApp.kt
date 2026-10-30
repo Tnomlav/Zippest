@@ -93,6 +93,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -570,6 +571,41 @@ private fun FileBrowserScreen(
         }
     }
 
+    fun extractSelected() {
+        val selectedArchives = controller.entries.filter {
+            it.uri in controller.selected && it.isArchive
+        }
+        val parentUri = controller.currentUri
+        val parentTreeUri = controller.treeUri
+        if (selectedArchives.isEmpty()) {
+            notify("请选择压缩包")
+        } else if (parentUri != null && parentTreeUri != null) {
+            onExtract(
+                selectedArchives,
+                parentUri,
+                parentTreeUri,
+                controller.path.joinToString(" / "),
+                controller.folderName
+            )
+        }
+    }
+
+    fun compressSelected() {
+        val parentUri = controller.currentUri
+        val treeUri = controller.treeUri
+        if (selectedEntries.isEmpty()) {
+            notify("请选择要压缩的文件")
+        } else if (parentUri != null && treeUri != null) {
+            compressTarget = CompressTarget(
+                entries = selectedEntries,
+                sourceTreeUri = treeUri,
+                parentUri = parentUri,
+                parentTreeUri = treeUri,
+                parentPath = controller.path.joinToString(" / ")
+            )
+        }
+    }
+
     BackHandler { handleBack() }
 
     Scaffold(
@@ -740,24 +776,6 @@ private fun FileBrowserScreen(
             Column {
                 when {
                     selectedCount > 0 -> SelectionToolbar(
-                    onExtract = {
-                        val selectedArchives = controller.entries.filter {
-                            it.uri in controller.selected && it.isArchive
-                        }
-                        val parentUri = controller.currentUri
-                        val parentTreeUri = controller.treeUri
-                        if (selectedArchives.isEmpty()) {
-                            notify("请选择压缩包")
-                        } else if (parentUri != null && parentTreeUri != null) {
-                            onExtract(
-                                selectedArchives,
-                                parentUri,
-                                parentTreeUri,
-                                controller.path.joinToString(" / "),
-                                controller.folderName
-                            )
-                        }
-                    },
                     onCopy = {
                         val mode = controller.storageMode
                         val treeUri = controller.treeUri
@@ -826,22 +844,7 @@ private fun FileBrowserScreen(
                         }
                     },
                     menuExpanded = selectionMenuExpanded,
-                    onMenuExpandedChange = { selectionMenuExpanded = it },
-                    onCompress = {
-                        val parentUri = controller.currentUri
-                        val treeUri = controller.treeUri
-                        if (selectedEntries.isEmpty()) {
-                            notify("请选择要压缩的文件")
-                        } else if (parentUri != null && treeUri != null) {
-                            compressTarget = CompressTarget(
-                                entries = selectedEntries,
-                                sourceTreeUri = treeUri,
-                                parentUri = parentUri,
-                                parentTreeUri = treeUri,
-                                parentPath = controller.path.joinToString(" / ")
-                            )
-                        }
-                    }
+                    onMenuExpandedChange = { selectionMenuExpanded = it }
                 )
                     !archiveTaskActive && controller.treeUri != null -> StorageBar(
                         context = context,
@@ -912,7 +915,12 @@ private fun FileBrowserScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                contentPadding = PaddingValues(
+                    start = 12.dp,
+                    top = 8.dp,
+                    end = 12.dp,
+                    bottom = if (selectedCount > 0) 82.dp else 8.dp
+                )
             ) {
                 items(visibleEntries, key = { it.uri.toString() }) { entry ->
                     EntryRow(
@@ -954,6 +962,28 @@ private fun FileBrowserScreen(
                     )
                 }
             }
+            }
+            if (selectedCount > 0 && !selectionMenuExpanded) {
+                FloatingActionButton(
+                    onClick = ::extractSelected,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(
+                            end = 24.dp,
+                            bottom = padding.calculateBottomPadding() + 16.dp
+                        )
+                        .size(58.dp)
+                        .zIndex(2f),
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(
+                        Icons.Outlined.Unarchive,
+                        contentDescription = "解压",
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
             EdgeSwipeBackZones(
                 onBack = ::handleBack,
@@ -1055,7 +1085,7 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {
                             moreExpanded = false
-                            notify("Zippest 1.5.0 · 文件浏览与压缩")
+                            notify("Zippest 1.5.1 · 文件浏览与压缩")
                         }
                     )
                 }
@@ -1069,6 +1099,14 @@ private fun FileBrowserScreen(
                     ),
                     onDismissRequest = { selectionMenuExpanded = false }
                 ) {
+                    ZippestMenuItem(
+                        text = { Text("压缩") },
+                        leadingIcon = { Icon(Icons.Outlined.Archive, null) },
+                        onClick = {
+                            selectionMenuExpanded = false
+                            compressSelected()
+                        }
+                    )
                     val canOpenWith = selectedEntries.singleOrNull()?.let {
                         !it.isDirectory && !it.isArchive
                     } == true
@@ -1879,14 +1917,12 @@ private fun MediaThumbnail(entry: BrowserEntry) {
 
 @Composable
 private fun SelectionToolbar(
-    onExtract: () -> Unit,
     onCopy: () -> Unit,
     onMove: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
     menuExpanded: Boolean,
-    onMenuExpandedChange: (Boolean) -> Unit,
-    onCompress: () -> Unit
+    onMenuExpandedChange: (Boolean) -> Unit
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -1899,8 +1935,6 @@ private fun SelectionToolbar(
                 .height(64.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SelectionAction(Icons.Outlined.Unarchive, "解压", onExtract)
-            SelectionAction(Icons.Outlined.Archive, "压缩", onCompress)
             SelectionAction(Icons.Outlined.ContentCopy, "复制", onCopy)
             SelectionAction(Icons.Outlined.DriveFileMove, "移动", onMove)
             SelectionAction(Icons.Outlined.Edit, "重命名", onRename)

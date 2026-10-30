@@ -91,7 +91,9 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.5.0` adds archive renaming and suffix shortcuts directly to the
+Version `1.5.1` moves compression into the selection menu and presents
+extraction as a circular action above the selection toolbar.
+Version `1.5.0` added archive renaming and suffix shortcuts directly to the
 single-archive extraction sheet; the rename is committed before extraction.
 Version `1.4.4` added matching linear icons to the selection-toolbar menu.
 Version `1.4.3` positioned top and bottom menus directly from the visible
