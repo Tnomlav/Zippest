@@ -25,7 +25,7 @@ internal fun ZippestDropdownMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    offset: DpOffset = DpOffset(0.dp, 6.dp),
+    offset: DpOffset = DpOffset(0.dp, 0.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
     DropdownMenu(
@@ -34,9 +34,9 @@ internal fun ZippestDropdownMenu(
         modifier = modifier.widthIn(min = 220.dp, max = 340.dp),
         offset = offset,
         shape = RoundedCornerShape(18.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-        shadowElevation = 12.dp,
+        containerColor = MaterialTheme.colorScheme.background,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
         border = BorderStroke(
             1.dp,
             MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)

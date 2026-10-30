@@ -91,9 +91,12 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.3.2` unifies every dropdown menu with the rounded, elevated panel
-style used by the internal-storage chooser, including sort, overflow,
-selection, and clipboard menus. Version `1.3.1` replaced the selected-items
+Version `1.3.8` aligns top-bar dropdowns exactly beneath and beside the anchor
+icon, removes menu shadows, and retains the full theme-colored border.
+Version `1.3.5` aligned top-bar dropdowns beneath the app bar and used
+the active theme background for every menu surface. Version `1.3.2` unified
+every dropdown menu with the rounded, elevated panel style used by the
+internal-storage chooser. Version `1.3.1` replaced the selected-items
 share shortcut with a menu containing Open With and Share. Version `1.3.0` opened indexed media through MediaStore and
 includes same-folder media URIs so capable galleries and players can navigate
 between siblings; write grants enable direct editing where supported.

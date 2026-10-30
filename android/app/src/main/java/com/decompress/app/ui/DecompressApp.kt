@@ -136,6 +136,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
@@ -171,6 +172,8 @@ private enum class StorageDestination(
     MUSIC("音乐", Environment.DIRECTORY_MUSIC),
     DOCUMENTS("文档", Environment.DIRECTORY_DOCUMENTS)
 }
+
+private val TopBarMenuOffset = DpOffset((-4).dp, 8.dp)
 
 data class ArchiveTarget(
     val archive: BrowserEntry,
@@ -705,7 +708,8 @@ private fun FileBrowserScreen(
                                     }
                                     ZippestDropdownMenu(
                                         expanded = sortExpanded,
-                                        onDismissRequest = { sortExpanded = false }
+                                        onDismissRequest = { sortExpanded = false },
+                                        offset = TopBarMenuOffset
                                     ) {
                                         BrowserSortMode.entries.forEach { mode ->
                                             ZippestMenuItem(
@@ -743,7 +747,8 @@ private fun FileBrowserScreen(
                                     }
                                     ZippestDropdownMenu(
                                         expanded = moreExpanded,
-                                        onDismissRequest = { moreExpanded = false }
+                                        onDismissRequest = { moreExpanded = false },
+                                        offset = TopBarMenuOffset
                                     ) {
                                         ZippestMenuItem(
                                             text = { Text("设置") },
@@ -782,7 +787,7 @@ private fun FileBrowserScreen(
                                             },
                                             onClick = {
                                                 moreExpanded = false
-                                                notify("Zippest 1.3.2 · 文件浏览与压缩")
+                                                notify("Zippest 1.3.8 · 文件浏览与压缩")
                                             }
                                         )
                                     }
