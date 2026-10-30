@@ -29,6 +29,7 @@ import android.util.Size
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -149,6 +150,9 @@ import com.decompress.app.data.AppSettingsRepository
 import com.decompress.app.data.BrowserSortMode
 import com.decompress.app.data.BrowserEntry
 import com.decompress.app.data.FileBrowserController
+import com.decompress.app.data.QuickLocation
+import com.decompress.app.data.QuickLocationIcon
+import com.decompress.app.data.QuickLocationRepository
 import com.decompress.app.data.ThemeMode
 import com.decompress.app.data.TrashRepository
 import com.decompress.app.service.ExtractionScheduler
@@ -160,19 +164,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-
-private enum class StorageDestination(
-    val label: String,
-    val directory: String?
-) {
-    ROOT("目录首页", null),
-    DOWNLOADS("下载", Environment.DIRECTORY_DOWNLOADS),
-    PICTURES("相册", Environment.DIRECTORY_PICTURES),
-    CAMERA("相机", Environment.DIRECTORY_DCIM),
-    MOVIES("视频", Environment.DIRECTORY_MOVIES),
-    MUSIC("音乐", Environment.DIRECTORY_MUSIC),
-    DOCUMENTS("文档", Environment.DIRECTORY_DOCUMENTS)
-}
 
 data class ArchiveTarget(
     val archive: BrowserEntry,
@@ -198,6 +189,9 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
     val context = LocalContext.current
     val controller = remember { FileBrowserController(context.applicationContext) }
     val settingsRepository = remember { AppSettingsRepository(context.applicationContext) }
+    val quickLocationRepository = remember {
+        QuickLocationRepository(context.applicationContext)
+    }
     val scope = rememberCoroutineScope()
     var restored by remember { mutableStateOf(false) }
     var archiveTarget by remember { mutableStateOf<ArchiveTarget?>(null) }
@@ -327,6 +321,7 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         SettingsScreen(
                             repository = settingsRepository,
+                            quickLocationRepository = quickLocationRepository,
                             browserPath = controller.path.joinToString(" / "),
                             onBack = { showSettings = false },
                             onChooseBrowserFolder = { settingsFolderPicker.launch(null) },
@@ -360,6 +355,7 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
                     FileBrowserScreen(
                         controller = controller,
                         settingsRepository = settingsRepository,
+                        quickLocationRepository = quickLocationRepository,
                         archiveTaskActive = activeTasks.isNotEmpty(),
                         onOpenArchive = { entry ->
                             val parentUri = controller.currentUri
@@ -437,6 +433,7 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
 private fun FileBrowserScreen(
     controller: FileBrowserController,
     settingsRepository: AppSettingsRepository,
+    quickLocationRepository: QuickLocationRepository,
     archiveTaskActive: Boolean,
     onOpenArchive: (BrowserEntry) -> Unit,
     onExtract: (List<BrowserEntry>, Uri, Uri, String, String) -> Unit,
@@ -461,6 +458,7 @@ private fun FileBrowserScreen(
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameValue by remember { mutableStateOf(TextFieldValue()) }
     var showCustomSuffixDialog by remember { mutableStateOf(false) }
+    var showQuickLocationEditor by remember { mutableStateOf(false) }
     var customSuffix by remember { mutableStateOf("") }
     var showTaskQueue by remember { mutableStateOf(false) }
     var transferTarget by remember { mutableStateOf<TransferTarget?>(null) }
@@ -499,7 +497,27 @@ private fun FileBrowserScreen(
         onNotify(message)
     }
 
+    fun closePanelPopups() {
+        storageExpanded = false
+        sortExpanded = false
+        moreExpanded = false
+        selectionMenuExpanded = false
+    }
+
+    fun dismissFileDialogs() {
+        showNewFolderDialog = false
+        showRenameDialog = false
+        showCustomSuffixDialog = false
+        showQuickLocationEditor = false
+        showTaskQueue = false
+        transferTarget = null
+        compressTarget = null
+        openWithRequest = null
+    }
+
     fun openWithFile(entry: BrowserEntry) {
+        closePanelPopups()
+        dismissFileDialogs()
         scope.launch {
             val viewIntent = createOpenWithIntent(context, entry)
             val options = viewIntent?.let {
@@ -560,6 +578,13 @@ private fun FileBrowserScreen(
     val selectedEntries = controller.entries.filter { it.uri in controller.selected }
     fun handleBack() {
         when {
+            storageExpanded || sortExpanded || moreExpanded || selectionMenuExpanded ->
+                closePanelPopups()
+            showCustomSuffixDialog -> showCustomSuffixDialog = false
+            showRenameDialog || showNewFolderDialog || showTaskQueue ||
+                showQuickLocationEditor ||
+                transferTarget != null || compressTarget != null ||
+                openWithRequest != null -> dismissFileDialogs()
             controller.selectionMode -> controller.clearSelection()
             searchMode -> {
                 searchMode = false
@@ -572,6 +597,8 @@ private fun FileBrowserScreen(
     }
 
     fun extractSelected() {
+        closePanelPopups()
+        dismissFileDialogs()
         val selectedArchives = controller.entries.filter {
             it.uri in controller.selected && it.isArchive
         }
@@ -591,6 +618,8 @@ private fun FileBrowserScreen(
     }
 
     fun compressSelected() {
+        closePanelPopups()
+        dismissFileDialogs()
         val parentUri = controller.currentUri
         val treeUri = controller.treeUri
         if (selectedEntries.isEmpty()) {
@@ -711,7 +740,9 @@ private fun FileBrowserScreen(
                                 Row(
                                     modifier = Modifier
                                         .clickable(enabled = directStorage) {
-                                            storageExpanded = !storageExpanded
+                                            val opening = !storageExpanded
+                                            closePanelPopups()
+                                            storageExpanded = opening
                                         }
                                         .padding(end = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
@@ -740,22 +771,33 @@ private fun FileBrowserScreen(
                         },
                         actions = {
                             if (controller.treeUri != null) {
-                                IconButton(onClick = { searchMode = true }) {
+                                IconButton(onClick = {
+                                    closePanelPopups()
+                                    searchMode = true
+                                }) {
                                     Icon(Icons.Outlined.Search, contentDescription = "搜索")
                                 }
                                 Box {
-                                    IconButton(onClick = { sortExpanded = true }) {
+                                    IconButton(onClick = {
+                                        closePanelPopups()
+                                        sortExpanded = true
+                                    }) {
                                         Icon(Icons.Outlined.Sort, contentDescription = "排序")
                                     }
                                 }
                                 IconButton(onClick = {
+                                    closePanelPopups()
+                                    dismissFileDialogs()
                                     newFolderName = ""
                                     showNewFolderDialog = true
                                 }) {
                                     Icon(Icons.Outlined.Add, contentDescription = "新建文件夹")
                                 }
                                 Box {
-                                    IconButton(onClick = { moreExpanded = true }) {
+                                    IconButton(onClick = {
+                                        closePanelPopups()
+                                        moreExpanded = true
+                                    }) {
                                         Icon(Icons.Outlined.MoreVert, contentDescription = "更多")
                                     }
                                 }
@@ -777,6 +819,8 @@ private fun FileBrowserScreen(
                 when {
                     selectedCount > 0 -> SelectionToolbar(
                     onCopy = {
+                        closePanelPopups()
+                        dismissFileDialogs()
                         val mode = controller.storageMode
                         val treeUri = controller.treeUri
                         val rootUri = treeUri?.let {
@@ -800,6 +844,8 @@ private fun FileBrowserScreen(
                         }
                     },
                     onMove = {
+                        closePanelPopups()
+                        dismissFileDialogs()
                         val mode = controller.storageMode
                         val treeUri = controller.treeUri
                         val rootUri = treeUri?.let {
@@ -823,6 +869,8 @@ private fun FileBrowserScreen(
                         }
                     },
                     onRename = {
+                        closePanelPopups()
+                        dismissFileDialogs()
                         val entry = selectedEntries.singleOrNull()
                         if (entry == null) {
                             notify("请只选择一个项目")
@@ -844,7 +892,10 @@ private fun FileBrowserScreen(
                         }
                     },
                     menuExpanded = selectionMenuExpanded,
-                    onMenuExpandedChange = { selectionMenuExpanded = it }
+                    onMenuExpandedChange = { expanded ->
+                        closePanelPopups()
+                        selectionMenuExpanded = expanded
+                    }
                 )
                     !archiveTaskActive && controller.treeUri != null -> StorageBar(
                         context = context,
@@ -1004,16 +1055,22 @@ private fun FileBrowserScreen(
                 StorageQuickLocationPanel(
                     topInset = padding.calculateTopPadding(),
                     currentUri = controller.currentUri,
+                    locations = quickLocationRepository.locations,
                     onDismiss = { storageExpanded = false },
-                    onOpen = { destination ->
+                    onAdd = {
+                        closePanelPopups()
+                        dismissFileDialogs()
+                        showQuickLocationEditor = true
+                    },
+                    onOpen = { location ->
                         storageExpanded = false
                         scope.launch {
                             val opened = controller.openFixedLocation(
-                                destination.label,
-                                destination.directory
+                                location.label,
+                                location.path
                             )
                             if (!opened) {
-                                notify("${destination.label}不可用")
+                                notify("${location.label}不可用")
                             }
                         }
                     }
@@ -1069,6 +1126,8 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Schedule, null) },
                         onClick = {
                             moreExpanded = false
+                            closePanelPopups()
+                            dismissFileDialogs()
                             showTaskQueue = true
                         }
                     )
@@ -1085,7 +1144,7 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {
                             moreExpanded = false
-                            notify("Zippest 1.5.1 · 文件浏览与压缩")
+                            notify("Zippest 1.5.2 · 文件浏览与压缩")
                         }
                     )
                 }
@@ -1135,6 +1194,18 @@ private fun FileBrowserScreen(
                 }
             }
         }
+    }
+
+    if (showQuickLocationEditor) {
+        QuickLocationEditorDialog(
+            repository = quickLocationRepository,
+            location = null,
+            onDismiss = { showQuickLocationEditor = false },
+            onSaved = { message ->
+                showQuickLocationEditor = false
+                notify(message)
+            }
+        )
     }
 
     if (showNewFolderDialog) {
@@ -2011,16 +2082,17 @@ private fun androidx.compose.foundation.layout.RowScope.SelectionAction(
 private fun StorageQuickLocationPanel(
     topInset: Dp,
     currentUri: Uri?,
+    locations: List<QuickLocation>,
     onDismiss: () -> Unit,
-    onOpen: (StorageDestination) -> Unit
+    onAdd: () -> Unit,
+    onOpen: (QuickLocation) -> Unit
 ) {
     val root = Environment.getExternalStorageDirectory()
-    val directoryLocations = StorageDestination.entries.filter {
-        it != StorageDestination.ROOT
-    }
+    val primaryLocation = locations.firstOrNull { it.id == "root" }
+    val remainingLocations = locations.filterNot { it.id == "root" }
 
-    fun isCurrent(destination: StorageDestination): Boolean {
-        val expected = destination.directory?.let { File(root, it) } ?: root
+    fun isCurrent(location: QuickLocation): Boolean {
+        val expected = File(root, location.path)
         return currentUri == Uri.fromFile(expected)
     }
 
@@ -2041,7 +2113,7 @@ private fun StorageQuickLocationPanel(
             shape = RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp),
             color = MaterialTheme.colorScheme.surface,
             shadowElevation = 14.dp,
-            tonalElevation = 2.dp
+            tonalElevation = 0.dp
         ) {
             Column(
                 modifier = Modifier.padding(
@@ -2052,26 +2124,45 @@ private fun StorageQuickLocationPanel(
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                StorageQuickLocation(
-                    destination = StorageDestination.ROOT,
-                    selected = isCurrent(StorageDestination.ROOT),
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { onOpen(StorageDestination.ROOT) }
-                )
-                directoryLocations.chunked(2).forEach { rowDestinations ->
+                if (locations.isEmpty()) {
+                    Text(
+                        "暂无快捷位置，可在设置中新建",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 14.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                primaryLocation?.let { location ->
+                    StorageQuickLocation(
+                        location = location,
+                        selected = isCurrent(location),
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onOpen(location) }
+                    )
+                }
+                val remainingItems = remainingLocations.map { it as QuickLocation? } +
+                    listOf(null)
+                remainingItems.chunked(2).forEach { rowItems ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        rowDestinations.forEach { destination ->
-                            StorageQuickLocation(
-                                destination = destination,
-                                selected = isCurrent(destination),
-                                modifier = Modifier.weight(1f),
-                                onClick = { onOpen(destination) }
-                            )
+                        rowItems.forEach { location ->
+                            if (location == null) {
+                                StorageQuickLocationAdd(
+                                    modifier = Modifier.weight(1f),
+                                    onClick = onAdd
+                                )
+                            } else {
+                                StorageQuickLocation(
+                                    location = location,
+                                    selected = isCurrent(location),
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { onOpen(location) }
+                                )
+                            }
                         }
-                        if (rowDestinations.size == 1) {
+                        if (rowItems.size == 1) {
                             Spacer(Modifier.weight(1f))
                         }
                     }
@@ -2082,28 +2173,72 @@ private fun StorageQuickLocationPanel(
 }
 
 @Composable
+private fun StorageQuickLocationAdd(
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Outlined.Add,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(21.dp)
+            )
+            Text(
+                "新增",
+                modifier = Modifier.padding(start = 8.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
 private fun StorageQuickLocation(
-    destination: StorageDestination,
+    location: QuickLocation,
     selected: Boolean,
     modifier: Modifier,
     onClick: () -> Unit
 ) {
-    val icon = when (destination) {
-        StorageDestination.ROOT -> Icons.Outlined.Home
-        StorageDestination.DOWNLOADS -> Icons.Outlined.Download
-        StorageDestination.PICTURES -> Icons.Outlined.PhotoLibrary
-        StorageDestination.CAMERA -> Icons.Outlined.PhotoCamera
-        StorageDestination.MOVIES -> Icons.Outlined.Movie
-        StorageDestination.MUSIC -> Icons.Outlined.MusicNote
-        StorageDestination.DOCUMENTS -> Icons.Outlined.Description
+    val icon = when (location.icon) {
+        QuickLocationIcon.HOME -> Icons.Outlined.Home
+        QuickLocationIcon.DOWNLOAD -> Icons.Outlined.Download
+        QuickLocationIcon.PICTURES -> Icons.Outlined.PhotoLibrary
+        QuickLocationIcon.CAMERA -> Icons.Outlined.PhotoCamera
+        QuickLocationIcon.MOVIES -> Icons.Outlined.Movie
+        QuickLocationIcon.MUSIC -> Icons.Outlined.MusicNote
+        QuickLocationIcon.DOCUMENTS -> Icons.Outlined.Description
+        QuickLocationIcon.FOLDER -> Icons.Outlined.Folder
     }
     Surface(
         modifier = modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         color = if (selected) {
-            MaterialTheme.colorScheme.primaryContainer
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
         } else {
             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+        },
+        border = if (selected) {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+        } else {
+            null
         }
     ) {
         Row(
@@ -2117,14 +2252,14 @@ private fun StorageQuickLocation(
                 icon,
                 contentDescription = null,
                 tint = if (selected) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
+                    MaterialTheme.colorScheme.onSurface
                 } else {
                     MaterialTheme.colorScheme.primary
                 },
                 modifier = Modifier.size(21.dp)
             )
             Text(
-                destination.label,
+                location.label,
                 modifier = Modifier.padding(start = 8.dp),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,

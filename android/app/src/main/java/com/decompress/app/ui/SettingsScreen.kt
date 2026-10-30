@@ -26,11 +26,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -65,6 +70,8 @@ import com.decompress.app.data.ConflictPolicy
 import com.decompress.app.data.DefaultDestinationMode
 import com.decompress.app.data.FileNameEncoding
 import com.decompress.app.data.OpenWithPreferences
+import com.decompress.app.data.QuickLocation
+import com.decompress.app.data.QuickLocationRepository
 import com.decompress.app.data.ThemeMode
 import com.decompress.app.data.TrashRetention
 import com.decompress.app.data.TrashRepository
@@ -74,9 +81,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private enum class SettingsPopup {
+    TASK_QUEUE,
+    TRASH,
+    QUICK_LOCATION_EDITOR,
+    QUICK_LOCATION_DELETE
+}
+
 @Composable
 fun SettingsScreen(
     repository: AppSettingsRepository,
+    quickLocationRepository: QuickLocationRepository,
     browserPath: String,
     onBack: () -> Unit,
     onChooseBrowserFolder: () -> Unit,
@@ -92,8 +107,9 @@ fun SettingsScreen(
     var batteryUnrestricted by remember {
         mutableStateOf(context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName))
     }
-    var showTaskQueue by remember { mutableStateOf(false) }
-    var showTrash by remember { mutableStateOf(false) }
+    var activePopup by remember { mutableStateOf<SettingsPopup?>(null) }
+    var editingQuickLocation by remember { mutableStateOf<QuickLocation?>(null) }
+    var deletingQuickLocation by remember { mutableStateOf<QuickLocation?>(null) }
 
     val allFilesLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -149,10 +165,15 @@ fun SettingsScreen(
         }
     }
 
+    fun openQuickLocationEditor(location: QuickLocation?) {
+        editingQuickLocation = location
+        activePopup = SettingsPopup.QUICK_LOCATION_EDITOR
+    }
+
     val versionName = remember {
         runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
-        }.getOrNull() ?: "1.5.1"
+        }.getOrNull() ?: "1.5.2"
     }
 
     BackHandler(onBack = onBack)
@@ -262,6 +283,60 @@ fun SettingsScreen(
                         title = "文件浏览位置",
                         detail = browserPath.ifBlank { "尚未选择" },
                         onClick = onChooseBrowserFolder
+                    )
+                }
+            }
+            item {
+                SettingsSection("内部存储快捷位置") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, top = 8.dp, end = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "${quickLocationRepository.locations.size} 个位置",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = { openQuickLocationEditor(null) }) {
+                            Icon(
+                                Icons.Outlined.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text("新建", modifier = Modifier.padding(start = 4.dp))
+                        }
+                    }
+                    if (quickLocationRepository.locations.isEmpty()) {
+                        Text(
+                            "暂无快捷位置",
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        quickLocationRepository.locations.forEachIndexed { index, location ->
+                            if (index > 0) SettingsDivider()
+                            QuickLocationSettingsRow(
+                                location = location,
+                                onEdit = { openQuickLocationEditor(location) },
+                                onDelete = {
+                                    deletingQuickLocation = location
+                                    activePopup = SettingsPopup.QUICK_LOCATION_DELETE
+                                }
+                            )
+                        }
+                    }
+                    SettingsDivider()
+                    SettingsAction(
+                        title = "恢复默认快捷位置",
+                        detail = "恢复目录首页、下载、相册、相机等默认入口",
+                        onClick = {
+                            quickLocationRepository.reset()
+                            onNotify("已恢复默认快捷位置")
+                        }
                     )
                 }
             }
@@ -441,7 +516,7 @@ fun SettingsScreen(
                     SettingsAction(
                         title = "回收站",
                         detail = "查看、恢复或永久删除已移除的文件",
-                        onClick = { showTrash = true }
+                        onClick = { activePopup = SettingsPopup.TRASH }
                     )
                     SettingsDivider()
                     SettingsAction(
@@ -469,7 +544,7 @@ fun SettingsScreen(
                     SettingsAction(
                         title = "后台任务",
                         detail = "查看正在运行、等待和已结束的压缩、解压任务",
-                        onClick = { showTaskQueue = true }
+                        onClick = { activePopup = SettingsPopup.TASK_QUEUE }
                     )
                     SettingsDivider()
                     SettingsAction(
@@ -538,16 +613,104 @@ fun SettingsScreen(
         }
     }
 
-    if (showTaskQueue) {
-        TaskQueueDialog(onDismiss = { showTaskQueue = false })
-    }
-    if (showTrash) {
-        TrashSheet(
-            onDismiss = { showTrash = false },
-            onChanged = { message ->
+    when (activePopup) {
+        SettingsPopup.TASK_QUEUE -> TaskQueueDialog(
+            onDismiss = { activePopup = null }
+        )
+        SettingsPopup.TRASH -> TrashSheet(
+            onDismiss = { activePopup = null },
+            onChanged = { message -> onNotify(message) }
+        )
+        SettingsPopup.QUICK_LOCATION_EDITOR -> QuickLocationEditorDialog(
+            repository = quickLocationRepository,
+            location = editingQuickLocation,
+            onDismiss = { activePopup = null },
+            onSaved = { message ->
+                activePopup = null
                 onNotify(message)
             }
         )
+        SettingsPopup.QUICK_LOCATION_DELETE -> AlertDialog(
+            onDismissRequest = { activePopup = null },
+            title = { Text("删除快捷位置") },
+            text = {
+                Text(
+                    "确定删除“${deletingQuickLocation?.label.orEmpty()}”？" +
+                        "这不会删除对应文件夹或其中的文件。"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        deletingQuickLocation?.let {
+                            quickLocationRepository.delete(it.id)
+                        }
+                        deletingQuickLocation = null
+                        activePopup = null
+                        onNotify("已删除快捷位置")
+                    }
+                ) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { activePopup = null }) {
+                    Text("取消")
+                }
+            }
+        )
+        null -> Unit
+    }
+}
+
+@Composable
+private fun QuickLocationSettingsRow(
+    location: QuickLocation,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, top = 8.dp, end = 4.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .clickable(onClick = onEdit)
+                .padding(vertical = 5.dp)
+        ) {
+            Text(
+                location.label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                if (location.path.isBlank()) {
+                    "内部存储"
+                } else {
+                    "内部存储 / ${location.path}"
+                },
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2
+            )
+        }
+        IconButton(onClick = onEdit) {
+            Icon(
+                Icons.Outlined.Edit,
+                contentDescription = "更换地址",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        IconButton(onClick = onDelete) {
+            Icon(
+                Icons.Outlined.Delete,
+                contentDescription = "删除快捷位置",
+                tint = MaterialTheme.colorScheme.error
+            )
+        }
     }
 }
 

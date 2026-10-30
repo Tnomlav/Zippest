@@ -110,10 +110,11 @@ class FileBrowserController(context: Context) {
         return true
     }
 
-    suspend fun openFixedLocation(label: String, directoryName: String?): Boolean {
+    suspend fun openFixedLocation(label: String, relativePath: String?): Boolean {
         if (storageMode != StorageMode.DIRECT) return false
         val root = Environment.getExternalStorageDirectory()
-        val target = directoryName?.let { File(root, it) } ?: root
+        val normalizedPath = relativePath.orEmpty().trim('/')
+        val target = if (normalizedPath.isBlank()) root else File(root, normalizedPath)
         if (!target.isDirectory) return false
 
         backStack.clear()
@@ -123,7 +124,11 @@ class FileBrowserController(context: Context) {
         treeUri = Uri.fromFile(root)
         currentUri = Uri.fromFile(target)
         folderName = label
-        path = if (target == root) listOf("内部存储") else listOf("内部存储", label)
+        path = if (target == root) {
+            listOf("内部存储")
+        } else {
+            listOf("内部存储") + normalizedPath.split('/').filter { it.isNotBlank() }
+        }
         clearSelection()
         loadCurrent()
         return true

@@ -91,7 +91,11 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.5.1` moves compression into the selection menu and presents
+Version `1.5.2` adds configurable internal-storage shortcuts, neutral popup
+surfaces, and mutual exclusion for browser menus and dialogs. Shortcut paths
+are chosen through the system folder picker, and the popup ends with a shared
+“Add” action.
+Version `1.5.1` moved compression into the selection menu and presents
 extraction as a circular action above the selection toolbar.
 Version `1.5.0` added archive renaming and suffix shortcuts directly to the
 single-archive extraction sheet; the rename is committed before extraction.
