@@ -787,7 +787,7 @@ private fun FileBrowserScreen(
                                             },
                                             onClick = {
                                                 moreExpanded = false
-                                                notify("Zippest 1.3.8 · 文件浏览与压缩")
+                                                notify("Zippest 1.4.0 · 文件浏览与压缩")
                                             }
                                         )
                                     }
@@ -1919,7 +1919,7 @@ private fun androidx.compose.foundation.layout.RowScope.SelectionMenu(
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
-        ZippestDropdownMenu(
+        ZippestBottomAnchoredMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
