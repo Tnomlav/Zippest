@@ -185,6 +185,12 @@ data class ExtractTarget(
     val initialPassword: String = ""
 )
 
+private data class TransferSession(
+    val sources: List<BrowserEntry>,
+    val move: Boolean,
+    val sourceLocation: FileBrowserController.LocationSnapshot
+)
+
 @Composable
 fun ZippestApp(incomingArchive: IncomingArchive? = null) {
     val context = LocalContext.current
@@ -462,7 +468,8 @@ private fun FileBrowserScreen(
     var showQuickLocationEditor by remember { mutableStateOf(false) }
     var customSuffix by remember { mutableStateOf("") }
     var showTaskQueue by remember { mutableStateOf(false) }
-    var transferTarget by remember { mutableStateOf<TransferTarget?>(null) }
+    var transferSession by remember { mutableStateOf<TransferSession?>(null) }
+    var transferBusy by remember { mutableStateOf(false) }
     var compressTarget by remember { mutableStateOf<CompressTarget?>(null) }
     var openWithRequest by remember { mutableStateOf<OpenWithRequest?>(null) }
 
@@ -511,7 +518,6 @@ private fun FileBrowserScreen(
         showCustomSuffixDialog = false
         showQuickLocationEditor = false
         showTaskQueue = false
-        transferTarget = null
         compressTarget = null
         openWithRequest = null
     }
@@ -577,14 +583,100 @@ private fun FileBrowserScreen(
         visibleEntries.all { it.uri in controller.selected }
     val selectedCount = controller.selected.size
     val selectedEntries = controller.entries.filter { it.uri in controller.selected }
+
+    fun startTransfer(move: Boolean) {
+        if (selectedEntries.isEmpty()) {
+            notify(if (move) "请选择要移动的文件" else "请选择要复制的文件")
+            return
+        }
+        val sourceLocation = controller.captureLocation()
+        if (sourceLocation == null) {
+            notify("当前存储位置不可用")
+            return
+        }
+        closePanelPopups()
+        dismissFileDialogs()
+        transferSession = TransferSession(
+            sources = selectedEntries,
+            move = move,
+            sourceLocation = sourceLocation
+        )
+        controller.clearSelection()
+    }
+
+    fun cancelTransfer() {
+        if (transferBusy) return
+        val session = transferSession ?: return
+        transferSession = null
+        scope.launch {
+            controller.restoreLocation(session.sourceLocation)
+        }
+    }
+
+    fun confirmTransfer() {
+        val session = transferSession ?: return
+        if (transferBusy) return
+        val destinationUri = controller.currentUri
+        val destinationTreeUri = controller.treeUri
+        if (destinationUri == null || destinationTreeUri == null) {
+            notify("目标位置不可用")
+            return
+        }
+        if (
+            session.move &&
+            destinationUri == session.sourceLocation.currentUri
+        ) {
+            notify("请选择其他文件夹")
+            return
+        }
+        transferBusy = true
+        scope.launch {
+            val action = if (session.move) "移动" else "复制"
+            val summary = runCatching {
+                controller.transferEntriesToDirectory(
+                    sources = session.sources,
+                    sourceDirectoryUri = session.sourceLocation.currentUri,
+                    destinationDirectoryUri = destinationUri,
+                    destinationTreeUri = destinationTreeUri,
+                    move = session.move
+                )
+            }.getOrNull()
+            val restored = controller.restoreLocation(session.sourceLocation)
+            transferSession = null
+            transferBusy = false
+            val message = when {
+                summary == null -> "${action}失败"
+                summary.completed > 0 &&
+                    summary.sourceRetained == 0 &&
+                    summary.failed == 0 ->
+                    "已${action} ${summary.completed} 项"
+                summary.completed + summary.sourceRetained > 0 ->
+                    "已复制 ${summary.completed + summary.sourceRetained} 项" +
+                        if (summary.sourceRetained > 0) {
+                            "，${summary.sourceRetained} 项源文件未能删除"
+                        } else {
+                            "，${summary.failed} 项失败"
+                        }
+                else -> summary.firstError ?: "${action}失败"
+            }
+            notify(
+                if (restored) message else "$message，但无法返回原目录"
+            )
+        }
+    }
+
     fun handleBack() {
         when {
+            transferBusy -> Unit
+            transferSession != null -> scope.launch {
+                if (!controller.goUp()) cancelTransfer()
+            }
             storageExpanded || sortExpanded || moreExpanded || selectionMenuExpanded ->
                 closePanelPopups()
             showCustomSuffixDialog -> showCustomSuffixDialog = false
             showRenameDialog || showNewFolderDialog || showTaskQueue ||
                 showQuickLocationEditor ||
-                transferTarget != null || compressTarget != null ||
+                compressTarget != null ||
                 openWithRequest != null -> dismissFileDialogs()
             controller.selectionMode -> controller.clearSelection()
             searchMode -> {
@@ -732,7 +824,25 @@ private fun FileBrowserScreen(
                             }
                         },
                         title = {
-                            if (controller.treeUri == null) {
+                            if (transferSession != null) {
+                                Column {
+                                    Text(
+                                        if (transferSession?.move == true) {
+                                            "选择移动目标"
+                                        } else {
+                                            "选择复制目标"
+                                        },
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                    Text(
+                                        controller.path.joinToString(" / "),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            } else if (controller.treeUri == null) {
                                 Text("Zippest", style = MaterialTheme.typography.titleLarge)
                             } else {
                                 val directStorage =
@@ -771,7 +881,17 @@ private fun FileBrowserScreen(
                             }
                         },
                         actions = {
-                            if (controller.treeUri != null) {
+                            if (transferSession != null) {
+                                IconButton(
+                                    onClick = ::cancelTransfer,
+                                    enabled = !transferBusy
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.Close,
+                                        contentDescription = "取消复制或移动"
+                                    )
+                                }
+                            } else if (controller.treeUri != null) {
                                 IconButton(onClick = {
                                     closePanelPopups()
                                     searchMode = true
@@ -818,56 +938,27 @@ private fun FileBrowserScreen(
         bottomBar = {
             Column {
                 when {
+                    transferSession != null -> TransferToolbar(
+                        move = transferSession?.move == true,
+                        itemCount = transferSession?.sources?.size ?: 0,
+                        path = controller.path.joinToString(" / "),
+                        busy = transferBusy,
+                        canConfirm = controller.currentUri != null &&
+                            controller.treeUri != null &&
+                            (
+                                transferSession?.move != true ||
+                                    controller.currentUri !=
+                                        transferSession?.sourceLocation?.currentUri
+                                ),
+                        onCancel = ::cancelTransfer,
+                        onConfirm = ::confirmTransfer
+                    )
                     selectedCount > 0 -> SelectionToolbar(
                     onCopy = {
-                        closePanelPopups()
-                        dismissFileDialogs()
-                        val mode = controller.storageMode
-                        val treeUri = controller.treeUri
-                        val rootUri = treeUri?.let {
-                            if (mode == FileBrowserController.StorageMode.DIRECT) {
-                                it
-                            } else {
-                                runCatching { treeRootDocumentUri(it) }.getOrNull()
-                            }
-                        }
-                        if (mode == null || treeUri == null || rootUri == null) {
-                            notify("当前存储位置不可用")
-                        } else {
-                            transferTarget = TransferTarget(
-                                sources = selectedEntries,
-                                storageMode = mode,
-                                treeUri = treeUri,
-                                rootUri = rootUri,
-                                rootLabel = controller.path.firstOrNull() ?: "根目录",
-                                move = false
-                            )
-                        }
+                        startTransfer(move = false)
                     },
                     onMove = {
-                        closePanelPopups()
-                        dismissFileDialogs()
-                        val mode = controller.storageMode
-                        val treeUri = controller.treeUri
-                        val rootUri = treeUri?.let {
-                            if (mode == FileBrowserController.StorageMode.DIRECT) {
-                                it
-                            } else {
-                                runCatching { treeRootDocumentUri(it) }.getOrNull()
-                            }
-                        }
-                        if (mode == null || treeUri == null || rootUri == null) {
-                            notify("当前存储位置不可用")
-                        } else {
-                            transferTarget = TransferTarget(
-                                sources = selectedEntries,
-                                storageMode = mode,
-                                treeUri = treeUri,
-                                rootUri = rootUri,
-                                rootLabel = controller.path.firstOrNull() ?: "根目录",
-                                move = true
-                            )
-                        }
+                        startTransfer(move = true)
                     },
                     onRename = {
                         closePanelPopups()
@@ -991,8 +1082,15 @@ private fun FileBrowserScreen(
                                 selectionMode = controller.selectionMode,
                                 selected = entry.uri in controller.selected,
                                 showThumbnail = appSettings.showThumbnails,
+                                showArchivePreview = transferSession == null,
                                 onClick = {
                                     when {
+                                        transferBusy -> Unit
+                                        transferSession != null -> {
+                                            if (entry.isDirectory) {
+                                                scope.launch { controller.open(entry) }
+                                            }
+                                        }
                                         controller.selectionMode ->
                                             controller.toggleSelection(entry.uri)
                                         entry.isDirectory ->
@@ -1013,13 +1111,23 @@ private fun FileBrowserScreen(
                                         else -> openWithFile(entry)
                                     }
                                 },
-                                onPreviewArchive = { onOpenArchive(entry) },
+                                onPreviewArchive = {
+                                    if (transferSession == null && !transferBusy) {
+                                        onOpenArchive(entry)
+                                    }
+                                },
                                 onLongClick = {
-                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    controller.startSelection(entry.uri)
+                                    if (transferSession == null && !transferBusy) {
+                                        haptics.performHapticFeedback(
+                                            HapticFeedbackType.LongPress
+                                        )
+                                        controller.startSelection(entry.uri)
+                                    }
                                 },
                                 onCheckedChange = {
-                                    controller.toggleSelection(entry.uri)
+                                    if (transferSession == null && !transferBusy) {
+                                        controller.toggleSelection(entry.uri)
+                                    }
                                 }
                             )
                             HorizontalDivider(
@@ -1160,7 +1268,7 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {
                             moreExpanded = false
-                            notify("Zippest 1.5.3 · 文件浏览与压缩")
+                            notify("Zippest 1.5.4 · 文件浏览与压缩")
                         }
                     )
                 }
@@ -1409,38 +1517,6 @@ private fun FileBrowserScreen(
         )
     }
 
-    transferTarget?.let { target ->
-        TransferDestinationSheet(
-            target = target,
-            onDismiss = { transferTarget = null },
-            onChoose = { destinationUri, destinationTreeUri ->
-                transferTarget = null
-                scope.launch {
-                    val summary = controller.transferSelectedToDirectory(
-                        destinationDirectoryUri = destinationUri,
-                        destinationTreeUri = destinationTreeUri,
-                        move = target.move
-                    )
-                    val action = if (target.move) "移动" else "复制"
-                    val message = when {
-                        summary.completed > 0 &&
-                            summary.sourceRetained == 0 &&
-                            summary.failed == 0 ->
-                            "已${action} ${summary.completed} 项"
-                        summary.completed + summary.sourceRetained > 0 ->
-                            "已复制 ${summary.completed + summary.sourceRetained} 项" +
-                                if (summary.sourceRetained > 0) {
-                                    "，${summary.sourceRetained} 项源文件未能删除"
-                                } else {
-                                    "，${summary.failed} 项失败"
-                                }
-                        else -> summary.firstError ?: "${action}失败"
-                    }
-                    notify(message)
-                }
-            }
-        )
-    }
 }
 
 @Composable
@@ -1824,6 +1900,7 @@ private fun EntryRow(
     selectionMode: Boolean,
     selected: Boolean,
     showThumbnail: Boolean,
+    showArchivePreview: Boolean,
     onClick: () -> Unit,
     onPreviewArchive: () -> Unit,
     onLongClick: () -> Unit,
@@ -1887,7 +1964,7 @@ private fun EntryRow(
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        } else if (entry.isArchive) {
+        } else if (entry.isArchive && showArchivePreview) {
             IconButton(
                 onClick = onPreviewArchive,
                 enabled = !selectionMode
@@ -1998,6 +2075,67 @@ private fun MediaThumbnail(entry: BrowserEntry) {
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+private fun TransferToolbar(
+    move: Boolean,
+    itemCount: Int,
+    path: String,
+    busy: Boolean,
+    canConfirm: Boolean,
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val action = if (move) "移动" else "复制"
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "$action $itemCount 项",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    path,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            TextButton(
+                onClick = onCancel,
+                enabled = !busy
+            ) {
+                Text("取消")
+            }
+            Button(
+                onClick = onConfirm,
+                enabled = canConfirm && !busy
+            ) {
+                if (busy) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("${action}到这里")
+                }
+            }
         }
     }
 }

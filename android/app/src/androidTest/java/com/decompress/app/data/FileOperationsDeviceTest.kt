@@ -181,6 +181,39 @@ class FileOperationsDeviceTest {
     }
 
     @Test
+    fun explicitInPlaceTransferUsesTheRecordedSourceAndRestoresIt() = runBlocking {
+        val sourceDirectory = File(baseDirectory, "source").apply { mkdirs() }
+        val destinationDirectory = File(baseDirectory, "destination").apply { mkdirs() }
+        val source = File(sourceDirectory, "copy.txt").apply { writeText("copy") }
+        openFolder("Download", baseDirectory.name)
+        val sourceLocation = requireNotNull(controller.captureLocation())
+        val sourceEntry = controller.entries.single { it.name == sourceDirectory.name }
+        val destinationEntry = controller.entries.single {
+            it.name == destinationDirectory.name
+        }
+
+        controller.open(destinationEntry)
+        val summary = controller.transferEntriesToDirectory(
+            sources = listOf(sourceEntry),
+            sourceDirectoryUri = sourceLocation.currentUri,
+            destinationDirectoryUri = controller.currentUri!!,
+            destinationTreeUri = controller.treeUri!!,
+            move = true
+        )
+        assertTrue(controller.restoreLocation(sourceLocation))
+
+        assertEquals(1, summary.completed)
+        assertEquals(sourceLocation.currentUri, controller.currentUri)
+        assertFalse(sourceDirectory.exists())
+        assertEquals(
+            "copy",
+            File(destinationDirectory, sourceDirectory.name)
+                .resolve("copy.txt")
+                .readText()
+        )
+    }
+
+    @Test
     fun safRenameAndDeleteWorkThroughDocumentsProvider() = runBlocking {
         val repository = SafFileRepository(context)
         val treeUri = createProviderDirectory("saf")

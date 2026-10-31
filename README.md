@@ -91,7 +91,9 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.5.3` adds pull-to-refresh to the file browser while retaining the
+Version `1.5.4` moves copy and move into an in-place destination browser and
+returns to the source folder after the operation.
+Version `1.5.3` added pull-to-refresh to the file browser while retaining the
 current list during refresh.
 Version `1.5.2` added configurable internal-storage shortcuts, neutral popup
 surfaces, and mutual exclusion for browser menus and dialogs. Shortcut paths

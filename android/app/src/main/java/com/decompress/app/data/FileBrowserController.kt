@@ -31,6 +31,15 @@ class FileBrowserController(context: Context) {
         DIRECT
     }
 
+    data class LocationSnapshot(
+        val storageMode: StorageMode,
+        val treeUri: Uri?,
+        val currentUri: Uri,
+        val folderName: String,
+        val path: List<String>,
+        val backStack: List<Pair<Uri, String>>
+    )
+
     var storageMode by mutableStateOf<StorageMode?>(null)
         private set
     var treeUri by mutableStateOf<Uri?>(null)
@@ -161,6 +170,32 @@ class FileBrowserController(context: Context) {
 
     suspend fun refresh() {
         loadCurrent()
+    }
+
+    fun captureLocation(): LocationSnapshot? {
+        val mode = storageMode ?: return null
+        val current = currentUri ?: return null
+        return LocationSnapshot(
+            storageMode = mode,
+            treeUri = treeUri,
+            currentUri = current,
+            folderName = folderName,
+            path = path.toList(),
+            backStack = backStack.toList()
+        )
+    }
+
+    suspend fun restoreLocation(snapshot: LocationSnapshot): Boolean {
+        storageMode = snapshot.storageMode
+        treeUri = snapshot.treeUri
+        currentUri = snapshot.currentUri
+        folderName = snapshot.folderName
+        path = snapshot.path.toList()
+        backStack.clear()
+        snapshot.backStack.forEach { backStack.addLast(it) }
+        clearSelection()
+        loadCurrent()
+        return error == null
     }
 
     private suspend fun loadCurrent() {
@@ -362,9 +397,28 @@ class FileBrowserController(context: Context) {
         move: Boolean
     ): TransferSummary {
         val sources = entries.filter { it.uri in selected }
+        val summary = transferEntriesToDirectory(
+            sources = sources,
+            sourceDirectoryUri = currentUri,
+            destinationDirectoryUri = destinationDirectoryUri,
+            destinationTreeUri = destinationTreeUri,
+            move = move
+        )
+        clearSelection()
+        loadCurrent()
+        return summary
+    }
+
+    suspend fun transferEntriesToDirectory(
+        sources: List<BrowserEntry>,
+        sourceDirectoryUri: Uri?,
+        destinationDirectoryUri: Uri,
+        destinationTreeUri: Uri,
+        move: Boolean
+    ): TransferSummary {
         if (
             move &&
-            currentUri?.let {
+            sourceDirectoryUri?.let {
                 repository.isSameDirectory(it, destinationDirectoryUri)
             } == true
         ) {
@@ -413,8 +467,6 @@ class FileBrowserController(context: Context) {
             }
             firstError = firstError ?: result.message
         }
-        clearSelection()
-        loadCurrent()
         return TransferSummary(completed, sourceRetained, failed, firstError)
     }
 
