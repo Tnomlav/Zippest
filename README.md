@@ -91,7 +91,9 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.5.7` adds one-step delete confirmation and direct recycle-bin entry
+Version `1.5.8` simplifies the file delete confirmation to the selected count
+with cancel and confirm actions.
+Version `1.5.7` added one-step delete confirmation and direct recycle-bin entry
 from file browser menus.
 Version `1.5.6` keeps copy and move results in the selected destination folder
 and simplifies the confirm action label.

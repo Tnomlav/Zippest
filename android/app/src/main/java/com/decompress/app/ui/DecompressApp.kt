@@ -1292,7 +1292,7 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {
                             moreExpanded = false
-                            notify("Zippest 1.5.7 · 文件浏览与压缩")
+                            notify("Zippest 1.5.8 · 文件浏览与压缩")
                         }
                     )
                 }
@@ -1357,22 +1357,8 @@ private fun FileBrowserScreen(
         val itemCount = selectedEntries.size
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
-            title = {
-                Text(if (appSettings.useTrash) "移入回收站" else "永久删除")
-            },
             text = {
-                Text(
-                    buildString {
-                        append("确定要删除选中的 $itemCount 项吗？")
-                        append(
-                            if (appSettings.useTrash) {
-                                "\n\n删除后可在回收站中恢复。"
-                            } else {
-                                "\n\n回收站已关闭，删除后无法恢复。"
-                            }
-                        )
-                    }
-                )
+                Text("共 $itemCount 项")
             },
             confirmButton = {
                 TextButton(
@@ -1394,7 +1380,7 @@ private fun FileBrowserScreen(
                     }
                 ) {
                     Text(
-                        if (appSettings.useTrash) "移入回收站" else "永久删除",
+                        "确认",
                         color = MaterialTheme.colorScheme.error
                     )
                 }
