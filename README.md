@@ -91,7 +91,9 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.5.9` centers the delete confirmation with large count typography
+Version `1.5.10` aligns the delete confirmation with the standard dialogs
+used elsewhere in the app.
+Version `1.5.9` centered the delete confirmation with large count typography
 and equally sized cancel and destructive confirm buttons.
 Version `1.5.8` simplified the file delete confirmation to the selected count
 with cancel and confirm actions.
