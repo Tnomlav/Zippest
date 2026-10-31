@@ -111,6 +111,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -940,7 +941,7 @@ private fun FileBrowserScreen(
                 },
                 onChooseFolder = { folderPicker.launch(null) }
             )
-            controller.loading -> Box(
+            controller.loading && controller.entries.isEmpty() -> Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
@@ -956,61 +957,76 @@ private fun FileBrowserScreen(
                 onRetry = { scope.launch { controller.refresh() } },
                 onChooseFolder = { folderPicker.launch(null) }
             )
-            visibleEntries.isEmpty() -> EmptyState(
+            else -> PullToRefreshBox(
+                isRefreshing = controller.loading,
+                onRefresh = {
+                    scope.launch { controller.refresh() }
+                },
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding),
-                filtered = query.isNotBlank()
-            )
-            else -> LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(
-                    start = 12.dp,
-                    top = 8.dp,
-                    end = 12.dp,
-                    bottom = if (selectedCount > 0) 82.dp else 8.dp
-                )
+                    .padding(padding)
             ) {
-                items(visibleEntries, key = { it.uri.toString() }) { entry ->
-                    EntryRow(
-                        entry = entry,
-                        selectionMode = controller.selectionMode,
-                        selected = entry.uri in controller.selected,
-                        showThumbnail = appSettings.showThumbnails,
-                        onClick = {
-                            when {
-                                controller.selectionMode -> controller.toggleSelection(entry.uri)
-                                entry.isDirectory -> scope.launch { controller.open(entry) }
-                                entry.isArchive -> {
-                                    val parentUri = controller.currentUri
-                                    val parentTreeUri = controller.treeUri
-                                    if (parentUri != null && parentTreeUri != null) {
-                                        onExtract(
-                                            listOf(entry),
-                                            parentUri,
-                                            parentTreeUri,
-                                            controller.path.joinToString(" / "),
-                                            controller.folderName
-                                        )
+                if (visibleEntries.isEmpty()) {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        item {
+                            EmptyState(
+                                modifier = Modifier.fillParentMaxSize(),
+                                filtered = query.isNotBlank()
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = 12.dp,
+                            top = 8.dp,
+                            end = 12.dp,
+                            bottom = if (selectedCount > 0) 82.dp else 8.dp
+                        )
+                    ) {
+                        items(visibleEntries, key = { it.uri.toString() }) { entry ->
+                            EntryRow(
+                                entry = entry,
+                                selectionMode = controller.selectionMode,
+                                selected = entry.uri in controller.selected,
+                                showThumbnail = appSettings.showThumbnails,
+                                onClick = {
+                                    when {
+                                        controller.selectionMode ->
+                                            controller.toggleSelection(entry.uri)
+                                        entry.isDirectory ->
+                                            scope.launch { controller.open(entry) }
+                                        entry.isArchive -> {
+                                            val parentUri = controller.currentUri
+                                            val parentTreeUri = controller.treeUri
+                                            if (parentUri != null && parentTreeUri != null) {
+                                                onExtract(
+                                                    listOf(entry),
+                                                    parentUri,
+                                                    parentTreeUri,
+                                                    controller.path.joinToString(" / "),
+                                                    controller.folderName
+                                                )
+                                            }
+                                        }
+                                        else -> openWithFile(entry)
                                     }
+                                },
+                                onPreviewArchive = { onOpenArchive(entry) },
+                                onLongClick = {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    controller.startSelection(entry.uri)
+                                },
+                                onCheckedChange = {
+                                    controller.toggleSelection(entry.uri)
                                 }
-                                else -> {
-                                    openWithFile(entry)
-                                }
-                            }
-                        },
-                        onPreviewArchive = { onOpenArchive(entry) },
-                        onLongClick = {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            controller.startSelection(entry.uri)
-                        },
-                        onCheckedChange = { controller.toggleSelection(entry.uri) }
-                    )
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.32f)
-                    )
+                            )
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.32f)
+                            )
+                        }
+                    }
                 }
             }
             }
@@ -1144,7 +1160,7 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {
                             moreExpanded = false
-                            notify("Zippest 1.5.2 · 文件浏览与压缩")
+                            notify("Zippest 1.5.3 · 文件浏览与压缩")
                         }
                     )
                 }

@@ -91,7 +91,9 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.5.2` adds configurable internal-storage shortcuts, neutral popup
+Version `1.5.3` adds pull-to-refresh to the file browser while retaining the
+current list during refresh.
+Version `1.5.2` added configurable internal-storage shortcuts, neutral popup
 surfaces, and mutual exclusion for browser menus and dialogs. Shortcut paths
 are chosen through the system folder picker, and the popup ends with a shared
 “Add” action.
