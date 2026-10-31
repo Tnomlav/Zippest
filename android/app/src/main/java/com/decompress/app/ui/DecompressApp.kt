@@ -657,7 +657,7 @@ private fun FileBrowserScreen(
                     move = session.move
                 )
             }.getOrNull()
-            val restored = controller.restoreLocation(session.sourceLocation)
+            controller.refresh()
             transferSession = null
             transferBusy = false
             val message = when {
@@ -675,9 +675,7 @@ private fun FileBrowserScreen(
                         }
                 else -> summary.firstError ?: "${action}失败"
             }
-            notify(
-                if (restored) message else "$message，但无法返回原目录"
-            )
+            notify(message)
         }
     }
 
@@ -1282,7 +1280,7 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {
                             moreExpanded = false
-                            notify("Zippest 1.5.5 · 文件浏览与压缩")
+                            notify("Zippest 1.5.6 · 文件浏览与压缩")
                         }
                     )
                 }
@@ -2147,7 +2145,7 @@ private fun TransferToolbar(
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Text("${action}到这里")
+                    Text(action)
                 }
             }
         }

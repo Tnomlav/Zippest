@@ -91,10 +91,12 @@ updates.
 ## Status
 
 The package name remains `com.decompress.app` for upgrade compatibility.
+Version `1.5.6` keeps copy and move results in the selected destination folder
+and simplifies the confirm action label.
 Version `1.5.5` keeps the pull-to-refresh indicator visible for a minimum
 duration so fast directory scans still provide visible loading feedback.
 Version `1.5.4` moved copy and move into an in-place destination browser and
-returns to the source folder after the operation.
+stays in the selected destination after the operation.
 Version `1.5.3` added pull-to-refresh to the file browser while retaining the
 current list during refresh.
 Version `1.5.2` added configurable internal-storage shortcuts, neutral popup
