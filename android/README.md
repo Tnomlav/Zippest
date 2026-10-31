@@ -7,7 +7,7 @@ creating common archive formats. The product UI follows the finalized prototype 
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.5.6`
+- Version: `1.5.7`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct
@@ -107,6 +107,8 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
+Version `1.5.7` adds one-step delete confirmation and direct recycle-bin entry
+from file browser menus.
 Version `1.5.6` keeps copy and move results in the selected destination folder
 and simplifies the confirm action label.
 Version `1.5.5` keeps the pull-to-refresh indicator visible for a minimum

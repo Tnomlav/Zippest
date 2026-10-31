@@ -466,6 +466,8 @@ private fun FileBrowserScreen(
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameValue by remember { mutableStateOf(TextFieldValue()) }
     var showCustomSuffixDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var showTrash by remember { mutableStateOf(false) }
     var showQuickLocationEditor by remember { mutableStateOf(false) }
     var customSuffix by remember { mutableStateOf("") }
     var showTaskQueue by remember { mutableStateOf(false) }
@@ -532,6 +534,8 @@ private fun FileBrowserScreen(
         showNewFolderDialog = false
         showRenameDialog = false
         showCustomSuffixDialog = false
+        showDeleteConfirmation = false
+        showTrash = false
         showQuickLocationEditor = false
         showTaskQueue = false
         compressTarget = null
@@ -688,6 +692,11 @@ private fun FileBrowserScreen(
             storageExpanded || sortExpanded || moreExpanded || selectionMenuExpanded ->
                 closePanelPopups()
             showCustomSuffixDialog -> showCustomSuffixDialog = false
+            showDeleteConfirmation -> showDeleteConfirmation = false
+            showTrash -> {
+                showTrash = false
+                scope.launch { controller.refresh() }
+            }
             showRenameDialog || showNewFolderDialog || showTaskQueue ||
                 showQuickLocationEditor ||
                 compressTarget != null ||
@@ -986,16 +995,8 @@ private fun FileBrowserScreen(
                         }
                     },
                     onDelete = {
-                        scope.launch {
-                            val count = controller.deleteSelected()
-                            notify(
-                                if (count > 0) {
-                                    "已删除 $count 项"
-                                } else {
-                                    "删除失败，目标可能位于 Android 受保护目录"
-                                }
-                            )
-                        }
+                        closePanelPopups()
+                        showDeleteConfirmation = true
                     },
                     menuExpanded = selectionMenuExpanded,
                     onMenuExpandedChange = { expanded ->
@@ -1268,6 +1269,17 @@ private fun FileBrowserScreen(
                         }
                     )
                     ZippestMenuItem(
+                        text = { Text("回收站") },
+                        leadingIcon = { Icon(Icons.Outlined.Delete, null) },
+                        onClick = {
+                            moreExpanded = false
+                            closePanelPopups()
+                            dismissFileDialogs()
+                            controller.clearSelection()
+                            showTrash = true
+                        }
+                    )
+                    ZippestMenuItem(
                         text = { Text("重新选择文件夹") },
                         leadingIcon = { Icon(Icons.Outlined.FolderOpen, null) },
                         onClick = {
@@ -1280,7 +1292,7 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {
                             moreExpanded = false
-                            notify("Zippest 1.5.6 · 文件浏览与压缩")
+                            notify("Zippest 1.5.7 · 文件浏览与压缩")
                         }
                     )
                 }
@@ -1300,6 +1312,15 @@ private fun FileBrowserScreen(
                         onClick = {
                             selectionMenuExpanded = false
                             compressSelected()
+                        }
+                    )
+                    ZippestMenuItem(
+                        text = { Text("回收站") },
+                        leadingIcon = { Icon(Icons.Outlined.Delete, null) },
+                        onClick = {
+                            selectionMenuExpanded = false
+                            controller.clearSelection()
+                            showTrash = true
                         }
                     )
                     val canOpenWith = selectedEntries.singleOrNull()?.let {
@@ -1330,6 +1351,75 @@ private fun FileBrowserScreen(
                 }
             }
         }
+    }
+
+    if (showDeleteConfirmation) {
+        val itemCount = selectedEntries.size
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = {
+                Text(if (appSettings.useTrash) "移入回收站" else "永久删除")
+            },
+            text = {
+                Text(
+                    buildString {
+                        append("确定要删除选中的 $itemCount 项吗？")
+                        append(
+                            if (appSettings.useTrash) {
+                                "\n\n删除后可在回收站中恢复。"
+                            } else {
+                                "\n\n回收站已关闭，删除后无法恢复。"
+                            }
+                        )
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = itemCount > 0,
+                    onClick = {
+                        showDeleteConfirmation = false
+                        scope.launch {
+                            val count = controller.deleteSelected()
+                            notify(
+                                when {
+                                    count <= 0 ->
+                                        "删除失败，目标可能位于 Android 受保护目录"
+                                    appSettings.useTrash ->
+                                        "已将 $count 项移入回收站"
+                                    else -> "已永久删除 $count 项"
+                                }
+                            )
+                        }
+                    }
+                ) {
+                    Text(
+                        if (appSettings.useTrash) "移入回收站" else "永久删除",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmation = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    if (showTrash) {
+        TrashSheet(
+            onDismiss = {
+                showTrash = false
+                scope.launch { controller.refresh() }
+            },
+            onChanged = { message ->
+                scope.launch {
+                    controller.refresh()
+                    notify(message)
+                }
+            }
+        )
     }
 
     if (showQuickLocationEditor) {

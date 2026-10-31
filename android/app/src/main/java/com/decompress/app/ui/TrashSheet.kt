@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -64,6 +65,8 @@ fun TrashSheet(
     var items by remember { mutableStateOf<List<TrashItem>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var refreshVersion by remember { mutableIntStateOf(0) }
+    var confirmEmpty by remember { mutableStateOf(false) }
+    var deleteTarget by remember { mutableStateOf<TrashItem?>(null) }
 
     LaunchedEffect(refreshVersion) {
         loading = true
@@ -105,12 +108,7 @@ fun TrashSheet(
                 }
                 if (items.isNotEmpty()) {
                     TextButton(
-                        onClick = {
-                            scope.launch {
-                                val count = repository.empty()
-                                refresh("已永久删除 $count 项")
-                            }
-                        }
+                        onClick = { confirmEmpty = true }
                     ) {
                         Text("清空", color = MaterialTheme.colorScheme.error)
                     }
@@ -168,16 +166,7 @@ fun TrashSheet(
                                         }
                                     },
                                     onDelete = {
-                                        scope.launch {
-                                            val deleted = repository.deleteForever(item.id)
-                                            refresh(
-                                                if (deleted) {
-                                                    "已永久删除 ${item.name}"
-                                                } else {
-                                                    "删除失败"
-                                                }
-                                            )
-                                        }
+                                        deleteTarget = item
                                     }
                                 )
                             }
@@ -195,6 +184,64 @@ fun TrashSheet(
                 Text("关闭")
             }
         }
+    }
+
+    if (confirmEmpty) {
+        AlertDialog(
+            onDismissRequest = { confirmEmpty = false },
+            title = { Text("清空回收站") },
+            text = { Text("确定永久删除回收站中的 ${items.size} 项吗？删除后无法恢复。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmEmpty = false
+                        scope.launch {
+                            val count = repository.empty()
+                            refresh("已永久删除 $count 项")
+                        }
+                    }
+                ) {
+                    Text("清空", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmEmpty = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    deleteTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("永久删除") },
+            text = { Text("确定永久删除“${target.name}”吗？此操作无法恢复。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        deleteTarget = null
+                        scope.launch {
+                            val deleted = repository.deleteForever(target.id)
+                            refresh(
+                                if (deleted) {
+                                    "已永久删除 ${target.name}"
+                                } else {
+                                    "删除失败"
+                                }
+                            )
+                        }
+                    }
+                ) {
+                    Text("永久删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteTarget = null }) {
+                    Text("取消")
+                }
+            }
+        )
     }
 }
 
