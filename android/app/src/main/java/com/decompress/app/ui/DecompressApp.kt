@@ -456,6 +456,7 @@ private fun FileBrowserScreen(
 
     var searchMode by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
+    var pullRefreshing by remember { mutableStateOf(false) }
     var storageExpanded by remember { mutableStateOf(false) }
     var sortExpanded by remember { mutableStateOf(false) }
     var moreExpanded by remember { mutableStateOf(false) }
@@ -503,6 +504,21 @@ private fun FileBrowserScreen(
 
     fun notify(message: String) {
         onNotify(message)
+    }
+
+    fun refreshFromPull() {
+        if (pullRefreshing) return
+        pullRefreshing = true
+        scope.launch {
+            val startedAt = SystemClock.elapsedRealtime()
+            try {
+                controller.refresh()
+            } finally {
+                val elapsed = SystemClock.elapsedRealtime() - startedAt
+                if (elapsed < 900L) delay(900L - elapsed)
+                pullRefreshing = false
+            }
+        }
     }
 
     fun closePanelPopups() {
@@ -1032,7 +1048,7 @@ private fun FileBrowserScreen(
                 },
                 onChooseFolder = { folderPicker.launch(null) }
             )
-            controller.loading && controller.entries.isEmpty() -> Box(
+            !pullRefreshing && controller.loading && controller.entries.isEmpty() -> Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
@@ -1049,10 +1065,8 @@ private fun FileBrowserScreen(
                 onChooseFolder = { folderPicker.launch(null) }
             )
             else -> PullToRefreshBox(
-                isRefreshing = controller.loading,
-                onRefresh = {
-                    scope.launch { controller.refresh() }
-                },
+                isRefreshing = pullRefreshing || controller.loading,
+                onRefresh = ::refreshFromPull,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
@@ -1268,7 +1282,7 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {
                             moreExpanded = false
-                            notify("Zippest 1.5.4 · 文件浏览与压缩")
+                            notify("Zippest 1.5.5 · 文件浏览与压缩")
                         }
                     )
                 }
