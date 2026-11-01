@@ -1,71 +1,62 @@
 # Zippest
 
-Zippest is an Android file manager and archive utility for browsing, extracting,
-and creating common compressed formats. Its interaction model follows the
-familiar flow of ZArchiver and RAR for Android while using Android's Storage
-Access Framework for scoped folder access.
+Zippest 是一款面向 Android 的本地文件管理与压缩工具，交互方式参考
+ZArchiver 和 RAR for Android。它既可以浏览、整理手机文件，也可以创建、
+预览、分卷和后台解压常见的压缩格式。
 
-![Zippest file browser](design/screens/01-root.png)
+![Zippest 文件浏览界面](design/screens/01-root.png)
 
-## Repository layout
+## 项目结构
 
-- `android/` - Kotlin and Jetpack Compose Android application
-- `design/` - frozen interactive product prototype and reference screenshots
-- `tools/` - local test fixtures and automation scripts
+- `android/`：使用 Kotlin 和 Jetpack Compose 开发的 Android 应用
+- `design/`：产品原型、图标和界面参考图
+- `tools/`：本地测试素材与自动化脚本
 
-## Highlights
+## 主要功能
 
-- Browse authorized folders, search, sort, create folders, copy, move, share,
-  rename, and delete.
-- Request Android's all-files access for direct internal-storage browsing, with
-  a scoped SAF folder picker as fallback.
-- Configure theme, hidden files, thumbnails, sorting, persistent extraction
-  defaults, clipboard password fill, notifications, and task maintenance.
-- Browse ZIP, 7Z, RAR, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, TAR.ZST, TAR.BR,
-  CPIO, GZ, BZ2, XZ, LZMA, LZ4, ZST, and BR.
-- Create ZIP, 7Z, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, TAR.ZST, CPIO, GZ, BZ2,
-  XZ, LZMA, LZ4, and ZST archives with selectable compression levels.
-- Create password-protected ZIP and 7Z archives.
-- Split any supported created archive into `.001`, `.002`, and later volumes;
-  open the first volume in Zippest to combine and extract it.
-- Extract to the archive folder, a new same-name folder, or any SAF folder.
-- Open password-protected ZIP, 7Z, and RAR archives.
-- Unlock encrypted 7Z and RAR headers directly in the archive browser.
-- Reuse one password across a multi-archive job or enter each password
-  separately.
-- Queue extraction and compression through WorkManager with persistent notification progress
-  and recovery after the app process is stopped.
-- Keep active archive jobs running with a foreground service and partial CPU wake lock
-  while the app is in the background or the screen is off.
-- Show a live archive-task card and progress bar in place of the storage bar.
-- Preselect a renamed file's suffix and provide 7Z, ZIP, RAR, and custom suffix shortcuts.
-- Choose copy and move destinations inside Zippest instead of leaving the app for
-  Android's document picker.
-- Route modifications through direct file-system APIs whenever all-files access is
-  granted, including standard internal-storage folders opened through SAF.
-- Delete files immediately without an extra app confirmation.
-- Move deleted files into a persistent recycle bin with restore, permanent delete,
-  empty-trash, and configurable retention controls.
-- Show compact operation notices in the center of the app instead of the bottom edge.
-- Paste the current clipboard text directly from the extraction clipboard row while
-  keeping the expand control separate.
-- Remove the duplicated root path subtitle and present fixed storage locations as
-  an icon-based quick-location grid.
-- Open extraction directly when tapping an archive, and reserve the trailing chevron
-  for archive preview. Preview mode uses an animated border and explicit extraction hint.
-- Tapping a file inside preview opens extraction settings for the complete archive.
-- Create native ZIP volumes as `.z01/.z02/.../.zip`, and open either `.z01` or the
-  final `.zip`; numeric `.zip.001` volume sets remain readable.
-- Notify Android's media index when extraction writes images or videos directly
-  into shared storage.
-- Encrypt queued archive passwords with an Android Keystore-managed key.
-- Inspect active, queued, and completed jobs from the in-app task center.
-- Run a real integrity test that reads every archive entry.
-- Open archives through Android's standard "Open with" flow.
-- Guard against path traversal, archive bombs, excessive entry counts, and
-  insufficient disk space.
+### 文件管理
 
-## Build
+- 浏览本地文件和文件夹，支持搜索、排序、新建目录、重命名和下拉刷新。
+- 长按进入多选，可复制、移动、分享、压缩、解压、删除及查看打开方式。
+- 复制和移动直接在当前文件页选择目标目录，完成后停留在目标文件夹。
+- 删除前显示一次确认，默认移入回收站，可从文件页菜单恢复或永久删除。
+- 支持直接内部存储访问，也保留 Android Storage Access Framework
+  文件夹授权作为兼容方案。
+- 内部存储快捷位置支持通过系统文件管理器新建、改址和删除。
+
+### 压缩与解压
+
+- 浏览并解压 ZIP、7Z、RAR、TAR、TAR.GZ、TAR.BZ2、TAR.XZ、
+  TAR.ZST、TAR.BR、CPIO、GZ、BZ2、XZ、LZMA、LZ4、ZST 和 BR。
+- 创建 ZIP、7Z、TAR 系列、CPIO、GZ、BZ2、XZ、LZMA、LZ4 和 ZST
+  压缩包，并可选择压缩级别。
+- 创建带密码的 ZIP 和 7Z 压缩包。
+- 将支持的压缩包分卷为 `.001`、`.002` 等格式，或创建
+  `.z01`、`.z02`、`.zip` 分卷集合。
+- 打开 ZIP、7Z 和 RAR 密码压缩包，并支持加密 7Z、RAR 头部解锁。
+- 多压缩包任务可复用同一密码，也可逐个输入密码。
+- 解压前可直接修改压缩包名称和后缀，支持 7Z、ZIP、RAR 与自定义后缀。
+- 解压预览使用边框特效区分预览内容，点击预览文件可进入完整解压设置。
+- 支持完整性检查，并防止路径穿越、异常条目数量和磁盘空间不足等问题。
+
+### 后台任务
+
+- 使用 WorkManager 排队执行压缩和解压任务。
+- 应用进入后台或屏幕熄灭后，任务可继续运行。
+- 提供常驻通知、应用内任务中心和浮动进度条。
+- 支持暂停、继续、取消与恢复检查点。
+- 队列密码使用 Android Keystore 管理的密钥加密。
+
+### 界面与系统集成
+
+- 支持系统主题、手动浅色和深色主题。
+- 图片和视频显示缩略图，普通文件支持调用系统应用打开。
+- 打开方式优先展示查看器和编辑器，其次才是分享或发送类应用。
+- 相册和播放器应用打开媒体时，可访问同文件夹内的其他媒体。
+- 文件菜单、排序菜单、内部存储面板和选择菜单采用互斥显示。
+- 支持 Android 分享、文件关联和“用 Zippest 打开”流程。
+
+## 构建
 
 ```powershell
 cd android
@@ -76,78 +67,23 @@ $env:JAVA_HOME='C:\Android Studio\jbr'
 .\gradlew.bat bundleRelease
 ```
 
-The signed release APK is generated at:
+签名后的 Release APK 输出位置：
 
 ```text
 android/app/build/outputs/apk/release/app-release.apk
 ```
 
-Android Studio can open `android/` directly.
+可以直接使用 Android Studio 打开 `android/` 目录。发布签名配置位于本地、
+不纳入 Git 的 `.signing/` 目录，发布前应同时备份密钥库及其配置。
 
-Release signing is loaded from the local, Git-ignored `.signing/` directory.
-Back up both the keystore and its properties file before publishing future
-updates.
+## 当前版本
 
-## Status
+当前版本为 `1.5.10`，包名继续使用 `com.decompress.app`，以保持已有版本升级
+兼容性。
 
-The package name remains `com.decompress.app` for upgrade compatibility.
-Version `1.5.10` aligns the delete confirmation with the standard dialogs
-used elsewhere in the app.
-Version `1.5.9` centered the delete confirmation with large count typography
-and equally sized cancel and destructive confirm buttons.
-Version `1.5.8` simplified the file delete confirmation to the selected count
-with cancel and confirm actions.
-Version `1.5.7` added one-step delete confirmation and direct recycle-bin entry
-from file browser menus.
-Version `1.5.6` keeps copy and move results in the selected destination folder
-and simplifies the confirm action label.
-Version `1.5.5` keeps the pull-to-refresh indicator visible for a minimum
-duration so fast directory scans still provide visible loading feedback.
-Version `1.5.4` moved copy and move into an in-place destination browser and
-stays in the selected destination after the operation.
-Version `1.5.3` added pull-to-refresh to the file browser while retaining the
-current list during refresh.
-Version `1.5.2` added configurable internal-storage shortcuts, neutral popup
-surfaces, and mutual exclusion for browser menus and dialogs. Shortcut paths
-are chosen through the system folder picker, and the popup ends with a shared
-“Add” action.
-Version `1.5.1` moved compression into the selection menu and presents
-extraction as a circular action above the selection toolbar.
-Version `1.5.0` added archive renaming and suffix shortcuts directly to the
-single-archive extraction sheet; the rename is committed before extraction.
-Version `1.4.4` added matching linear icons to the selection-toolbar menu.
-Version `1.4.3` positioned top and bottom menus directly from the visible
-Scaffold bar boundaries instead of popup icon anchors, then lifts and narrows
-the resulting compact panels. Version `1.4.0` aligned top-bar and selection-toolbar
-menus flush with their adjacent app bars. Version `1.3.8` aligned top-bar dropdowns beneath the anchor
-icon, removed menu shadows, and retained the full theme-colored border.
-Version `1.3.5` aligned top-bar dropdowns beneath the app bar and used
-the active theme background for every menu surface. Version `1.3.2` unified
-every dropdown menu with the rounded, elevated panel style used by the
-internal-storage chooser. Version `1.3.1` replaced the selected-items
-share shortcut with a menu containing Open With and Share. Version `1.3.0` opened indexed media through MediaStore and
-includes same-folder media URIs so capable galleries and players can navigate
-between siblings; write grants enable direct editing where supported.
-Version `1.2.4` grouped Open With targets by file type, prioritized direct
-viewers/editors ahead of share and send targets, and remembered always-use
-preferences for the selected file family. Version `1.2.2` added the
-explicit one-time/always Open With dialog and its reset control. Version `1.2.0`
-added system-app opening for regular files, cross-volume file
-transfer roots, app-wide archive progress with pause/resume and timing, edge and
-bottom navigation gestures, Zstandard creation/opening, and Brotli opening.
-Version `1.1.9` showed the current directory path as the top-bar title without a
-second subtitle and removed the redundant quick-location heading. Version
-`1.1.8` removed the colored background tiles from file and folder icons so file
-names remain the visual focus. Version `1.1.7` attached the full-width
-internal-storage quick-location panel directly below the top app bar. Version
-`1.1.6` added native ZIP split-volume output and reading for `.z01/.zip`
-sets while retaining numeric `.001` volume support. It opens whole-archive extraction when a previewed file is tapped. It separates direct extraction from archive preview and marks preview mode with an animated border. It redesigns the internal-storage location picker as a compact grid and removes its duplicate root subtitle. It separates direct clipboard paste from the clipboard expansion control in the extraction sheet. It centers compact operation notices across every screen and includes a persistent recycle bin with restore and retention settings, plus unrestricted direct file modifications across standard internal
-storage and removes delete confirmation prompts. It includes an in-app destination browser for copy and move operations.
-It includes the dot in automatic suffix selection and one-tap 7Z/ZIP/RAR/custom
-extension replacement in the rename dialog. It retains screen-off background execution safeguards and an in-app floating
-progress bar for active archive tasks. It retains archive creation, password-protected ZIP/7Z output,
-split-volume output and reading, plus LZMA/LZ4 support. It retains persistent app settings, theme selection, browsing
-preferences, configurable extraction defaults, permission status controls,
-and notification/task maintenance. It includes persistent
-extraction queues, RAR4/RAR5 support, task status UI, resumable checkpoints,
-password-protected archive browsing, and built-in integrity testing.
+此版本统一了删除确认弹窗的样式：显示删除数量，并提供标准的“取消”和警示色
+“确认”操作。
+
+完整版本历史与安装包请查看：
+
+https://github.com/Tnomlav/Zippest/releases
