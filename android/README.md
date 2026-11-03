@@ -7,7 +7,7 @@ creating common archive formats. The product UI follows the finalized prototype 
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.5.10`
+- Version: `1.5.11`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct
@@ -107,7 +107,9 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
-Version `1.5.10` aligns the delete confirmation with the standard dialogs
+Version `1.5.11` reads complete multi-item clipboard text and lets any regular
+file open extraction settings before its suffix is changed.
+Version `1.5.10` aligned the delete confirmation with the standard dialogs
 used elsewhere in the app.
 Version `1.5.9` centered the delete confirmation with large count typography
 and equally sized cancel and destructive confirm buttons.

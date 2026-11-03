@@ -716,22 +716,38 @@ private fun FileBrowserScreen(
     fun extractSelected() {
         closePanelPopups()
         dismissFileDialogs()
-        val selectedArchives = controller.entries.filter {
-            it.uri in controller.selected && it.isArchive
+        val selectedFiles = controller.entries.filter {
+            it.uri in controller.selected && !it.isDirectory
         }
         val parentUri = controller.currentUri
         val parentTreeUri = controller.treeUri
-        if (selectedArchives.isEmpty()) {
-            notify("请选择压缩包")
+        if (selectedFiles.isEmpty()) {
+            notify("请选择文件")
         } else if (parentUri != null && parentTreeUri != null) {
             onExtract(
-                selectedArchives,
+                selectedFiles,
                 parentUri,
                 parentTreeUri,
                 controller.path.joinToString(" / "),
                 controller.folderName
             )
         }
+    }
+
+    fun extractFile(entry: BrowserEntry) {
+        val parentUri = controller.currentUri
+        val parentTreeUri = controller.treeUri
+        if (parentUri == null || parentTreeUri == null) {
+            notify("当前存储位置不可用")
+            return
+        }
+        onExtract(
+            listOf(entry),
+            parentUri,
+            parentTreeUri,
+            controller.path.joinToString(" / "),
+            controller.folderName
+        )
     }
 
     fun compressSelected() {
@@ -1109,19 +1125,7 @@ private fun FileBrowserScreen(
                                             controller.toggleSelection(entry.uri)
                                         entry.isDirectory ->
                                             scope.launch { controller.open(entry) }
-                                        entry.isArchive -> {
-                                            val parentUri = controller.currentUri
-                                            val parentTreeUri = controller.treeUri
-                                            if (parentUri != null && parentTreeUri != null) {
-                                                onExtract(
-                                                    listOf(entry),
-                                                    parentUri,
-                                                    parentTreeUri,
-                                                    controller.path.joinToString(" / "),
-                                                    controller.folderName
-                                                )
-                                            }
-                                        }
+                                        entry.isArchive -> extractFile(entry)
                                         else -> openWithFile(entry)
                                     }
                                 },
@@ -1129,6 +1133,15 @@ private fun FileBrowserScreen(
                                     if (transferSession == null && !transferBusy) {
                                         onOpenArchive(entry)
                                     }
+                                },
+                                onExtractFile = if (
+                                    !entry.isDirectory &&
+                                    !entry.isArchive &&
+                                    transferSession == null
+                                ) {
+                                    { extractFile(entry) }
+                                } else {
+                                    null
                                 },
                                 onLongClick = {
                                     if (transferSession == null && !transferBusy) {
@@ -1293,7 +1306,7 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {
                             moreExpanded = false
-                            notify("Zippest 1.5.10 · 文件浏览与压缩")
+                            notify("Zippest 1.5.11 · 文件浏览与压缩")
                         }
                     )
                 }
@@ -1975,6 +1988,7 @@ private fun EntryRow(
     showArchivePreview: Boolean,
     onClick: () -> Unit,
     onPreviewArchive: () -> Unit,
+    onExtractFile: (() -> Unit)?,
     onLongClick: () -> Unit,
     onCheckedChange: (Boolean) -> Unit
 ) {
@@ -2045,6 +2059,14 @@ private fun EntryRow(
                     Icons.Outlined.ChevronRight,
                     contentDescription = "预览压缩包",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else if (onExtractFile != null) {
+            IconButton(onClick = onExtractFile) {
+                Icon(
+                    Icons.Outlined.Unarchive,
+                    contentDescription = "解压 ${entry.name}",
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }

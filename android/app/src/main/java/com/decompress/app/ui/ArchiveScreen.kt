@@ -50,6 +50,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Archive
@@ -964,32 +965,6 @@ fun ExtractSheet(
                             }
                         }
                     }
-                    ZippestDropdownMenu(
-                        expanded = clipboardExpanded,
-                        onDismissRequest = { clipboardExpanded = false },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        if (clipboardText != null) {
-                            ZippestMenuItem(
-                                text = {
-                                    Text(
-                                        clipboardText.orEmpty(),
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                },
-                                onClick = {
-                                    password = clipboardText.orEmpty()
-                                    clipboardExpanded = false
-                                }
-                            )
-                        } else {
-                            ZippestMenuItem(
-                                text = { Text("剪贴板为空") },
-                                onClick = { clipboardExpanded = false }
-                            )
-                        }
-                    }
                 }
 
                 if (canRenameArchive) {
@@ -1184,6 +1159,49 @@ fun ExtractSheet(
         }
     }
 
+    if (clipboardExpanded) {
+        AlertDialog(
+            onDismissRequest = { clipboardExpanded = false },
+            title = { Text("剪贴板") },
+            text = {
+                val text = clipboardText
+                if (text == null) {
+                    Text("剪贴板为空")
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 300.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        SelectionContainer {
+                            Text(
+                                text,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = clipboardText != null,
+                    onClick = {
+                        password = clipboardText.orEmpty()
+                        clipboardExpanded = false
+                    }
+                ) {
+                    Text("使用")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { clipboardExpanded = false }) {
+                    Text("关闭")
+                }
+            }
+        )
+    }
+
     if (showCustomSuffixDialog) {
         AlertDialog(
             onDismissRequest = { showCustomSuffixDialog = false },
@@ -1372,7 +1390,16 @@ private fun archiveBaseName(name: String): String = name.substringBeforeLast('.'
 private fun readClipboard(manager: ClipboardManager, context: Context): String? {
     val clip: ClipData = manager.primaryClip ?: return null
     if (clip.itemCount == 0) return null
-    return clip.getItemAt(0).coerceToText(context)?.toString()?.trim()?.ifBlank { null }
+    val parts = (0 until clip.itemCount).mapNotNull { index ->
+        val item = clip.getItemAt(index)
+        runCatching {
+            item.text?.toString()?.takeIf { it.isNotEmpty() }
+                ?: item.htmlText?.toString()?.takeIf { it.isNotEmpty() }
+                ?: item.coerceToText(context)?.toString()?.takeIf { it.isNotEmpty() }
+        }.getOrNull()
+    }
+    if (parts.isEmpty() || parts.all { it.isBlank() }) return null
+    return parts.joinToString("\n")
 }
 
 internal fun treeRootDocumentUri(treeUri: Uri): Uri {
