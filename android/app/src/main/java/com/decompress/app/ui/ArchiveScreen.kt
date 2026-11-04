@@ -91,6 +91,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -109,6 +110,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
@@ -659,6 +661,16 @@ fun ExtractSheet(
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var clipboardText by remember { mutableStateOf(readClipboard(clipboardManager, context)) }
     var clipboardExpanded by remember { mutableStateOf(false) }
+
+    DisposableEffect(clipboardManager) {
+        val listener = ClipboardManager.OnPrimaryClipChangedListener {
+            clipboardText = readClipboard(clipboardManager, context)
+        }
+        clipboardManager.addPrimaryClipChangedListener(listener)
+        onDispose {
+            clipboardManager.removePrimaryClipChangedListener(listener)
+        }
+    }
     var destinationMode by rememberSaveable {
         mutableStateOf(
             when {
@@ -897,7 +909,10 @@ fun ExtractSheet(
                     } else {
                         PasswordVisualTransformation()
                     },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        capitalization = KeyboardCapitalization.None
+                    ),
                     trailingIcon = {
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
@@ -1166,7 +1181,16 @@ fun ExtractSheet(
             text = {
                 val text = clipboardText
                 if (text == null) {
-                    Text("剪贴板为空")
+                    Column {
+                        Text("系统剪贴板为空")
+                        Spacer(Modifier.height(5.dp))
+                        Text(
+                            "可以直接长按密码框，或使用输入法顶部的剪贴板/粘贴按钮。" +
+                                "应用无法读取输入法私有的剪贴板历史。",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 } else {
                     Box(
                         modifier = Modifier
@@ -1265,7 +1289,11 @@ fun ExtractSheet(
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             label = { Text("密码") },
-                            visualTransformation = PasswordVisualTransformation()
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Text,
+                                capitalization = KeyboardCapitalization.None
+                            )
                         )
                     }
                 },
