@@ -35,7 +35,7 @@ class TrashRepository(private val context: Context) {
             .put("originalPath", source.absolutePath)
             .put("deletedAt", System.currentTimeMillis())
             .put("isDirectory", source.isDirectory)
-            .put("size", if (source.isDirectory) directorySize(source) else source.length())
+            .put("size", if (source.isDirectory) 0L else source.length())
         val metadataFile = File(itemDirectory, METADATA_NAME)
         val moved = runCatching {
             metadataFile.writeText(metadata.toString(), Charsets.UTF_8)
@@ -165,11 +165,6 @@ class TrashRepository(private val context: Context) {
         }
         throw IllegalStateException("无法生成可恢复文件名")
     }
-
-    private fun directorySize(directory: File): Long =
-        directory.walkTopDown()
-            .filter { it.isFile }
-            .sumOf { it.length() }
 
     companion object {
         private const val METADATA_NAME = "metadata.json"

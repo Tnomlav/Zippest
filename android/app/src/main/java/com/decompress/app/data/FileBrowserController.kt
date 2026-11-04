@@ -330,7 +330,7 @@ class FileBrowserController(context: Context) {
         return null
     }
 
-    suspend fun deleteSelected(): Int {
+    suspend fun deleteSelected(refreshAfter: Boolean = true): Int {
         val useTrash = AppSettingsRepository.read(appContext).useTrash
         val trash = TrashRepository(appContext)
         var deleted = 0
@@ -353,7 +353,7 @@ class FileBrowserController(context: Context) {
             if (success) deleted++
         }
         clearSelection()
-        loadCurrent()
+        if (refreshAfter) loadCurrent()
         return deleted
     }
 
@@ -450,14 +450,15 @@ class FileBrowserController(context: Context) {
         var sourceRetained = 0
         var failed = 0
         var firstError: String? = null
+        val hasDirectAccess = hasDirectStorageAccess()
+        val directDestination = if (hasDirectAccess) {
+            repository.localFileForUri(destinationDirectoryUri)
+        } else {
+            null
+        }
         for (source in sources) {
-            val directSource = if (hasDirectStorageAccess()) {
+            val directSource = if (hasDirectAccess) {
                 repository.localFileForUri(source.uri)
-            } else {
-                null
-            }
-            val directDestination = if (hasDirectStorageAccess()) {
-                repository.localFileForUri(destinationDirectoryUri)
             } else {
                 null
             }

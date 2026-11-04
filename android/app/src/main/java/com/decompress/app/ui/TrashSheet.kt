@@ -281,7 +281,11 @@ private fun TrashItemRow(
             )
             Text(
                 listOf(
-                    Formatter.formatShortFileSize(context, item.size),
+                    if (item.isDirectory) {
+                        "文件夹"
+                    } else {
+                        Formatter.formatShortFileSize(context, item.size)
+                    },
                     DateUtils.getRelativeTimeSpanString(item.deletedAt).toString()
                 ).joinToString(" · "),
                 style = MaterialTheme.typography.labelSmall,

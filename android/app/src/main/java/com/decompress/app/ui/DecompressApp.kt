@@ -92,6 +92,7 @@ import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -103,6 +104,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -144,6 +146,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -709,7 +712,6 @@ private fun FileBrowserScreen(
                     move = session.move
                 )
             }.getOrNull()
-            controller.refresh()
             transferSession = null
             transferBusy = false
             val message = when {
@@ -728,6 +730,7 @@ private fun FileBrowserScreen(
                 else -> summary.firstError ?: "${action}失败"
             }
             notify(message)
+            controller.refresh()
         }
     }
 
@@ -813,6 +816,16 @@ private fun FileBrowserScreen(
                 parentPath = controller.path.joinToString(" / ")
             )
         }
+    }
+
+    val directStorage =
+        controller.storageMode == FileBrowserController.StorageMode.DIRECT
+
+    fun toggleQuickAccess() {
+        val opening = !storageExpanded
+        closePanelPopups()
+        storageExpanded = opening
+        if (opening) refreshExternalStorages()
     }
 
     BackHandler { handleBack() }
@@ -912,62 +925,21 @@ private fun FileBrowserScreen(
                         },
                         title = {
                             if (transferSession != null) {
-                                Column {
-                                    Text(
-                                        if (transferSession?.move == true) {
-                                            "选择移动目标"
-                                        } else {
-                                            "选择复制目标"
-                                        },
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-                                    Text(
-                                        controller.path.joinToString(" / "),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
+                                QuickAccessTopTitle(
+                                    directStorage = directStorage,
+                                    folderName = controller.folderName,
+                                    expanded = storageExpanded,
+                                    onClick = ::toggleQuickAccess
+                                )
                             } else if (controller.treeUri == null) {
                                 Text("Zippest", style = MaterialTheme.typography.titleLarge)
                             } else {
-                                val directStorage =
-                                    controller.storageMode ==
-                                        FileBrowserController.StorageMode.DIRECT
-                                Row(
-                                    modifier = Modifier
-                                        .clickable(enabled = directStorage) {
-                                            val opening = !storageExpanded
-                                            closePanelPopups()
-                                            storageExpanded = opening
-                                            if (opening) refreshExternalStorages()
-                                        }
-                                        .padding(end = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        controller.path.toDisplayPath(
-                                            controller.storageMode
-                                        ),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    if (directStorage) {
-                                        Spacer(Modifier.size(2.dp))
-                                        Icon(
-                                            Icons.Outlined.KeyboardArrowDown,
-                                            contentDescription = if (storageExpanded) {
-                                                "收起固定位置"
-                                            } else {
-                                                "展开固定位置"
-                                            },
-                                            tint = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.size(21.dp)
-                                        )
-                                    }
-                                }
+                                QuickAccessTopTitle(
+                                    directStorage = directStorage,
+                                    folderName = controller.folderName,
+                                    expanded = storageExpanded,
+                                    onClick = ::toggleQuickAccess
+                                )
                             }
                         },
                         actions = {
@@ -1370,7 +1342,7 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {
                             moreExpanded = false
-                            notify("Zippest 1.5.16 · 文件浏览与压缩")
+                            notify("Zippest 1.5.17 · 文件浏览与压缩")
                         }
                     )
                 }
@@ -1435,11 +1407,12 @@ private fun FileBrowserScreen(
         val itemCount = selectedEntries.size
         DeleteConfirmationDialog(
             itemCount = itemCount,
+            useTrash = appSettings.useTrash,
             onDismiss = { showDeleteConfirmation = false },
             onConfirm = {
                 showDeleteConfirmation = false
                 scope.launch {
-                    val count = controller.deleteSelected()
+                    val count = controller.deleteSelected(refreshAfter = false)
                     notify(
                         when {
                             count <= 0 ->
@@ -1449,6 +1422,7 @@ private fun FileBrowserScreen(
                             else -> "已永久删除 $count 项"
                         }
                     )
+                    controller.refresh()
                 }
             }
         )
@@ -2240,35 +2214,117 @@ private fun MediaThumbnail(entry: BrowserEntry) {
 @Composable
 private fun DeleteConfirmationDialog(
     itemCount: Int,
+    useTrash: Boolean,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                "$itemCount 项",
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onConfirm,
-                enabled = itemCount > 0
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp),
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+            shadowElevation = 14.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Surface(
+                    modifier = Modifier.size(58.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.errorContainer
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Outlined.Delete,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.size(29.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(18.dp))
                 Text(
-                    "确认",
-                    color = MaterialTheme.colorScheme.error
+                    if (itemCount == 1) "删除 1 项？" else "删除 $itemCount 项？",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center
                 )
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    if (useTrash) "删除后可在回收站恢复" else "此操作无法撤销",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp)
+                    ) {
+                        Text("取消")
+                    }
+                    Button(
+                        onClick = onConfirm,
+                        enabled = itemCount > 0,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError
+                        )
+                    ) {
+                        Text("删除")
+                    }
+                }
             }
         }
-    )
+    }
+}
+
+@Composable
+private fun QuickAccessTopTitle(
+    directStorage: Boolean,
+    folderName: String,
+    expanded: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .clickable(enabled = directStorage, onClick = onClick)
+            .padding(end = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            if (directStorage) "快速访问" else folderName.ifBlank { "文件" },
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        if (directStorage) {
+            Spacer(Modifier.size(2.dp))
+            Icon(
+                Icons.Outlined.KeyboardArrowDown,
+                contentDescription = if (expanded) {
+                    "收起固定位置"
+                } else {
+                    "展开固定位置"
+                },
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(21.dp)
+            )
+        }
+    }
 }
 
 @Composable
@@ -2918,27 +2974,6 @@ private fun entryMeta(context: Context, entry: BrowserEntry): String {
             date
         ).filter { it.isNotBlank() }.joinToString(" · ")
     }
-}
-
-private fun List<String>.toDisplayPath(
-    storageMode: FileBrowserController.StorageMode?
-): String {
-    if (isEmpty()) {
-        return if (storageMode == FileBrowserController.StorageMode.DIRECT) {
-            "快速访问"
-        } else {
-            ""
-        }
-    }
-    val displayPath = if (
-        storageMode == FileBrowserController.StorageMode.DIRECT &&
-        firstOrNull() == "内部存储"
-    ) {
-        listOf("快速访问") + drop(1)
-    } else {
-        this
-    }
-    return displayPath.joinToString(" / ")
 }
 
 internal fun fileNameWithSuffixSelected(name: String): TextFieldValue {

@@ -7,7 +7,7 @@ creating common archive formats. The product UI follows the finalized prototype 
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.5.16`
+- Version: `1.5.17`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct
@@ -47,10 +47,11 @@ creating common archive formats. The product UI follows the finalized prototype 
 - Preselect the text after the last dot when renaming and replace it with 7Z, ZIP,
   RAR, or a user-defined suffix.
 - Browse copy and move destinations inside Zippest with breadcrumb navigation and
-  no system document picker.
+  no system document picker; the destination picker also exposes Quick Access.
 - Prefer direct filesystem operations for create, rename, delete, copy, and move
   when all-files access is available, even when browsing through SAF.
-- Delete selected files immediately without an additional in-app confirmation.
+- Confirm deletion with a compact count-based dialog, then use the fastest
+  direct filesystem path available for the selected entries.
 - Keep deleted files in a recycle bin with restore, permanent deletion, clear-all,
   and configurable retention.
 - Render operation notices as compact cards centered in the app window.
@@ -58,6 +59,10 @@ creating common archive formats. The product UI follows the finalized prototype 
   the right-side arrow opens the clipboard list.
 - Hide the duplicated internal-storage subtitle and use a quick-location grid with
   dedicated icons for root, downloads, media, and documents.
+- Keep the direct-storage top bar compact as “Quick Access” without appending the
+  current path; authorized SAF folders show only the current folder name.
+- Avoid pre-scanning the full size of deleted folders and show move completion
+  before refreshing the destination listing.
 - Tap an archive row to open extraction directly; use its trailing chevron to preview.
   Preview mode shows an animated border and a clear extraction-required notice.
 - Tap any file inside the preview to open extraction settings for the complete archive.
@@ -109,8 +114,13 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
-Version `1.5.16` completes automatic multi-volume RAR extraction from the first
-volume and traverses files that start in later volumes. Version `1.5.15` uses
+Version `1.5.17` stops showing the current path in the quick-access top bar, so
+long folder paths no longer produce a clipped address. It also keeps Quick
+Access available while choosing a move or copy destination, redesigns the
+delete confirmation, avoids a full directory-size scan before deleting, and
+shows completion before refreshing the destination. Version `1.5.16` completes
+automatic multi-volume RAR extraction from the first volume and traverses files
+that start in later volumes. Version `1.5.15` uses
 the regular text keyboard for password fields so IME
 clipboard/paste controls remain available, and listens for clipboard changes.
 Version `1.5.14` completed the About section with app information, privacy
