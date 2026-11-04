@@ -947,7 +947,9 @@ private fun FileBrowserScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        controller.path.joinToString(" / "),
+                                        controller.path.toDisplayPath(
+                                            controller.storageMode
+                                        ),
                                         style = MaterialTheme.typography.titleMedium,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -1368,7 +1370,7 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {
                             moreExpanded = false
-                            notify("Zippest 1.5.12 · 文件浏览与压缩")
+                            notify("Zippest 1.5.13 · 文件浏览与压缩")
                         }
                     )
                 }
@@ -2434,8 +2436,6 @@ private fun StorageQuickLocationPanel(
     onOpenExternal: (ExternalStorageLocation) -> Unit
 ) {
     val root = Environment.getExternalStorageDirectory()
-    val primaryLocation = locations.firstOrNull { it.id == "root" }
-    val remainingLocations = locations.filterNot { it.id == "root" }
 
     fun isCurrent(location: QuickLocation): Boolean {
         val expected = File(root, location.path)
@@ -2478,15 +2478,7 @@ private fun StorageQuickLocationPanel(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                primaryLocation?.let { location ->
-                    StorageQuickLocation(
-                        location = location,
-                        selected = isCurrent(location),
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = { onOpen(location) }
-                    )
-                }
-                remainingLocations.chunked(2).forEach { rowLocations ->
+                locations.chunked(2).forEach { rowLocations ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -2926,6 +2918,27 @@ private fun entryMeta(context: Context, entry: BrowserEntry): String {
             date
         ).filter { it.isNotBlank() }.joinToString(" · ")
     }
+}
+
+private fun List<String>.toDisplayPath(
+    storageMode: FileBrowserController.StorageMode?
+): String {
+    if (isEmpty()) {
+        return if (storageMode == FileBrowserController.StorageMode.DIRECT) {
+            "快速访问"
+        } else {
+            ""
+        }
+    }
+    val displayPath = if (
+        storageMode == FileBrowserController.StorageMode.DIRECT &&
+        firstOrNull() == "内部存储"
+    ) {
+        listOf("快速访问") + drop(1)
+    } else {
+        this
+    }
+    return displayPath.joinToString(" / ")
 }
 
 internal fun fileNameWithSuffixSelected(name: String): TextFieldValue {
