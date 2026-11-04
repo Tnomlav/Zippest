@@ -85,7 +85,10 @@ private enum class SettingsPopup {
     TASK_QUEUE,
     TRASH,
     QUICK_LOCATION_EDITOR,
-    QUICK_LOCATION_DELETE
+    QUICK_LOCATION_DELETE,
+    ABOUT_INFO,
+    PRIVACY_POLICY,
+    OPEN_SOURCE_LICENSES
 }
 
 @Composable
@@ -170,10 +173,18 @@ fun SettingsScreen(
         activePopup = SettingsPopup.QUICK_LOCATION_EDITOR
     }
 
+    fun openExternalLink(url: String) {
+        runCatching {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        }.onFailure {
+            onNotify("没有可打开此链接的应用")
+        }
+    }
+
     val versionName = remember {
         runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
-        }.getOrNull() ?: "1.5.13"
+        }.getOrNull() ?: "1.5.14"
     }
 
     BackHandler(onBack = onBack)
@@ -593,20 +604,40 @@ fun SettingsScreen(
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
                         Text(
                             "Zippest $versionName",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "解压：ZIP · 7Z · RAR · TAR · ZST · BR · " +
-                                "GZ · BZ2 · XZ · LZMA · LZ4 · CPIO\n" +
-                                "创建：ZIP · 7Z · TAR 系列 · ZST · " +
-                                "GZ · BZ2 · XZ · LZMA · LZ4 · CPIO\n" +
-                                "包名：${context.packageName}",
+                            "Android 文件管理与压缩工具",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    SettingsDivider()
+                    SettingsAction(
+                        title = "应用信息",
+                        detail = "版本、包名、系统要求与项目地址",
+                        onClick = { activePopup = SettingsPopup.ABOUT_INFO }
+                    )
+                    SettingsDivider()
+                    SettingsAction(
+                        title = "隐私政策",
+                        detail = "数据收集、本地处理、权限与剪贴板说明",
+                        onClick = { activePopup = SettingsPopup.PRIVACY_POLICY }
+                    )
+                    SettingsDivider()
+                    SettingsAction(
+                        title = "第三方开源许可",
+                        detail = "查看压缩引擎、界面框架等组件许可证",
+                        onClick = { activePopup = SettingsPopup.OPEN_SOURCE_LICENSES }
+                    )
+                    SettingsDivider()
+                    SettingsAction(
+                        title = "GitHub 项目",
+                        detail = ZIPPEST_GITHUB_URL,
+                        onClick = { openExternalLink(ZIPPEST_GITHUB_URL) }
+                    )
                 }
             }
             item { Spacer(Modifier.height(10.dp).navigationBarsPadding()) }
@@ -620,6 +651,19 @@ fun SettingsScreen(
         SettingsPopup.TRASH -> TrashSheet(
             onDismiss = { activePopup = null },
             onChanged = { message -> onNotify(message) }
+        )
+        SettingsPopup.ABOUT_INFO -> AboutInfoDialog(
+            versionName = versionName,
+            packageName = context.packageName,
+            onOpenLink = ::openExternalLink,
+            onDismiss = { activePopup = null }
+        )
+        SettingsPopup.PRIVACY_POLICY -> PrivacyPolicyDialog(
+            onDismiss = { activePopup = null }
+        )
+        SettingsPopup.OPEN_SOURCE_LICENSES -> OpenSourceLicensesDialog(
+            onOpenLink = ::openExternalLink,
+            onDismiss = { activePopup = null }
         )
         SettingsPopup.QUICK_LOCATION_EDITOR -> QuickLocationEditorDialog(
             repository = quickLocationRepository,

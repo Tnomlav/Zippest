@@ -7,7 +7,7 @@ creating common archive formats. The product UI follows the finalized prototype 
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.5.13`
+- Version: `1.5.14`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct
@@ -107,7 +107,9 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
-Version `1.5.13` renames the direct-storage path prefix in the top app bar to
+Version `1.5.14` completes the About section with app information, privacy
+policy, third-party open-source notices, and a GitHub project link.
+Version `1.5.13` renamed the direct-storage path prefix in the top app bar to
 “Quick Access” while retaining “Internal Storage” as an equally sized root
 shortcut in the quick-access grid.
 Version `1.5.12` renamed quick locations, adds mounted removable volumes to

@@ -1370,7 +1370,7 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {
                             moreExpanded = false
-                            notify("Zippest 1.5.13 · 文件浏览与压缩")
+                            notify("Zippest 1.5.14 · 文件浏览与压缩")
                         }
                     )
                 }

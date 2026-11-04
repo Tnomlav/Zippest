@@ -81,8 +81,11 @@ android/app/build/outputs/apk/release/app-release.apk
 
 ## 当前版本
 
-当前版本为 `1.5.13`，包名继续使用 `com.decompress.app`，以保持已有版本升级
+当前版本为 `1.5.14`，包名继续使用 `com.decompress.app`，以保持已有版本升级
 兼容性。
+
+此版本补全了“关于”页面，提供应用信息、完整隐私政策、第三方开源许可和
+GitHub 项目入口。
 
 此版本将文件页顶栏中的内部存储路径前缀改为“快速访问”，快速访问面板中的
 根快捷项仍保持“内部存储”，并与其他快捷入口使用相同的单格尺寸。
@@ -99,3 +102,8 @@ android/app/build/outputs/apk/release/app-release.apk
 完整版本历史与安装包请查看：
 
 https://github.com/Tnomlav/Zippest/releases
+
+## 隐私与许可
+
+- [隐私政策](PRIVACY.md)
+- [第三方开源许可](THIRD_PARTY_NOTICES.md)
