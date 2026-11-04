@@ -33,12 +33,14 @@ class QuickLocationRepository(context: Context) {
         Context.MODE_PRIVATE
     )
 
-    var locations by mutableStateOf(
-        preferences.getString(KEY_LOCATIONS, null)
-            ?.let(::decodeQuickLocations)
-            ?: defaultQuickLocations()
-    )
+    var locations by mutableStateOf(loadLocations())
         private set
+
+    init {
+        preferences.edit {
+            putString(KEY_LOCATIONS, encodeQuickLocations(locations))
+        }
+    }
 
     fun add(label: String, path: String): QuickLocation {
         val location = QuickLocation(
@@ -70,6 +72,19 @@ class QuickLocationRepository(context: Context) {
         }
     }
 
+    private fun loadLocations(): List<QuickLocation> {
+        val stored = preferences.getString(KEY_LOCATIONS, null)
+            ?.let(::decodeQuickLocations)
+            ?: defaultQuickLocations()
+        return stored.map { location ->
+            if (location.id == "root" && location.label == "目录首页") {
+                location.copy(label = "内部存储")
+            } else {
+                location
+            }
+        }
+    }
+
     companion object {
         private const val PREFERENCES = "zippest-quick-locations"
         private const val KEY_LOCATIONS = "locations"
@@ -77,7 +92,7 @@ class QuickLocationRepository(context: Context) {
 }
 
 internal fun defaultQuickLocations(): List<QuickLocation> = listOf(
-    QuickLocation("root", "目录首页", "", QuickLocationIcon.HOME),
+    QuickLocation("root", "内部存储", "", QuickLocationIcon.HOME),
     QuickLocation("downloads", "下载", "Download", QuickLocationIcon.DOWNLOAD),
     QuickLocation("pictures", "相册", "Pictures", QuickLocationIcon.PICTURES),
     QuickLocation("camera", "相机", "DCIM", QuickLocationIcon.CAMERA),

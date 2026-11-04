@@ -173,7 +173,7 @@ fun SettingsScreen(
     val versionName = remember {
         runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
-        }.getOrNull() ?: "1.5.11"
+        }.getOrNull() ?: "1.5.12"
     }
 
     BackHandler(onBack = onBack)
@@ -287,7 +287,7 @@ fun SettingsScreen(
                 }
             }
             item {
-                SettingsSection("内部存储快捷位置") {
+                SettingsSection("快速访问") {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -331,8 +331,8 @@ fun SettingsScreen(
                     }
                     SettingsDivider()
                     SettingsAction(
-                        title = "恢复默认快捷位置",
-                        detail = "恢复目录首页、下载、相册、相机等默认入口",
+                        title = "恢复默认快速访问",
+                        detail = "恢复内部存储、下载、相册、相机等默认入口",
                         onClick = {
                             quickLocationRepository.reset()
                             onNotify("已恢复默认快捷位置")

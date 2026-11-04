@@ -12,6 +12,10 @@ class QuickLocationsTest {
 
         assertFalse(locations.any { it.id == "music" })
         assertEquals(
+            "内部存储",
+            locations.single { it.id == "root" }.label
+        )
+        assertEquals(
             locations,
             decodeQuickLocations(encodeQuickLocations(locations))
         )

@@ -22,6 +22,7 @@ import android.os.Environment
 import android.os.SystemClock
 import android.provider.Settings
 import android.os.StatFs
+import android.os.storage.StorageManager
 import android.provider.OpenableColumns
 import android.text.format.DateUtils
 import android.text.format.Formatter
@@ -86,6 +87,7 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Sort
+import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material3.AlertDialog
@@ -190,6 +192,11 @@ private data class TransferSession(
     val sources: List<BrowserEntry>,
     val move: Boolean,
     val sourceLocation: FileBrowserController.LocationSnapshot
+)
+
+private data class ExternalStorageLocation(
+    val label: String,
+    val path: String
 )
 
 @Composable
@@ -458,6 +465,9 @@ private fun FileBrowserScreen(
     var searchMode by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     var pullRefreshing by remember { mutableStateOf(false) }
+    var externalStorages by remember {
+        mutableStateOf<List<ExternalStorageLocation>>(emptyList())
+    }
     var storageExpanded by remember { mutableStateOf(false) }
     var sortExpanded by remember { mutableStateOf(false) }
     var moreExpanded by remember { mutableStateOf(false) }
@@ -524,6 +534,14 @@ private fun FileBrowserScreen(
         }
     }
 
+    fun refreshExternalStorages() {
+        scope.launch {
+            externalStorages = withContext(Dispatchers.IO) {
+                discoverExternalStorageLocations(context)
+            }
+        }
+    }
+
     fun closePanelPopups() {
         storageExpanded = false
         sortExpanded = false
@@ -567,6 +585,35 @@ private fun FileBrowserScreen(
             } else {
                 notify("没有可打开此文件的应用")
             }
+        }
+    }
+
+    LaunchedEffect(context) {
+        externalStorages = withContext(Dispatchers.IO) {
+            discoverExternalStorageLocations(context)
+        }
+    }
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                refreshExternalStorages()
+            }
+        }
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            IntentFilter().apply {
+                addAction(Intent.ACTION_MEDIA_MOUNTED)
+                addAction(Intent.ACTION_MEDIA_UNMOUNTED)
+                addAction(Intent.ACTION_MEDIA_EJECT)
+                addAction(Intent.ACTION_MEDIA_REMOVED)
+                addAction(Intent.ACTION_MEDIA_BAD_REMOVAL)
+                addDataScheme("file")
+            },
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        onDispose {
+            context.unregisterReceiver(receiver)
         }
     }
 
@@ -894,6 +941,7 @@ private fun FileBrowserScreen(
                                             val opening = !storageExpanded
                                             closePanelPopups()
                                             storageExpanded = opening
+                                            if (opening) refreshExternalStorages()
                                         }
                                         .padding(end = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
@@ -1207,6 +1255,7 @@ private fun FileBrowserScreen(
                     topInset = padding.calculateTopPadding(),
                     currentUri = controller.currentUri,
                     locations = quickLocationRepository.locations,
+                    externalStorages = externalStorages,
                     onDismiss = { storageExpanded = false },
                     onAdd = {
                         closePanelPopups()
@@ -1222,6 +1271,19 @@ private fun FileBrowserScreen(
                             )
                             if (!opened) {
                                 notify("${location.label}不可用")
+                            }
+                        }
+                    },
+                    onOpenExternal = { storage ->
+                        storageExpanded = false
+                        scope.launch {
+                            val opened = controller.openStorageRoot(
+                                File(storage.path),
+                                storage.label
+                            )
+                            if (!opened) {
+                                notify("${storage.label}不可用")
+                                refreshExternalStorages()
                             }
                         }
                     }
@@ -1306,7 +1368,7 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {
                             moreExpanded = false
-                            notify("Zippest 1.5.11 · 文件浏览与压缩")
+                            notify("Zippest 1.5.12 · 文件浏览与压缩")
                         }
                     )
                 }
@@ -2365,9 +2427,11 @@ private fun StorageQuickLocationPanel(
     topInset: Dp,
     currentUri: Uri?,
     locations: List<QuickLocation>,
+    externalStorages: List<ExternalStorageLocation>,
     onDismiss: () -> Unit,
     onAdd: () -> Unit,
-    onOpen: (QuickLocation) -> Unit
+    onOpen: (QuickLocation) -> Unit,
+    onOpenExternal: (ExternalStorageLocation) -> Unit
 ) {
     val root = Environment.getExternalStorageDirectory()
     val primaryLocation = locations.firstOrNull { it.id == "root" }
@@ -2422,33 +2486,96 @@ private fun StorageQuickLocationPanel(
                         onClick = { onOpen(location) }
                     )
                 }
-                val remainingItems = remainingLocations.map { it as QuickLocation? } +
-                    listOf(null)
-                remainingItems.chunked(2).forEach { rowItems ->
+                remainingLocations.chunked(2).forEach { rowLocations ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        rowItems.forEach { location ->
-                            if (location == null) {
-                                StorageQuickLocationAdd(
-                                    modifier = Modifier.weight(1f),
-                                    onClick = onAdd
-                                )
-                            } else {
-                                StorageQuickLocation(
-                                    location = location,
-                                    selected = isCurrent(location),
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { onOpen(location) }
-                                )
-                            }
+                        rowLocations.forEach { location ->
+                            StorageQuickLocation(
+                                location = location,
+                                selected = isCurrent(location),
+                                modifier = Modifier.weight(1f),
+                                onClick = { onOpen(location) }
+                            )
                         }
-                        if (rowItems.size == 1) {
+                        if (rowLocations.size == 1) {
                             Spacer(Modifier.weight(1f))
                         }
                     }
                 }
+                externalStorages.forEach { storage ->
+                    StorageExternalQuickLocation(
+                        storage = storage,
+                        selected = currentUri == Uri.fromFile(File(storage.path)),
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onOpenExternal(storage) }
+                    )
+                }
+                StorageQuickLocationAdd(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onAdd
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StorageExternalQuickLocation(
+    storage: ExternalStorageLocation,
+    selected: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(
+            alpha = if (selected) 0.9f else 0.55f
+        ),
+        border = if (selected) {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+        } else {
+            null
+        }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 52.dp)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Outlined.Storage,
+                contentDescription = null,
+                tint = if (selected) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+                modifier = Modifier.size(21.dp)
+            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 8.dp)
+            ) {
+                Text(
+                    storage.label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    storage.path,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.MiddleEllipsis
+                )
             }
         }
     }
@@ -2550,6 +2677,63 @@ private fun StorageQuickLocation(
             )
         }
     }
+}
+
+private fun discoverExternalStorageLocations(
+    context: Context
+): List<ExternalStorageLocation> {
+    val internalRoot = runCatching {
+        Environment.getExternalStorageDirectory().canonicalPath
+    }.getOrDefault(Environment.getExternalStorageDirectory().absolutePath)
+    val roots = linkedMapOf<String, String>()
+    val usedLabels = mutableSetOf<String>()
+
+    fun addRoot(path: String?, label: String) {
+        val directory = path?.let(::File) ?: return
+        if (!directory.isDirectory) return
+        val canonical = runCatching { directory.canonicalPath }
+            .getOrDefault(directory.absolutePath)
+        if (canonical == internalRoot || roots.containsKey(canonical)) return
+        val baseLabel = label.ifBlank { "外部存储" }
+        var uniqueLabel = baseLabel
+        var index = 2
+        while (!usedLabels.add(uniqueLabel)) {
+            uniqueLabel = "$baseLabel $index"
+            index++
+        }
+        roots[canonical] = uniqueLabel
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        val storageManager = context.getSystemService(StorageManager::class.java)
+        storageManager?.storageVolumes.orEmpty()
+            .filter { volume ->
+                !volume.isPrimary &&
+                    (
+                        volume.state == Environment.MEDIA_MOUNTED ||
+                            volume.state == Environment.MEDIA_MOUNTED_READ_ONLY
+                        )
+            }
+            .forEach { volume ->
+                addRoot(
+                    volume.directory?.absolutePath,
+                    volume.getDescription(context)
+                )
+            }
+    }
+
+    context.getExternalFilesDirs(null).forEachIndexed { index, appDirectory ->
+        val appPath = appDirectory?.absolutePath ?: return@forEachIndexed
+        val androidMarker = appPath.indexOf("/Android/")
+        if (androidMarker <= 0) return@forEachIndexed
+        addRoot(
+            appPath.substring(0, androidMarker),
+            if (index == 0) "外部存储" else "外部存储 $index"
+        )
+    }
+    return roots.entries
+        .map { (path, label) -> ExternalStorageLocation(label, path) }
+        .sortedBy { it.label.lowercase() }
 }
 
 @Composable

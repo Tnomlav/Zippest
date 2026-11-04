@@ -119,6 +119,23 @@ class FileBrowserController(context: Context) {
         return true
     }
 
+    suspend fun openStorageRoot(root: File, label: String): Boolean {
+        if (!hasDirectStorageAccess() || !root.isDirectory) return false
+        val internalRoot = Environment.getExternalStorageDirectory()
+        storageMode = StorageMode.DIRECT
+        treeUri = Uri.fromFile(root)
+        currentUri = Uri.fromFile(root)
+        folderName = label
+        path = listOf(label)
+        backStack.clear()
+        if (root.canonicalFile != internalRoot.canonicalFile) {
+            backStack.addLast(Uri.fromFile(internalRoot) to "内部存储")
+        }
+        clearSelection()
+        loadCurrent()
+        return error == null
+    }
+
     suspend fun openFixedLocation(label: String, relativePath: String?): Boolean {
         if (storageMode != StorageMode.DIRECT) return false
         val root = Environment.getExternalStorageDirectory()

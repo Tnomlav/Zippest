@@ -215,6 +215,25 @@ class FileOperationsDeviceTest {
     }
 
     @Test
+    fun externalStorageRootCanBeOpenedAndReturnsToInternalStorage() = runBlocking {
+        val externalRoot = File(baseDirectory, "external-root").apply {
+            assertTrue(mkdirs())
+        }
+        File(externalRoot, "external.txt").writeText("external")
+
+        assertTrue(controller.openStorageRoot(externalRoot, "外部存储测试"))
+        assertEquals(Uri.fromFile(externalRoot), controller.currentUri)
+        assertEquals("外部存储测试", controller.folderName)
+        assertTrue(controller.entries.any { it.name == "external.txt" })
+
+        assertTrue(controller.goUp())
+        assertEquals(
+            Uri.fromFile(Environment.getExternalStorageDirectory()),
+            controller.currentUri
+        )
+    }
+
+    @Test
     fun safRenameAndDeleteWorkThroughDocumentsProvider() = runBlocking {
         val repository = SafFileRepository(context)
         val treeUri = createProviderDirectory("saf")
