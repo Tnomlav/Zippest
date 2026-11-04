@@ -6,6 +6,7 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
 import com.github.junrar.Archive as RarArchive
+import com.github.junrar.rarfile.FileHeader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.compress.archivers.ArchiveEntry
@@ -156,6 +157,7 @@ class MultiArchiveEngine(private val context: Context) {
         block: suspend (Uri, String) -> T
     ): T {
         val nativeZip = resolveNativeSplitZip(
+            archiveUri,
             archiveName,
             archiveTreeUri,
             archiveParentUri
@@ -181,10 +183,51 @@ class MultiArchiveEngine(private val context: Context) {
                 directory.deleteRecursively()
             }
         }
+        val rarVolumes = resolveRarVolumes(
+            archiveUri = archiveUri,
+            archiveName = archiveName,
+            treeUri = archiveTreeUri,
+            parentUri = archiveParentUri
+        )
+        if (rarVolumes != null) {
+            val localParts = rarVolumes.mapNotNull { repository.localFileForUri(it.uri) }
+            if (localParts.size == rarVolumes.size) {
+                return block(
+                    Uri.fromFile(localParts.first()),
+                    rarVolumes.first().name
+                )
+            }
+            val directory = Files.createTempDirectory(
+                context.cacheDir.toPath(),
+                "zippest-rar-volumes-"
+            ).toFile()
+            try {
+                withContext(Dispatchers.IO) {
+                    rarVolumes.forEach { part ->
+                        resolver.openInputStream(part.uri)?.use { input ->
+                            File(directory, part.name).outputStream().use { output ->
+                                input.copyTo(output, 64 * 1024)
+                            }
+                        } ?: throw ArchiveException("无法读取分卷：${part.name}")
+                    }
+                }
+                return block(
+                    Uri.fromFile(File(directory, rarVolumes.first().name)),
+                    rarVolumes.first().name
+                )
+            } finally {
+                directory.deleteRecursively()
+            }
+        }
         if (!isFirstSplitVolume(archiveName)) {
             return block(archiveUri, archiveName)
         }
-        val parts = findSplitParts(archiveName, archiveTreeUri, archiveParentUri)
+        val parts = findSplitParts(
+            archiveUri,
+            archiveName,
+            archiveTreeUri,
+            archiveParentUri
+        )
         if (parts.isEmpty()) throw ArchiveException("找不到完整的分卷文件")
         val temp = File.createTempFile("zippest-parts-", ".tmp", context.cacheDir)
         try {
@@ -204,6 +247,7 @@ class MultiArchiveEngine(private val context: Context) {
     }
 
     private suspend fun resolveNativeSplitZip(
+        archiveUri: Uri,
         archiveName: String,
         treeUri: Uri?,
         parentUri: Uri?
@@ -220,13 +264,7 @@ class MultiArchiveEngine(private val context: Context) {
             RegexOption.IGNORE_CASE
         )
         val finalName = baseName + ".zip"
-        val children = parentUri?.localFile()?.let { parent ->
-            parent.listFiles().orEmpty().map { repository.directEntry(it) }
-        } ?: if (treeUri != null && parentUri != null) {
-            repository.listChildren(treeUri, parentUri)
-        } else {
-            emptyList()
-        }
+        val children = siblingEntries(archiveUri, treeUri, parentUri)
         val volumes = children.filter { volumePattern.matches(it.name) }
             .sortedBy { entry ->
                 volumePattern.matchEntire(entry.name)
@@ -246,7 +284,59 @@ class MultiArchiveEngine(private val context: Context) {
         return volumes.map { it.name to it.uri } + (finalPart.name to finalPart.uri)
     }
 
+    private suspend fun resolveRarVolumes(
+        archiveUri: Uri,
+        archiveName: String,
+        treeUri: Uri?,
+        parentUri: Uri?
+    ): List<BrowserEntry>? {
+        val children = siblingEntries(archiveUri, treeUri, parentUri)
+        val selectedEntry = children.firstOrNull {
+            it.name.equals(archiveName, ignoreCase = true)
+        } ?: repository.localFileForUri(archiveUri)?.let { local ->
+            repository.directEntry(local)
+        } ?: BrowserEntry(
+            uri = archiveUri,
+            name = archiveName,
+            isDirectory = false,
+            size = 0L,
+            lastModified = 0L,
+            mimeType = "application/x-rar-compressed"
+        )
+        val partVolume = parseRarPartVolume(archiveName)
+        if (partVolume != null) {
+            val firstNumber = if (partVolume.zeroBased) 0 else 1
+            if (partVolume.number != firstNumber) return null
+            val parts = children.mapNotNull { entry ->
+                parseRarPartVolume(entry.name)
+                    ?.takeIf { it.baseName.equals(partVolume.baseName, ignoreCase = true) }
+                    ?.let { it.number to entry }
+            }.toMap().toMutableMap()
+            parts[partVolume.number] = selectedEntry
+            val numbers = parts.keys.sorted()
+            if (numbers != (firstNumber until firstNumber + numbers.size).toList()) {
+                throw ArchiveException("RAR 分卷编号不连续，请从第一个分卷开始")
+            }
+            return numbers.mapNotNull(parts::get)
+        }
+
+        if (!archiveName.endsWith(".rar", ignoreCase = true)) return null
+        val baseName = archiveName.dropLast(4)
+        val legacyParts = children.mapNotNull { entry ->
+            parseLegacyRarVolume(entry.name)
+                ?.takeIf { it.baseName.equals(baseName, ignoreCase = true) }
+                ?.let { it.number to entry }
+        }.toMap().toMutableMap()
+        if (legacyParts.isEmpty()) return null
+        val numbers = legacyParts.keys.sorted()
+        if (numbers != (0 until numbers.size).toList()) {
+            throw ArchiveException("RAR 分卷编号不连续，请确保从 .r00 开始")
+        }
+        return listOf(selectedEntry) + numbers.mapNotNull(legacyParts::get)
+    }
+
     private suspend fun findSplitParts(
+        archiveUri: Uri,
         firstName: String,
         treeUri: Uri?,
         parentUri: Uri?
@@ -256,16 +346,11 @@ class MultiArchiveEngine(private val context: Context) {
             Regex.escape(baseName) + """\.(\d{3,})$""",
             RegexOption.IGNORE_CASE
         )
-        val candidates: List<BrowserEntry> = parentUri?.localFile()?.let { parent ->
-            parent.listFiles().orEmpty()
-                .filter { pattern.matches(it.name) }
-                .map { repository.directEntry(it) }
-        } ?: if (treeUri != null && parentUri != null) {
-            repository.listChildren(treeUri, parentUri)
-                .filter { pattern.matches(it.name) }
-        } else {
-            emptyList()
-        }
+        val candidates = siblingEntries(
+            archiveUri,
+            treeUri,
+            parentUri
+        ).filter { pattern.matches(it.name) }
         val sorted = candidates.sortedBy { entry ->
             pattern.matchEntire(entry.name)?.groupValues?.get(1)?.toIntOrNull() ?: Int.MAX_VALUE
         }
@@ -278,12 +363,31 @@ class MultiArchiveEngine(private val context: Context) {
         return sorted
     }
 
+    private suspend fun siblingEntries(
+        archiveUri: Uri,
+        treeUri: Uri?,
+        parentUri: Uri?
+    ): List<BrowserEntry> {
+        parentUri?.localFile()?.let { parent ->
+            return parent.listFiles().orEmpty().map { repository.directEntry(it) }
+        }
+        if (treeUri != null && parentUri != null) {
+            return repository.listChildren(treeUri, parentUri)
+        }
+        return repository.localFileForUri(archiveUri)
+            ?.parentFile
+            ?.listFiles()
+            .orEmpty()
+            .map { repository.directEntry(it) }
+    }
+
     private suspend fun testSevenZ(
         uri: Uri,
         password: String,
         onProgress: (Int, Int) -> Unit
-    ): Int = withTempArchive(uri) { file ->
+    ): Int = withArchiveFile(uri) { file ->
         runCatching {
+            val packedSize = packedSizeForVolumes(file)
             val archive = if (password.isBlank()) {
                 SevenZFile(file)
             } else {
@@ -297,7 +401,7 @@ class MultiArchiveEngine(private val context: Context) {
                 val declaredBytes = entries.sumOf { entry ->
                     entry.size.coerceAtLeast(0L)
                 }
-                ensureSafeExpansion(declaredBytes, file.length())
+                ensureSafeExpansion(declaredBytes, packedSize)
                 var writtenBytes = 0L
                 entries.forEachIndexed { index, entry ->
                     if (!entry.isDirectory) {
@@ -320,24 +424,30 @@ class MultiArchiveEngine(private val context: Context) {
         uri: Uri,
         password: String,
         onProgress: (Int, Int) -> Unit
-    ): Int = withTempArchive(uri) { file ->
+    ): Int = withArchiveFile(uri) { file ->
         runCatching {
+            val headers = rarHeaders(file, password)
+            if (headers.size > MAX_ENTRIES) {
+                throw ArchiveException("压缩包条目过多，已停止测试")
+            }
+            val declaredBytes = headers.sumOf {
+                it.fullUnpackSize.coerceAtLeast(0L)
+            }
+            val packedSize = packedSizeForVolumes(file)
+            ensureSafeExpansion(declaredBytes, packedSize)
             val archive = if (password.isBlank()) {
                 RarArchive(file)
             } else {
                 RarArchive(file, password)
             }
             archive.use { rar ->
-                val headers = rar.fileHeaders
-                if (headers.size > MAX_ENTRIES) {
-                    throw ArchiveException("压缩包条目过多，已停止测试")
-                }
-                val declaredBytes = headers.sumOf {
-                    it.fullUnpackSize.coerceAtLeast(0L)
-                }
-                ensureSafeExpansion(declaredBytes, file.length())
                 var writtenBytes = 0L
-                headers.forEachIndexed { index, header ->
+                var processed = 0
+                var header = rar.nextFileHeader()
+                while (header != null) {
+                    if (processed >= MAX_ENTRIES) {
+                        throw ArchiveException("压缩包条目过多，已停止测试")
+                    }
                     if (!header.isDirectory) {
                         rar.getInputStream(header).use { input ->
                             writtenBytes += copyWithLimit(
@@ -347,9 +457,12 @@ class MultiArchiveEngine(private val context: Context) {
                             )
                         }
                     }
-                    onProgress(index + 1, headers.size)
+                    ensureSafeExpansion(writtenBytes, packedSize)
+                    processed++
+                    onProgress(processed, headers.size.coerceAtLeast(processed))
+                    header = rar.nextFileHeader()
                 }
-                headers.size
+                processed
             }
         }.getOrElse { throw ArchiveException("RAR 测试失败：${it.archiveMessage()}", it) }
     }
@@ -476,21 +589,14 @@ class MultiArchiveEngine(private val context: Context) {
     }
 
     private suspend fun listRar(uri: Uri, password: String): List<ArchiveItem> =
-        withTempArchive(uri) { file ->
+        withArchiveFile(uri) { file ->
             runCatching {
-                val archive = if (password.isBlank()) {
-                    RarArchive(file)
-                } else {
-                    RarArchive(file, password)
-                }
-                archive.use {
-                    it.fileHeaders.take(MAX_ENTRIES).map { header ->
-                        ArchiveItem(
-                            path = header.fileName,
-                            isDirectory = header.isDirectory,
-                            size = header.fullUnpackSize.coerceAtLeast(0L)
-                        )
-                    }
+                rarHeaders(file, password).take(MAX_ENTRIES).map { header ->
+                    ArchiveItem(
+                        path = header.fileName,
+                        isDirectory = header.isDirectory,
+                        size = header.fullUnpackSize.coerceAtLeast(0L)
+                    )
                 }
             }.getOrElse { throw ArchiveException("无法读取 RAR：${it.archiveMessage()}", it) }
         }
@@ -500,27 +606,33 @@ class MultiArchiveEngine(private val context: Context) {
         archiveName: String,
         settings: ExtractSettings,
         onProgress: (Int, Int) -> Unit
-    ) = withTempArchive(uri) { file ->
+    ) = withArchiveFile(uri) { file ->
         runCatching {
+            val headers = rarHeaders(file, settings.password)
+            if (headers.size > MAX_ENTRIES) {
+                throw ArchiveException("压缩包条目过多，已停止解压")
+            }
+            val declaredBytes = headers.sumOf {
+                it.fullUnpackSize.coerceAtLeast(0L)
+            }
+            val packedSize = packedSizeForVolumes(file)
+            ensureSafeExpansion(declaredBytes, packedSize)
+            ensureLocalFreeSpace(context, settings.targetTreeUri, declaredBytes)
             val archive = if (settings.password.isBlank()) {
                 RarArchive(file)
             } else {
                 RarArchive(file, settings.password)
             }
             archive.use { rar ->
-                val headers = rar.fileHeaders
-                if (headers.size > MAX_ENTRIES) {
-                    throw ArchiveException("压缩包条目过多，已停止解压")
-                }
-                val declaredBytes = headers.sumOf {
-                    it.fullUnpackSize.coerceAtLeast(0L)
-                }
-                ensureSafeExpansion(declaredBytes, file.length())
-                ensureLocalFreeSpace(context, settings.targetTreeUri, declaredBytes)
                 val output = outputWriter(settings)
                 val destination = prepareDestination(output, settings, archiveName)
                 var writtenBytes = 0L
-                headers.forEachIndexed { index, header ->
+                var processed = 0
+                var header = rar.nextFileHeader()
+                while (header != null) {
+                    if (processed >= MAX_ENTRIES) {
+                        throw ArchiveException("压缩包条目过多，已停止解压")
+                    }
                     writtenBytes += writeEntry(
                         output = output,
                         destination = destination,
@@ -533,8 +645,10 @@ class MultiArchiveEngine(private val context: Context) {
                         closeInput = true,
                         remainingBytes = MAX_TOTAL_BYTES - writtenBytes
                     )
-                    ensureSafeExpansion(writtenBytes, file.length())
-                    onProgress(index + 1, headers.size)
+                    ensureSafeExpansion(writtenBytes, packedSize)
+                    processed++
+                    onProgress(processed, headers.size.coerceAtLeast(processed))
+                    header = rar.nextFileHeader()
                 }
             }
         }.getOrElse { throw ArchiveException("RAR 解压失败：${it.archiveMessage()}", it) }
@@ -759,6 +873,72 @@ class MultiArchiveEngine(private val context: Context) {
             lowerName.endsWith(".br") -> archiveName.dropLast(3)
             else -> archiveName.substringBeforeLast('.', archiveName)
         }
+    }
+
+    private suspend fun <T> withArchiveFile(uri: Uri, block: (File) -> T): T {
+        val local = uri.localFile()
+        if (local != null) {
+            return withContext(Dispatchers.IO) {
+                if (!local.isFile) throw ArchiveException("压缩包不可用")
+                block(local)
+            }
+        }
+        return withTempArchive(uri, block)
+    }
+
+    private fun packedSizeForVolumes(firstVolume: File): Long {
+        return rarVolumeFiles(firstVolume)
+            .map { it.length() }
+            .sum()
+            .coerceAtLeast(firstVolume.length())
+    }
+
+    private fun rarHeaders(firstVolume: File, password: String): List<FileHeader> {
+        val headers = linkedMapOf<String, FileHeader>()
+        rarVolumeFiles(firstVolume).forEach { volume ->
+            val archive = if (password.isBlank()) {
+                RarArchive(volume)
+            } else {
+                RarArchive(volume, password)
+            }
+            archive.use {
+                it.fileHeaders.forEach { header ->
+                    val key = "${header.fileName}\u0000" +
+                        "${header.fullUnpackSize}\u0000${header.fileCRC}"
+                    headers.putIfAbsent(key, header)
+                }
+            }
+        }
+        return headers.values.toList()
+    }
+
+    private fun rarVolumeFiles(firstVolume: File): List<File> {
+        val siblings = firstVolume.parentFile?.listFiles().orEmpty()
+        val part = parseRarPartVolume(firstVolume.name)
+        if (part != null) {
+            return siblings
+                .mapNotNull { file ->
+                    parseRarPartVolume(file.name)
+                        ?.takeIf { it.baseName.equals(part.baseName, ignoreCase = true) }
+                        ?.let { it.number to file }
+                }
+                .sortedBy { it.first }
+                .map { it.second }
+                .ifEmpty { listOf(firstVolume) }
+        }
+        if (firstVolume.name.endsWith(".rar", ignoreCase = true)) {
+            val baseName = firstVolume.name.dropLast(4)
+            val legacy = siblings
+                .mapNotNull { file ->
+                    parseLegacyRarVolume(file.name)
+                        ?.takeIf { it.baseName.equals(baseName, ignoreCase = true) }
+                        ?.let { it.number to file }
+                }
+                .sortedBy { it.first }
+                .map { it.second }
+            if (legacy.isNotEmpty()) return listOf(firstVolume) + legacy
+        }
+        return listOf(firstVolume)
     }
 
     private suspend fun <T> withTempArchive(uri: Uri, block: (File) -> T): T =

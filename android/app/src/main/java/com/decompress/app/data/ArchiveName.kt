@@ -3,6 +3,12 @@ package com.decompress.app.data
 private val SPLIT_VOLUME_PATTERN = Regex(""".*\.(\d{3})$""")
 private val NATIVE_ZIP_VOLUME_PATTERN =
     Regex("""(.*)\.z(\d{2,})$""", RegexOption.IGNORE_CASE)
+private val RAR_PART_VOLUME_PATTERN =
+    Regex("""^(.*)\.part(\d+)\.rar$""", RegexOption.IGNORE_CASE)
+private val RAR_NUMBERED_VOLUME_PATTERN =
+    Regex("""^(.*)\.(\d{3,})\.rar$""", RegexOption.IGNORE_CASE)
+private val RAR_LEGACY_VOLUME_PATTERN =
+    Regex("""^(.*)\.r(\d{2,})$""", RegexOption.IGNORE_CASE)
 private val ARCHIVE_SUFFIXES = listOf(
     ".tar.zst",
     ".tar.br",
@@ -49,6 +55,38 @@ fun isFirstNativeZipVolume(name: String): Boolean {
 
 fun nativeZipBaseName(name: String): String? =
     NATIVE_ZIP_VOLUME_PATTERN.matchEntire(name)?.groupValues?.get(1)
+
+internal data class RarVolumeName(
+    val baseName: String,
+    val number: Int,
+    val zeroBased: Boolean = false
+)
+
+internal fun parseRarPartVolume(name: String): RarVolumeName? {
+    RAR_PART_VOLUME_PATTERN.matchEntire(name)?.let { match ->
+        return RarVolumeName(
+            baseName = match.groupValues[1],
+            number = match.groupValues[2].toIntOrNull() ?: return null
+        )
+    }
+    RAR_NUMBERED_VOLUME_PATTERN.matchEntire(name)?.let { match ->
+        return RarVolumeName(
+            baseName = match.groupValues[1],
+            number = match.groupValues[2].toIntOrNull() ?: return null,
+            zeroBased = true
+        )
+    }
+    return null
+}
+
+internal fun parseLegacyRarVolume(name: String): RarVolumeName? {
+    val match = RAR_LEGACY_VOLUME_PATTERN.matchEntire(name) ?: return null
+    return RarVolumeName(
+        baseName = match.groupValues[1],
+        number = match.groupValues[2].toIntOrNull() ?: return null,
+        zeroBased = true
+    )
+}
 
 fun isSupportedArchiveName(name: String): Boolean {
     val lower = canonicalArchiveName(name).lowercase()
