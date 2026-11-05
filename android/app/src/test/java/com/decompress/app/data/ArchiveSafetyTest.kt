@@ -2,6 +2,7 @@ package com.decompress.app.data
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -44,5 +45,41 @@ class ArchiveSafetyTest {
 
         assertEquals(7L, written)
         assertEquals("Zippest", output.toString(Charsets.UTF_8.name()))
+    }
+
+    @Test
+    fun boundedCopyReportsMonotonicProgress() {
+        val input = ByteArrayInputStream(ByteArray(256 * 1024) { it.toByte() })
+        val progress = mutableListOf<Long>()
+
+        val written = copyWithLimit(
+            input = input,
+            output = ByteArrayOutputStream(),
+            remainingBytes = Long.MAX_VALUE,
+            onProgress = { progress += it }
+        )
+
+        assertEquals(written, progress.last())
+        assertEquals(
+            progress.sorted(),
+            progress
+        )
+        assertEquals(4, progress.size)
+    }
+
+    @Test
+    fun inputStreamProgressIsClampedAndMonotonic() {
+        val progress = mutableListOf<Float>()
+        val input = ProgressInputStream(
+            ByteArrayInputStream(ByteArray(200) { it.toByte() }),
+            totalBytes = 100L,
+            onProgress = { progress += it }
+        )
+
+        input.copyTo(ByteArrayOutputStream())
+
+        assertEquals(progress.sorted(), progress)
+        assertEquals(1f, progress.last())
+        assertTrue(progress.all { it in 0f..1f })
     }
 }

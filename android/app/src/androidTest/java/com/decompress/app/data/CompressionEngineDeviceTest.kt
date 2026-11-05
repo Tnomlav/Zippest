@@ -210,6 +210,55 @@ class CompressionEngineDeviceTest {
     }
 
     @Test
+    fun splitSevenZipReportsContinuousByteProgress() = runBlocking {
+        val largeFile = File(sourceDirectory, "large-volume.bin").apply {
+            writeBytes(ByteArray(8 * 1024 * 1024).also { Random(77).nextBytes(it) })
+        }
+        val result = CompressionEngine(context).compress(
+            selected = listOf(SafFileRepository(context).directEntry(largeFile)),
+            sourceTreeUri = Uri.fromFile(sourceDirectory),
+            targetParentUri = Uri.fromFile(outputDirectory),
+            targetTreeUri = Uri.fromFile(outputDirectory),
+            options = CompressionOptions(
+                format = CompressionFormat.SEVEN_Z,
+                archiveName = "progress.7z",
+                splitSizeBytes = 512L * 1024
+            )
+        )
+        assertTrue(result.partUris.size > 1)
+        val fractions = mutableListOf<Float>()
+        val extracted = File(root, "progress-extracted").apply { mkdirs() }
+        MultiArchiveEngine(context).extract(
+            archiveUri = result.primaryUri,
+            archiveName = result.displayName,
+            settings = ExtractSettings(
+                mode = DestinationMode.CURRENT_FOLDER,
+                targetParentUri = Uri.fromFile(extracted),
+                targetTreeUri = Uri.fromFile(extracted),
+                createFolder = false,
+                conflictPolicy = ConflictPolicy.RENAME,
+                encoding = FileNameEncoding.AUTO,
+                password = ""
+            ),
+            onProgress = { _, _ -> },
+            onFractionProgress = { fractions += it },
+            archiveTreeUri = Uri.fromFile(outputDirectory),
+            archiveParentUri = Uri.fromFile(outputDirectory)
+        )
+
+        assertTrue("Expected multiple progress updates", fractions.size >= 5)
+        assertTrue(
+            "Progress must not move backwards",
+            fractions.zipWithNext().all { (previous, next) -> next >= previous }
+        )
+        assertTrue("Progress must reach completion", fractions.last() >= 0.99f)
+        assertEquals(
+            largeFile.length(),
+            File(extracted, largeFile.name).length()
+        )
+    }
+
+    @Test
     fun createsLzmaAndLz4SingleFileStreams() = runBlocking {
         val engine = CompressionEngine(context)
         val archiveEngine = MultiArchiveEngine(context)

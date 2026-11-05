@@ -7,7 +7,7 @@ creating common archive formats. The product UI follows the finalized prototype 
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.5.17`
+- Version: `1.5.18`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct
@@ -32,6 +32,8 @@ creating common archive formats. The product UI follows the finalized prototype 
   open `.001` in Zippest to combine and extract it.
 - Opening the first RAR volume from its folder automatically includes the whole
   set, including `.partN.rar`, `.000.rar`, RAR5, and legacy `.rar/.r00` naming.
+- Report progress while split volumes are being combined and while large entries
+  are being written, keeping the in-app and notification bars moving.
 - Open archive files from another app through Android's standard "Open with"
   flow.
 - Extract to the archive folder, a new same-name folder, or any folder selected
@@ -114,6 +116,8 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
+Version `1.5.18` reports byte-level progress while combining and extracting
+multi-volume archives, including large files contained in a volume set.
 Version `1.5.17` stops showing the current path in the quick-access top bar, so
 long folder paths no longer produce a clipped address. It also keeps Quick
 Access available while choosing a move or copy destination, redesigns the

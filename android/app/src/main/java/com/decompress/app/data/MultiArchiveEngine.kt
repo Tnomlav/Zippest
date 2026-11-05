@@ -63,22 +63,38 @@ class MultiArchiveEngine(private val context: Context) {
         archiveName: String,
         settings: ExtractSettings,
         onProgress: (Int, Int) -> Unit,
+        onFractionProgress: (Float) -> Unit = {},
         archiveTreeUri: Uri? = null,
         archiveParentUri: Uri? = null
     ) = withResolvedArchive(
         archiveUri,
         archiveName,
         archiveTreeUri,
-        archiveParentUri
+        archiveParentUri,
+        onPreparationProgress = { fraction ->
+            onFractionProgress(fraction.coerceIn(0f, 1f) * PREPARATION_SHARE)
+        }
     ) { uri, name ->
+        val reportExtraction: (Float) -> Unit = { fraction ->
+            onFractionProgress(
+                PREPARATION_SHARE +
+                    fraction.coerceIn(0f, 1f) * (1f - PREPARATION_SHARE)
+            )
+        }
         val lower = name.lowercase()
         when {
             lower.endsWith(".zip") || lower.endsWith(".jar") ->
-                zipEngine.extract(uri, name, settings, onProgress)
+                zipEngine.extract(
+                    uri,
+                    name,
+                    settings,
+                    onProgress,
+                    reportExtraction
+                )
             lower.endsWith(".7z") ->
-                extractSevenZ(uri, name, settings, onProgress)
+                extractSevenZ(uri, name, settings, onProgress, reportExtraction)
             lower.endsWith(".rar") ->
-                extractRar(uri, name, settings, onProgress)
+                extractRar(uri, name, settings, onProgress, reportExtraction)
             lower.endsWith(".tar") ||
                 lower.endsWith(".tar.gz") ||
                 lower.endsWith(".tgz") ||
@@ -89,7 +105,14 @@ class MultiArchiveEngine(private val context: Context) {
                 lower.endsWith(".tar.zst") ||
                 lower.endsWith(".tar.br") ||
                 lower.endsWith(".cpio") ->
-                extractStream(uri, lower, name, settings, onProgress)
+                extractStream(
+                    uri,
+                    lower,
+                    name,
+                    settings,
+                    onProgress,
+                    reportExtraction
+                )
             lower.endsWith(".gz") ||
                 lower.endsWith(".bz2") ||
                 lower.endsWith(".xz") ||
@@ -97,7 +120,13 @@ class MultiArchiveEngine(private val context: Context) {
                 lower.endsWith(".lz4") ||
                 lower.endsWith(".zst") ||
                 lower.endsWith(".br") ->
-                extractSingleCompressed(uri, lower, name, settings)
+                extractSingleCompressed(
+                    uri,
+                    lower,
+                    name,
+                    settings,
+                    reportExtraction
+                )
             else -> throw ArchiveException("暂不支持此压缩格式")
         }
     }
@@ -154,6 +183,7 @@ class MultiArchiveEngine(private val context: Context) {
         archiveName: String,
         archiveTreeUri: Uri?,
         archiveParentUri: Uri?,
+        onPreparationProgress: (Float) -> Unit = {},
         block: suspend (Uri, String) -> T
     ): T {
         val nativeZip = resolveNativeSplitZip(
@@ -168,15 +198,29 @@ class MultiArchiveEngine(private val context: Context) {
                 "zippest-zip-volumes-"
             ).toFile()
             try {
+                val totalBytes = nativeZip.sumOf { (_, partUri) -> fileSize(partUri) }
+                var copiedBytes = 0L
                 withContext(Dispatchers.IO) {
                     nativeZip.forEach { (name, partUri) ->
                         resolver.openInputStream(partUri)?.use { input ->
                             File(directory, name).outputStream().use { output ->
-                                input.copyTo(output, 64 * 1024)
+                                copiedBytes += copyWithLimit(
+                                    input = input,
+                                    output = output,
+                                    remainingBytes = Long.MAX_VALUE,
+                                    onProgress = { partBytes ->
+                                        reportFraction(
+                                            onPreparationProgress,
+                                            copiedBytes + partBytes,
+                                            totalBytes
+                                        )
+                                    }
+                                )
                             }
                         } ?: throw ArchiveException("无法读取分卷：$name")
                     }
                 }
+                onPreparationProgress(1f)
                 val finalName = canonicalArchiveName(archiveName)
                 return block(Uri.fromFile(File(directory, finalName)), finalName)
             } finally {
@@ -192,6 +236,7 @@ class MultiArchiveEngine(private val context: Context) {
         if (rarVolumes != null) {
             val localParts = rarVolumes.mapNotNull { repository.localFileForUri(it.uri) }
             if (localParts.size == rarVolumes.size) {
+                onPreparationProgress(1f)
                 return block(
                     Uri.fromFile(localParts.first()),
                     rarVolumes.first().name
@@ -202,15 +247,32 @@ class MultiArchiveEngine(private val context: Context) {
                 "zippest-rar-volumes-"
             ).toFile()
             try {
+                val totalBytes = rarVolumes.sumOf { part ->
+                    fileSize(part.uri).takeIf { it > 0L }
+                        ?: part.size.coerceAtLeast(0L)
+                }
+                var copiedBytes = 0L
                 withContext(Dispatchers.IO) {
                     rarVolumes.forEach { part ->
                         resolver.openInputStream(part.uri)?.use { input ->
                             File(directory, part.name).outputStream().use { output ->
-                                input.copyTo(output, 64 * 1024)
+                                copiedBytes += copyWithLimit(
+                                    input = input,
+                                    output = output,
+                                    remainingBytes = Long.MAX_VALUE,
+                                    onProgress = { partBytes ->
+                                        reportFraction(
+                                            onPreparationProgress,
+                                            copiedBytes + partBytes,
+                                            totalBytes
+                                        )
+                                    }
+                                )
                             }
                         } ?: throw ArchiveException("无法读取分卷：${part.name}")
                     }
                 }
+                onPreparationProgress(1f)
                 return block(
                     Uri.fromFile(File(directory, rarVolumes.first().name)),
                     rarVolumes.first().name
@@ -220,6 +282,7 @@ class MultiArchiveEngine(private val context: Context) {
             }
         }
         if (!isFirstSplitVolume(archiveName)) {
+            onPreparationProgress(1f)
             return block(archiveUri, archiveName)
         }
         val parts = findSplitParts(
@@ -231,15 +294,32 @@ class MultiArchiveEngine(private val context: Context) {
         if (parts.isEmpty()) throw ArchiveException("找不到完整的分卷文件")
         val temp = File.createTempFile("zippest-parts-", ".tmp", context.cacheDir)
         try {
+            val totalBytes = parts.sumOf { part ->
+                fileSize(part.uri).takeIf { it > 0L }
+                    ?: part.size.coerceAtLeast(0L)
+            }
+            var copiedBytes = 0L
             withContext(Dispatchers.IO) {
                 temp.outputStream().buffered().use { output ->
                     parts.forEach { part ->
                         resolver.openInputStream(part.uri)?.use { input ->
-                            input.copyTo(output, 64 * 1024)
+                            copiedBytes += copyWithLimit(
+                                input = input,
+                                output = output,
+                                remainingBytes = Long.MAX_VALUE,
+                                onProgress = { partBytes ->
+                                    reportFraction(
+                                        onPreparationProgress,
+                                        copiedBytes + partBytes,
+                                        totalBytes
+                                    )
+                                }
+                            )
                         } ?: throw ArchiveException("无法读取分卷：${part.name}")
                     }
                 }
             }
+            onPreparationProgress(1f)
             return block(Uri.fromFile(temp), canonicalArchiveName(archiveName))
         } finally {
             temp.delete()
@@ -549,8 +629,9 @@ class MultiArchiveEngine(private val context: Context) {
         uri: Uri,
         archiveName: String,
         settings: ExtractSettings,
-        onProgress: (Int, Int) -> Unit
-    ) = withTempArchive(uri) { file ->
+        onProgress: (Int, Int) -> Unit,
+        onFractionProgress: (Float) -> Unit
+    ) = withArchiveFile(uri) { file ->
         runCatching {
             val sevenZ = if (settings.password.isBlank()) {
                 SevenZFile(file)
@@ -565,6 +646,7 @@ class MultiArchiveEngine(private val context: Context) {
                 val declaredBytes = entries.sumOf { it.size.coerceAtLeast(0L) }
                 ensureSafeExpansion(declaredBytes, file.length())
                 ensureLocalFreeSpace(context, settings.targetTreeUri, declaredBytes)
+                onFractionProgress(0f)
                 val output = outputWriter(settings)
                 val destination = prepareDestination(output, settings, archiveName)
                 var writtenBytes = 0L
@@ -579,11 +661,19 @@ class MultiArchiveEngine(private val context: Context) {
                             archive.getInputStream(entry)
                         },
                         closeInput = true,
-                        remainingBytes = MAX_TOTAL_BYTES - writtenBytes
+                        remainingBytes = MAX_TOTAL_BYTES - writtenBytes,
+                        onProgress = { fileBytes ->
+                            reportFraction(
+                                onFractionProgress,
+                                writtenBytes + fileBytes,
+                                declaredBytes
+                            )
+                        }
                     )
                     ensureSafeExpansion(writtenBytes, file.length())
                     onProgress(index + 1, entries.size)
                 }
+                onFractionProgress(1f)
             }
         }.getOrElse { throw ArchiveException("7Z 解压失败：${it.archiveMessage()}", it) }
     }
@@ -605,7 +695,8 @@ class MultiArchiveEngine(private val context: Context) {
         uri: Uri,
         archiveName: String,
         settings: ExtractSettings,
-        onProgress: (Int, Int) -> Unit
+        onProgress: (Int, Int) -> Unit,
+        onFractionProgress: (Float) -> Unit
     ) = withArchiveFile(uri) { file ->
         runCatching {
             val headers = rarHeaders(file, settings.password)
@@ -618,6 +709,7 @@ class MultiArchiveEngine(private val context: Context) {
             val packedSize = packedSizeForVolumes(file)
             ensureSafeExpansion(declaredBytes, packedSize)
             ensureLocalFreeSpace(context, settings.targetTreeUri, declaredBytes)
+            onFractionProgress(0f)
             val archive = if (settings.password.isBlank()) {
                 RarArchive(file)
             } else {
@@ -643,13 +735,21 @@ class MultiArchiveEngine(private val context: Context) {
                             rar.getInputStream(header)
                         },
                         closeInput = true,
-                        remainingBytes = MAX_TOTAL_BYTES - writtenBytes
+                        remainingBytes = MAX_TOTAL_BYTES - writtenBytes,
+                        onProgress = { fileBytes ->
+                            reportFraction(
+                                onFractionProgress,
+                                writtenBytes + fileBytes,
+                                declaredBytes
+                            )
+                        }
                     )
                     ensureSafeExpansion(writtenBytes, packedSize)
                     processed++
                     onProgress(processed, headers.size.coerceAtLeast(processed))
                     header = rar.nextFileHeader()
                 }
+                onFractionProgress(1f)
             }
         }.getOrElse { throw ArchiveException("RAR 解压失败：${it.archiveMessage()}", it) }
     }
@@ -701,9 +801,11 @@ class MultiArchiveEngine(private val context: Context) {
         lowerName: String,
         archiveName: String,
         settings: ExtractSettings,
-        onProgress: (Int, Int) -> Unit
+        onProgress: (Int, Int) -> Unit,
+        onFractionProgress: (Float) -> Unit
     ) = withContext(Dispatchers.IO) {
-        openStreamArchive(uri, lowerName).use { archive ->
+        onFractionProgress(0f)
+        openStreamArchive(uri, lowerName, onFractionProgress).use { archive ->
             val output = outputWriter(settings)
             val destination = prepareDestination(output, settings, archiveName)
             var entry: ArchiveEntry? = archive.nextEntry
@@ -729,6 +831,7 @@ class MultiArchiveEngine(private val context: Context) {
                 onProgress(processed, processed)
                 entry = archive.nextEntry
             }
+            onFractionProgress(1f)
         }
     }
 
@@ -736,20 +839,31 @@ class MultiArchiveEngine(private val context: Context) {
         uri: Uri,
         lowerName: String,
         archiveName: String,
-        settings: ExtractSettings
+        settings: ExtractSettings,
+        onFractionProgress: (Float) -> Unit
     ) = withContext(Dispatchers.IO) {
         val input = resolver.openInputStream(uri)
             ?: throw ArchiveException("无法读取压缩包")
+        onFractionProgress(0f)
+        val progressInput = ProgressInputStream(
+            input,
+            fileSize(uri),
+            onFractionProgress
+        )
         val compressed: InputStream = when {
-            lowerName.endsWith(".gz") -> GzipCompressorInputStream(BufferedInputStream(input))
-            lowerName.endsWith(".bz2") -> BZip2CompressorInputStream(BufferedInputStream(input))
-            lowerName.endsWith(".xz") -> XZCompressorInputStream(BufferedInputStream(input))
-            lowerName.endsWith(".lzma") -> LZMACompressorInputStream(BufferedInputStream(input))
+            lowerName.endsWith(".gz") ->
+                GzipCompressorInputStream(BufferedInputStream(progressInput))
+            lowerName.endsWith(".bz2") ->
+                BZip2CompressorInputStream(BufferedInputStream(progressInput))
+            lowerName.endsWith(".xz") ->
+                XZCompressorInputStream(BufferedInputStream(progressInput))
+            lowerName.endsWith(".lzma") ->
+                LZMACompressorInputStream(BufferedInputStream(progressInput))
             lowerName.endsWith(".lz4") ->
-                FramedLZ4CompressorInputStream(BufferedInputStream(input))
+                FramedLZ4CompressorInputStream(BufferedInputStream(progressInput))
             lowerName.endsWith(".zst") ->
-                ZstdCodec.inputStream(BufferedInputStream(input))
-            else -> BrotliInputStream(BufferedInputStream(input))
+                ZstdCodec.inputStream(BufferedInputStream(progressInput))
+            else -> BrotliInputStream(BufferedInputStream(progressInput))
         }
         compressed.use { stream ->
             val output = outputWriter(settings)
@@ -767,13 +881,20 @@ class MultiArchiveEngine(private val context: Context) {
                 ensureSafeExpansion(written, fileSize(uri))
             } ?: throw ArchiveException("无法写入解压文件")
             settings.onFileCreated(fileUri)
+            onFractionProgress(1f)
         }
     }
 
-    private fun openStreamArchive(uri: Uri, lowerName: String): ArchiveInputStream<*> {
+    private fun openStreamArchive(
+        uri: Uri,
+        lowerName: String,
+        onFractionProgress: (Float) -> Unit = {}
+    ): ArchiveInputStream<*> {
         val input = resolver.openInputStream(uri)
             ?: throw ArchiveException("无法读取压缩包")
-        val buffered = BufferedInputStream(input)
+        val buffered = BufferedInputStream(
+            ProgressInputStream(input, fileSize(uri), onFractionProgress)
+        )
         return when {
             lowerName.endsWith(".tar.gz") || lowerName.endsWith(".tgz") ->
                 TarArchiveInputStream(GzipCompressorInputStream(buffered))
@@ -799,7 +920,8 @@ class MultiArchiveEngine(private val context: Context) {
         settings: ExtractSettings,
         inputFactory: () -> InputStream,
         closeInput: Boolean,
-        remainingBytes: Long
+        remainingBytes: Long,
+        onProgress: (Long) -> Unit = {}
     ): Long {
         val segments = sanitizePath(path)
         if (segments.isEmpty()) return 0L
@@ -824,7 +946,8 @@ class MultiArchiveEngine(private val context: Context) {
                 copyWithLimit(
                     input = input,
                     output = out,
-                    remainingBytes = remainingBytes
+                    remainingBytes = remainingBytes,
+                    onProgress = onProgress
                 )
             } ?: throw ArchiveException("无法写入文件：${segments.last()}")
         } finally {
@@ -1083,6 +1206,7 @@ class MultiArchiveEngine(private val context: Context) {
     }
 
     companion object {
+        private const val PREPARATION_SHARE = 0.1f
         private const val MAX_ENTRIES = 50_000
         private const val MAX_TOTAL_BYTES = 20L * 1024 * 1024 * 1024
     }

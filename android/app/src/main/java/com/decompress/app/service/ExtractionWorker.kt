@@ -263,7 +263,10 @@ class ExtractionWorker(
                 task = effectiveTask,
                 onCheckpoint = checkpoint
             ) { progress, message ->
-                currentProgress = progress
+                val now = SystemClock.elapsedRealtime()
+                if (now - lastUpdate < 250 && progress < 100) return@extract
+                lastUpdate = now
+                currentProgress = maxOf(currentProgress, progress)
                 val pauseHandled = ArchiveTaskControl.waitWhilePaused(
                     applicationContext,
                     id,
@@ -289,27 +292,23 @@ class ExtractionWorker(
                     }
                 )
                 if (!pauseHandled) throw CancellationException("解压已取消")
-                val now = SystemClock.elapsedRealtime()
-                if (now - lastUpdate >= 250 || progress >= 100) {
-                    lastUpdate = now
-                    notificationManager.notify(
-                        notificationId,
-                        buildProgressNotification(
+                notificationManager.notify(
+                    notificationId,
+                    buildProgressNotification(
+                        effectiveTask.displayName,
+                        message,
+                        currentProgress
+                    )
+                )
+                setProgressAsync(
+                    workDataOf(
+                        ExtractionScheduler.KEY_DISPLAY_NAME to
                             effectiveTask.displayName,
-                            message,
-                            progress
-                        )
+                        ExtractionScheduler.KEY_PROGRESS to currentProgress,
+                        ExtractionScheduler.KEY_MESSAGE to message,
+                        ExtractionScheduler.KEY_PAUSED to false
                     )
-                    setProgressAsync(
-                        workDataOf(
-                            ExtractionScheduler.KEY_DISPLAY_NAME to
-                                effectiveTask.displayName,
-                            ExtractionScheduler.KEY_PROGRESS to progress,
-                            ExtractionScheduler.KEY_MESSAGE to message,
-                            ExtractionScheduler.KEY_PAUSED to false
-                        )
-                    )
-                }
+                )
             }
             setProgressAsync(
                 workDataOf(
@@ -395,13 +394,12 @@ class ExtractionWorker(
                         }
                     }
                 ),
-                onProgress = { processed, entryTotal ->
-                    val within = if (entryTotal > 0) {
-                        processed.toFloat() / entryTotal.toFloat()
-                    } else {
-                        0f
-                    }
-                    val overall = ((index + within) / total * 100f).toInt()
+                onProgress = { _, _ -> },
+                onFractionProgress = { archiveFraction ->
+                    val within = archiveFraction.coerceIn(0f, 1f)
+                    val overall = (
+                        (index + within) / total * 100f
+                        ).toInt().coerceIn(0, 100)
                     onProgress(
                         overall,
                         "正在解压 ${index + 1}/$total · ${task.archiveNames[index]}"

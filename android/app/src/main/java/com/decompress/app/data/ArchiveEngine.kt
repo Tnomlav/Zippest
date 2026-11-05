@@ -102,7 +102,8 @@ internal fun ensureSafeExpansion(unpackedBytes: Long, packedBytes: Long) {
 internal fun copyWithLimit(
     input: InputStream,
     output: OutputStream,
-    remainingBytes: Long
+    remainingBytes: Long,
+    onProgress: (Long) -> Unit = {}
 ): Long {
     if (remainingBytes < 0L) throw ArchiveException("解压后体积超过安全上限")
     val buffer = ByteArray(DEFAULT_ARCHIVE_BUFFER_SIZE)
@@ -115,8 +116,57 @@ internal fun copyWithLimit(
             throw ArchiveException("解压后体积超过安全上限")
         }
         output.write(buffer, 0, read)
+        onProgress(written)
     }
     return written
+}
+
+internal class ProgressInputStream(
+    private val delegate: InputStream,
+    private val totalBytes: Long,
+    private val onProgress: (Float) -> Unit
+) : InputStream() {
+    private var bytesRead = 0L
+
+    override fun read(): Int {
+        val value = delegate.read()
+        if (value >= 0) report(1)
+        return value
+    }
+
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+        val count = delegate.read(buffer, offset, length)
+        if (count > 0) report(count)
+        return count
+    }
+
+    override fun available(): Int = delegate.available()
+
+    override fun close() = delegate.close()
+
+    private fun report(count: Int) {
+        bytesRead += count
+        if (totalBytes > 0L) {
+            onProgress(
+                (bytesRead.toDouble() / totalBytes.toDouble())
+                    .toFloat()
+                    .coerceIn(0f, 1f)
+            )
+        }
+    }
+}
+
+internal fun reportFraction(
+    onProgress: (Float) -> Unit,
+    completedBytes: Long,
+    totalBytes: Long
+) {
+    if (totalBytes <= 0L) return
+    onProgress(
+        (completedBytes.toDouble() / totalBytes.toDouble())
+            .toFloat()
+            .coerceIn(0f, 1f)
+    )
 }
 
 internal fun Throwable.archiveMessage(): String {
@@ -224,23 +274,36 @@ class ZipArchiveEngine(private val context: Context) {
         archiveUri: Uri,
         archiveName: String,
         settings: ExtractSettings,
-        onProgress: (Int, Int) -> Unit
+        onProgress: (Int, Int) -> Unit,
+        onFractionProgress: (Float) -> Unit = {}
     ) {
         val localZip = archiveUri.localFile()?.takeIf { it.isFile }
         val splitZip = localZip?.let {
             runCatching { Zip4jFile(it).isSplitArchive }.getOrDefault(false)
         } == true
         if (settings.password.isNotEmpty() || splitZip) {
-            extractPasswordProtected(archiveUri, archiveName, settings, onProgress)
+            extractPasswordProtected(
+                archiveUri,
+                archiveName,
+                settings,
+                onProgress,
+                onFractionProgress
+            )
             return
         }
 
         withContext(Dispatchers.IO) {
+            onFractionProgress(0f)
             val input = resolver.openInputStream(archiveUri)
                 ?: throw ArchiveException("无法读取压缩包")
             val zipCharset = Charset.forName(settings.encoding.charsetName)
+            val progressInput = ProgressInputStream(
+                input,
+                localZip?.length() ?: fileSize(archiveUri),
+                onFractionProgress
+            )
 
-            BufferedInputStream(input).use { buffered ->
+            BufferedInputStream(progressInput).use { buffered ->
                 ZipInputStream(buffered, zipCharset).use { zip ->
                     val output = SafOutput(
                         resolver = resolver,
@@ -304,6 +367,7 @@ class ZipArchiveEngine(private val context: Context) {
                         onProgress(processed, processed)
                         entry = zip.nextEntry
                     }
+                    onFractionProgress(1f)
                 }
             }
         }
@@ -411,7 +475,8 @@ class ZipArchiveEngine(private val context: Context) {
         archiveUri: Uri,
         archiveName: String,
         settings: ExtractSettings,
-        onProgress: (Int, Int) -> Unit
+        onProgress: (Int, Int) -> Unit,
+        onFractionProgress: (Float) -> Unit
     ) = withContext(Dispatchers.IO) {
         val direct = archiveUri.localFile()?.takeIf { it.isFile }
         val temp = if (direct == null) {
@@ -440,6 +505,7 @@ class ZipArchiveEngine(private val context: Context) {
                 }
                 ensureSafeExpansion(declaredBytes, archiveFile.length())
                 ensureLocalFreeSpace(context, settings.targetTreeUri, declaredBytes)
+                onFractionProgress(0f)
 
                 val output = SafOutput(
                     resolver = resolver,
@@ -455,12 +521,20 @@ class ZipArchiveEngine(private val context: Context) {
                         output = output,
                         destination = destination,
                         settings = settings,
-                        writtenBytes = writtenBytes
+                        writtenBytes = writtenBytes,
+                        onProgress = { fileBytes ->
+                            reportFraction(
+                                onFractionProgress,
+                                writtenBytes + fileBytes,
+                                declaredBytes
+                            )
+                        }
                     ).let { written ->
                         writtenBytes += written
                     }
                     onProgress(index + 1, headers.size)
                 }
+                onFractionProgress(1f)
             }.getOrElse { error ->
                 if (error is ArchiveException) throw error
                 throw ArchiveException(
@@ -479,7 +553,8 @@ class ZipArchiveEngine(private val context: Context) {
         output: SafOutput,
         destination: Uri,
         settings: ExtractSettings,
-        writtenBytes: Long
+        writtenBytes: Long,
+        onProgress: (Long) -> Unit
     ): Long {
         val segments = sanitizePath(header.fileName)
         if (segments.isEmpty()) return 0L
@@ -502,13 +577,20 @@ class ZipArchiveEngine(private val context: Context) {
                 val written = copyWithLimit(
                     input = CheckpointInputStream(input, settings.onCheckpoint),
                     output = out,
-                    remainingBytes = MAX_TOTAL_BYTES - writtenBytes
+                    remainingBytes = MAX_TOTAL_BYTES - writtenBytes,
+                    onProgress = onProgress
                 )
                 settings.onFileCreated(fileUri)
                 return written
             } ?: throw ArchiveException("无法写入文件：${segments.last()}")
         }
     }
+
+    private fun fileSize(uri: Uri): Long =
+        uri.localFile()?.takeIf { it.isFile }?.length()
+            ?: resolver.openFileDescriptor(uri, "r")?.use { it.statSize }
+                ?.coerceAtLeast(0L)
+            ?: 0L
 
     private fun createDestination(
         output: SafOutput,
