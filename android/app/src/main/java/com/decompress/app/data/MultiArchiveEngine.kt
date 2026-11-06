@@ -1094,14 +1094,24 @@ class MultiArchiveEngine(private val context: Context) {
         private val resolver: ContentResolver,
         private val treeUri: Uri
     ) {
+        private val directoryCache = mutableMapOf<String, Uri?>()
+
         fun ensureDirectory(parentUri: Uri, name: String): Uri? {
-            parentUri.localFile()?.let { parent ->
-                val directory = File(parent, name)
-                if (directory.isDirectory) return Uri.fromFile(directory)
-                return if (directory.mkdirs()) Uri.fromFile(directory) else null
+            val cacheKey = "${parentUri}\u0000$name"
+            if (directoryCache.containsKey(cacheKey)) {
+                return directoryCache[cacheKey]
             }
-            findChild(parentUri, name)?.let { return it }
-            return createDocument(parentUri, name, Document.MIME_TYPE_DIR)
+            val directory = parentUri.localFile()?.let { parent ->
+                val directory = File(parent, name)
+                if (directory.isDirectory) {
+                    Uri.fromFile(directory)
+                } else {
+                    if (directory.mkdirs()) Uri.fromFile(directory) else null
+                }
+            } ?: findChild(parentUri, name)
+                ?: createDocument(parentUri, name, Document.MIME_TYPE_DIR)
+            directoryCache[cacheKey] = directory
+            return directory
         }
 
         fun createFile(

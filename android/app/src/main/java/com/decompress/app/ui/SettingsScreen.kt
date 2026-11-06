@@ -184,7 +184,7 @@ fun SettingsScreen(
     val versionName = remember {
         runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
-        }.getOrNull() ?: "1.5.18"
+        }.getOrNull() ?: "1.5.19"
     }
 
     BackHandler(onBack = onBack)
@@ -254,18 +254,45 @@ fun SettingsScreen(
                         onClick = {
                             runCatching {
                                 batterySettingsLauncher.launch(
-                                    Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                    Intent(
+                                        Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                        Uri.parse("package:${context.packageName}")
+                                    )
                                 )
                             }.onFailure {
                                 batterySettingsLauncher.launch(
-                                    Intent(
-                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                        Uri.parse("package:${context.packageName}")
-                                    )
+                                    Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                                 )
                             }
                         }
                     )
+                    if (
+                        Build.MANUFACTURER.equals("vivo", ignoreCase = true) ||
+                        Build.MANUFACTURER.equals("iqoo", ignoreCase = true)
+                    ) {
+                        SettingsDivider()
+                        SettingsStatus(
+                            title = "Vivo 后台运行权限",
+                            detail = "在“自启动/后台启动”中允许 Zippest，避免熄屏后任务被系统冻结",
+                            action = "打开",
+                            enabled = true,
+                            onClick = {
+                                val vendorIntent = Intent(
+                                    "com.iqoo.secure.BGSTARTUPMANAGER"
+                                ).addCategory(Intent.CATEGORY_DEFAULT)
+                                if (vendorIntent.resolveActivity(context.packageManager) != null) {
+                                    batterySettingsLauncher.launch(vendorIntent)
+                                } else {
+                                    batterySettingsLauncher.launch(
+                                        Intent(
+                                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                            Uri.parse("package:${context.packageName}")
+                                        )
+                                    )
+                                }
+                            }
+                        )
+                    }
                     SettingsDivider()
                     SettingsSwitch(
                         title = "显示图片和视频缩略图",

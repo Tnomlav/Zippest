@@ -7,7 +7,7 @@ creating common archive formats. The product UI follows the finalized prototype 
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.5.18`
+- Version: `1.5.19`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct
@@ -34,6 +34,8 @@ creating common archive formats. The product UI follows the finalized prototype 
   set, including `.partN.rar`, `.000.rar`, RAR5, and legacy `.rar/.r00` naming.
 - Report progress while split volumes are being combined and while large entries
   are being written, keeping the in-app and notification bars moving.
+- Cache resolved output directories during extraction to reduce repeated file
+  system lookups for archives containing many entries.
 - Open archive files from another app through Android's standard "Open with"
   flow.
 - Extract to the archive folder, a new same-name folder, or any folder selected
@@ -116,7 +118,10 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
-Version `1.5.18` reports byte-level progress while combining and extracting
+Version `1.5.19` adds a direct battery-optimization request and a Vivo-specific
+shortcut to its “Autostart / Background start” permission page, caches resolved
+output directories, and documents that GPU rendering acceleration does not
+accelerate archive algorithms. Version `1.5.18` reports byte-level progress while combining and extracting
 multi-volume archives, including large files contained in a volume set.
 Version `1.5.17` stops showing the current path in the quick-access top bar, so
 long folder paths no longer produce a clipped address. It also keeps Quick
