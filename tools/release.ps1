@@ -4,13 +4,27 @@
 )
 
 # 一键发版：构建 -> 归档产物与校验和 -> 打 tag -> 推送（tag 会触发 CI 自动发 Release）。
-# 用法：pwsh -File tools\release.ps1
+# 用法：& tools\release.ps1
 # 前提：工作区干净（仅允许 design/ 下未跟踪图片），当前分支为 main。
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Push-Location $root
 try {
+    function Invoke-Step {
+        param([string]$Label, [scriptblock]$Action)
+        $previous = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            & $Action 2>&1 | ForEach-Object { Write-Host $_ }
+        } finally {
+            $ErrorActionPreference = $previous
+        }
+        if ($LASTEXITCODE -ne 0) {
+            throw "$Label 失败（exit $LASTEXITCODE）"
+        }
+    }
+
     $gradleProps = Get-Content 'android\app\build.gradle.kts' -Raw
     if ($gradleProps -notmatch 'versionName\s*=\s*"([^"]+)"') {
         throw '无法从 build.gradle.kts 读取 versionName'
@@ -34,11 +48,9 @@ try {
         $env:JAVA_HOME = 'C:\Android Studio\jbr'
         Push-Location android
         try {
-            & .\gradlew.bat :app:assembleRelease --console=plain
-            if ($LASTEXITCODE -ne 0) { throw 'assembleRelease 失败' }
+            Invoke-Step 'assembleRelease' { & .\gradlew.bat :app:assembleRelease --console=plain }
             # AGP 不允许 ABI 拆分与 AAB 同时构建，AAB 单独跑并关掉拆分
-            & .\gradlew.bat -PzippestBundle :app:bundleRelease --console=plain
-            if ($LASTEXITCODE -ne 0) { throw 'bundleRelease 失败' }
+            Invoke-Step 'bundleRelease' { & .\gradlew.bat -PzippestBundle :app:bundleRelease --console=plain }
         } finally {
             Pop-Location
         }
@@ -63,10 +75,8 @@ try {
     git tag -a $tag -m "Zippest $version"
     if (-not $SkipPush) {
         $env:GIT_TERMINAL_PROMPT = '0'
-        git push origin main
-        if ($LASTEXITCODE -ne 0) { throw '推送 main 失败' }
-        git push origin $tag
-        if ($LASTEXITCODE -ne 0) { throw '推送 tag 失败' }
+        Invoke-Step '推送 main' { git push origin main }
+        Invoke-Step "推送 $tag" { git push origin $tag }
     }
 
     Write-Host ""
