@@ -1188,6 +1188,7 @@ class MultiArchiveEngine(private val context: Context) {
         remainingBytes: Long,
         onProgress: (Long) -> Unit = {}
     ): Long {
+        if (!settings.matches(path)) return 0L
         val segments = sanitizePath(path)
         if (segments.isEmpty()) return 0L
         var parent = destination
@@ -1236,10 +1237,15 @@ class MultiArchiveEngine(private val context: Context) {
         settings: ExtractSettings,
         archiveName: String
     ): Uri {
-        if (!settings.createFolder) return settings.targetParentUri
+        if (!settings.createFolder) {
+            settings.onDestinationCreated(settings.targetParentUri, archiveName)
+            return settings.targetParentUri
+        }
         val baseName = singleOutputName(archiveName, archiveName.lowercase())
-        return output.ensureDirectory(settings.targetParentUri, baseName)
+        val destination = output.ensureDirectory(settings.targetParentUri, baseName)
             ?: throw ArchiveException("无法创建目标文件夹")
+        settings.onDestinationCreated(destination, baseName)
+        return destination
     }
 
     private fun singleOutputName(archiveName: String, lowerName: String): String {

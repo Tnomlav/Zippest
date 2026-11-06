@@ -52,7 +52,12 @@ data class ExtractionTask(
     val createFolder: Boolean,
     val conflictPolicy: ConflictPolicy,
     val encoding: FileNameEncoding,
-    val passwords: List<String>
+    val passwords: List<String>,
+    /** 面包屑里压缩包所在位置的文字描述，用于任务完成后定位。 */
+    val parentPath: String = "",
+    val parentName: String = "",
+    /** 非空时只解压这些条目（压缩包内路径）；UI 只对单个压缩包启用。 */
+    val entryPaths: List<String> = emptyList()
 ) {
     val displayName: String
         get() = if (archiveNames.size == 1) {
@@ -73,6 +78,10 @@ object ExtractionScheduler {
         "com.decompress.app.action.EXTRACTION_FINISHED"
     const val EXTRA_EXTRACTION_SUCCESS = "extraction_success"
     const val EXTRA_EXTRACTION_MESSAGE = "extraction_message"
+    const val EXTRA_EXTRACTION_LOCATION = "extraction_location"
+    const val EXTRA_EXTRACTION_LOCATION_NAME = "extraction_location_name"
+    const val EXTRA_EXTRACTION_TREE_URI = "extraction_tree_uri"
+    const val EXTRA_EXTRACTION_PATH = "extraction_parent_path"
 
     const val QUEUE_NAME = "zippest-extraction-queue"
     const val TAG_ALL_TASKS = "zippest-extraction-task"
@@ -93,6 +102,9 @@ object ExtractionScheduler {
     private const val KEY_CONFLICT = "conflict"
     private const val KEY_ENCODING = "encoding"
     private const val KEY_PASSWORDS = "passwords"
+    private const val KEY_PARENT_PATH = "parent_path"
+    private const val KEY_PARENT_NAME = "parent_name"
+    private const val KEY_ENTRY_PATHS = "entry_paths"
 
     fun enqueue(context: Context, task: ExtractionTask): UUID {
         val input = workDataOf(
@@ -107,6 +119,9 @@ object ExtractionScheduler {
             KEY_CONFLICT to task.conflictPolicy.name,
             KEY_ENCODING to task.encoding.name,
             KEY_PASSWORDS to ExtractionSecretBox.encrypt(task.passwords),
+            KEY_PARENT_PATH to task.parentPath,
+            KEY_PARENT_NAME to task.parentName,
+            KEY_ENTRY_PATHS to task.entryPaths.toTypedArray(),
             KEY_DISPLAY_NAME to task.displayName
         )
         val request = OneTimeWorkRequestBuilder<ExtractionWorker>()
@@ -148,7 +163,13 @@ object ExtractionScheduler {
             encoding = FileNameEncoding.valueOf(
                 data.getString(KEY_ENCODING) ?: FileNameEncoding.AUTO.name
             ),
-            passwords = passwords
+            passwords = passwords,
+            parentPath = data.getString(KEY_PARENT_PATH).orEmpty(),
+            parentName = data.getString(KEY_PARENT_NAME).orEmpty(),
+            entryPaths = data.getNullableStringArray(KEY_ENTRY_PATHS)
+                ?.filterNotNull()
+                ?.toList()
+                .orEmpty()
         )
     }
 }
@@ -259,7 +280,7 @@ class ExtractionWorker(
                     )
                 }
             }
-            val resultMessage = extract(
+            val outcome = extract(
                 task = effectiveTask,
                 onCheckpoint = checkpoint
             ) { progress, message ->
@@ -314,17 +335,32 @@ class ExtractionWorker(
                 workDataOf(
                     ExtractionScheduler.KEY_DISPLAY_NAME to effectiveTask.displayName,
                     ExtractionScheduler.KEY_PROGRESS to 100,
-                    ExtractionScheduler.KEY_MESSAGE to resultMessage,
+                    ExtractionScheduler.KEY_MESSAGE to outcome.message,
                     ExtractionScheduler.KEY_PAUSED to false
                 )
             )
             if (shouldNotifyFinished()) {
-                notifyFinished("解压完成", resultMessage, successful = true)
+                notifyFinished(
+                    title = "解压完成",
+                    text = outcome.message,
+                    successful = true,
+                    location = outcome.locationUri,
+                    locationName = outcome.locationName,
+                    treeUri = outcome.treeUri,
+                    path = outcome.path
+                )
             }
-            broadcastFinished(true, resultMessage)
+            broadcastFinished(
+                successful = true,
+                message = outcome.message,
+                location = outcome.locationUri,
+                locationName = outcome.locationName,
+                treeUri = outcome.treeUri,
+                path = outcome.path
+            )
             ExtractionCheckpointStore.clear(applicationContext, id)
             Result.success(
-                workDataOf(ExtractionScheduler.KEY_MESSAGE to resultMessage)
+                workDataOf(ExtractionScheduler.KEY_MESSAGE to outcome.message)
             )
         } catch (error: CancellationException) {
             if (shouldNotifyFinished()) {
@@ -353,7 +389,7 @@ class ExtractionWorker(
         task: ExtractionTask,
         onCheckpoint: () -> Unit,
         onProgress: (Int, String) -> Unit
-    ): String {
+    ): ExtractionOutcome {
         val targetParent = if (task.mode == DestinationMode.CUSTOM) {
             task.customRootUri ?: throw IllegalStateException("自定义位置不可用")
         } else {
@@ -368,6 +404,8 @@ class ExtractionWorker(
         val engine = MultiArchiveEngine(applicationContext)
         val total = task.archiveUris.size
         val createdFiles = Collections.synchronizedList(mutableListOf<Uri>())
+        val destinations = Collections.synchronizedList(mutableListOf<Pair<Uri, String>>())
+        val requestedEntries = task.entryPaths.toSet()
         task.archiveUris.forEachIndexed { index, archiveUri ->
             if (!engine.supports(task.archiveNames[index])) {
                 throw IllegalArgumentException("暂不支持 ${task.archiveNames[index]}")
@@ -388,6 +426,12 @@ class ExtractionWorker(
                     encoding = task.encoding,
                     password = task.passwords[index],
                     onCheckpoint = onCheckpoint,
+                    entryFilter = if (requestedEntries.isEmpty()) {
+                        null
+                    } else {
+                        { name: String -> name in requestedEntries }
+                    },
+                    onDestinationCreated = { uri, name -> destinations += uri to name },
                     onFileCreated = { uri ->
                         if (uri.scheme == "file") {
                             createdFiles += uri
@@ -410,8 +454,29 @@ class ExtractionWorker(
             )
         }
         scanCreatedFiles(createdFiles)
-        return "已完成 $total 个压缩包"
+        val created = destinations.lastOrNull()
+        val folderName = if (task.createFolder) created?.second.orEmpty() else ""
+        val parentLabel = task.parentName.ifBlank { "目标文件夹" }
+        return ExtractionOutcome(
+            message = if (requestedEntries.isEmpty()) {
+                "已完成 $total 个压缩包"
+            } else {
+                "已解压 ${requestedEntries.size} 个所选文件"
+            },
+            locationUri = created?.first ?: targetParent,
+            locationName = folderName.ifBlank { parentLabel },
+            treeUri = targetTree,
+            path = task.parentPath
+        )
     }
+
+    private data class ExtractionOutcome(
+        val message: String,
+        val locationUri: Uri?,
+        val locationName: String,
+        val treeUri: Uri?,
+        val path: String
+    )
 
     private fun scanCreatedFiles(uris: List<Uri>) {
         val paths = synchronized(uris) {
@@ -462,13 +527,21 @@ class ExtractionWorker(
             .setProgress(100, progress.coerceIn(0, 100), false)
             .build()
 
-    private fun notifyFinished(title: String, text: String, successful: Boolean) {
+    private fun notifyFinished(
+        title: String,
+        text: String,
+        successful: Boolean,
+        location: Uri? = null,
+        locationName: String = "",
+        treeUri: Uri? = null,
+        path: String = ""
+    ) {
         ensureNotificationChannel()
-        val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(text)
-            .setContentIntent(openAppIntent())
+            .setContentIntent(openAppIntent(location, locationName, treeUri, path))
             .setAutoCancel(true)
             .setOngoing(false)
             .setPriority(
@@ -476,8 +549,20 @@ class ExtractionWorker(
                 else NotificationCompat.PRIORITY_HIGH
             )
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-            .build()
-        notificationManager.notify(notificationId, notification)
+        if (successful && location != null) {
+            builder.addAction(
+                0,
+                "打开所在文件夹",
+                TaskNavigation.pendingIntent(
+                    applicationContext,
+                    location,
+                    locationName,
+                    treeUri,
+                    path
+                )
+            )
+        }
+        notificationManager.notify(notificationId, builder.build())
     }
 
     private fun ensureNotificationChannel() {
@@ -494,24 +579,56 @@ class ExtractionWorker(
         }
     }
 
-    private fun openAppIntent(): PendingIntent {
-        val intent = Intent(applicationContext, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    private fun openAppIntent(
+        location: Uri? = null,
+        locationName: String = "",
+        treeUri: Uri? = null,
+        path: String = ""
+    ): PendingIntent {
+        val intent = if (location != null) {
+            TaskNavigation.intent(
+                applicationContext,
+                location,
+                locationName,
+                treeUri,
+                path
+            )
+        } else {
+            Intent(applicationContext, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
         }
         return PendingIntent.getActivity(
             applicationContext,
-            0,
+            (location?.hashCode() ?: 0) xor 0x51,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
 
-    private fun broadcastFinished(successful: Boolean, message: String) {
+    private fun broadcastFinished(
+        successful: Boolean,
+        message: String,
+        location: Uri? = null,
+        locationName: String = "",
+        treeUri: Uri? = null,
+        path: String = ""
+    ) {
         applicationContext.sendBroadcast(
             Intent(ExtractionScheduler.ACTION_EXTRACTION_FINISHED)
                 .setPackage(applicationContext.packageName)
                 .putExtra(ExtractionScheduler.EXTRA_EXTRACTION_SUCCESS, successful)
                 .putExtra(ExtractionScheduler.EXTRA_EXTRACTION_MESSAGE, message)
+                .putExtra(
+                    ExtractionScheduler.EXTRA_EXTRACTION_LOCATION,
+                    location?.toString()
+                )
+                .putExtra(ExtractionScheduler.EXTRA_EXTRACTION_LOCATION_NAME, locationName)
+                .putExtra(
+                    ExtractionScheduler.EXTRA_EXTRACTION_TREE_URI,
+                    treeUri?.toString()
+                )
+                .putExtra(ExtractionScheduler.EXTRA_EXTRACTION_PATH, path)
         )
     }
 

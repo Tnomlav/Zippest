@@ -61,8 +61,14 @@ data class ExtractSettings(
     val encoding: FileNameEncoding,
     val password: String,
     val onFileCreated: (Uri) -> Unit = {},
-    val onCheckpoint: () -> Unit = {}
-)
+    val onCheckpoint: () -> Unit = {},
+    /** 只解压匹配的条目；null 表示整包解压。 */
+    val entryFilter: ((String) -> Boolean)? = null,
+    /** 目标目录确定后回调，用于任务完成后把用户带回结果位置。 */
+    val onDestinationCreated: (Uri, String) -> Unit = { _, _ -> }
+) {
+    fun matches(entryName: String): Boolean = entryFilter?.invoke(entryName) ?: true
+}
 
 class ArchiveException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
@@ -329,6 +335,12 @@ class ZipArchiveEngine(private val context: Context) {
                         if (entry.compressedSize > 0) totalCompressed += entry.compressedSize
                         ensureSafeExpansion(declaredBytes, totalCompressed)
 
+                        if (!settings.matches(entry.name)) {
+                            zip.closeEntry()
+                            entry = zip.nextEntry
+                            continue
+                        }
+
                         val segments = sanitizePath(entry.name)
                         if (segments.isNotEmpty()) {
                             var parent = destination
@@ -556,6 +568,7 @@ class ZipArchiveEngine(private val context: Context) {
         writtenBytes: Long,
         onProgress: (Long) -> Unit
     ): Long {
+        if (!settings.matches(header.fileName)) return 0L
         val segments = sanitizePath(header.fileName)
         if (segments.isEmpty()) return 0L
         var parent = destination
@@ -598,11 +611,16 @@ class ZipArchiveEngine(private val context: Context) {
         settings: ExtractSettings
     ): Uri {
         val baseName = archiveName.substringBeforeLast('.', archiveName)
-        return if (settings.createFolder) {
+        val destination = if (settings.createFolder) {
             output.ensureDirectory(settings.targetParentUri, baseName)
         } else {
             settings.targetParentUri
         } ?: throw ArchiveException("无法创建目标文件夹")
+        settings.onDestinationCreated(
+            destination,
+            if (settings.createFolder) baseName else archiveName
+        )
+        return destination
     }
 
     private fun sanitizePath(raw: String): List<String> {

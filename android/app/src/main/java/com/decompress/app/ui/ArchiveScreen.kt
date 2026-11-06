@@ -26,6 +26,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -58,6 +59,7 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Info
@@ -127,13 +129,16 @@ import com.decompress.app.data.FileNameEncoding
 import com.decompress.app.data.MultiArchiveEngine
 import com.decompress.app.service.ExtractionScheduler
 import com.decompress.app.service.ExtractionTask
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 @Composable
 fun ArchiveScreen(
     target: ArchiveTarget,
     onBack: () -> Unit,
-    onExtract: (BrowserEntry, String) -> Unit,
+    onExtract: (BrowserEntry, String, List<String>) -> Unit,
     onNotify: (String) -> Unit
 ) {
     val context = LocalContext.current
@@ -151,6 +156,8 @@ fun ArchiveScreen(
     var passwordInput by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var testing by remember { mutableStateOf(false) }
+    var selectedPaths by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var openingEntry by remember { mutableStateOf(false) }
 
     LaunchedEffect(target.archive.uri, archivePassword) {
         loading = true
@@ -179,6 +186,72 @@ fun ArchiveScreen(
         onNotify(message)
     }
 
+    fun toggleSelection(path: String) {
+        selectedPaths = if (path in selectedPaths) {
+            selectedPaths - path
+        } else {
+            selectedPaths + path
+        }
+    }
+
+    /** 把一个包内文件取到缓存，再用系统应用打开；只解这一个条目。 */
+    fun openEntry(node: ArchiveNode) {
+        if (openingEntry || node.isDirectory) return
+        scope.launch {
+            openingEntry = true
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    val previewRoot = File(context.cacheDir, "preview").apply { mkdirs() }
+                    val now = System.currentTimeMillis()
+                    previewRoot.listFiles()?.forEach { stale ->
+                        if (now - stale.lastModified() > 24L * 60 * 60 * 1000) {
+                            stale.deleteRecursively()
+                        }
+                    }
+                    val workDir = File(previewRoot, "entry-$now").apply { mkdirs() }
+                    engine.extract(
+                        archiveUri = target.archive.uri,
+                        archiveName = target.archive.name,
+                        settings = com.decompress.app.data.ExtractSettings(
+                            mode = DestinationMode.CURRENT_FOLDER,
+                            targetParentUri = Uri.fromFile(workDir),
+                            targetTreeUri = Uri.fromFile(workDir),
+                            createFolder = false,
+                            conflictPolicy = ConflictPolicy.OVERWRITE,
+                            encoding = FileNameEncoding.AUTO,
+                            password = archivePassword,
+                            entryFilter = { it == node.path }
+                        ),
+                        onProgress = { _, _ -> },
+                        archiveTreeUri = target.parentTreeUri,
+                        archiveParentUri = target.parentUri
+                    )
+                    workDir.walkTopDown()
+                        .firstOrNull { it.isFile && it.name == node.name }
+                        ?: throw IllegalStateException("未能取出该文件")
+                }
+            }.onSuccess { extracted ->
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    extracted
+                )
+                val mime = android.webkit.MimeTypeMap.getSingleton()
+                    .getMimeTypeFromExtension(extracted.extension.lowercase())
+                    ?: "*/*"
+                runCatching {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(uri, mime)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                    )
+                }.onFailure { notify("没有可以打开该类型的应用") }
+            }.onFailure { notify(it.message ?: "无法打开该文件") }
+            openingEntry = false
+        }
+    }
+
     fun testArchive() {
         if (testing || loading) return
         scope.launch {
@@ -202,11 +275,15 @@ fun ArchiveScreen(
     }
 
     BackHandler {
-        if (currentPath.isNotEmpty()) {
-            currentPath = parentArchivePath(currentPath)
-        } else {
-            onBack()
+        when {
+            selectedPaths.isNotEmpty() -> selectedPaths = emptySet()
+            currentPath.isNotEmpty() -> currentPath = parentArchivePath(currentPath)
+            else -> onBack()
         }
+    }
+
+    LaunchedEffect(currentPath) {
+        selectedPaths = emptySet()
     }
 
     val nodes = remember(items, currentPath) {
@@ -269,7 +346,12 @@ fun ArchiveScreen(
         bottomBar = {
             if (error == null) {
                 ArchiveBottomBar(
-                    onExtract = { onExtract(target.archive, archivePassword) },
+                    selectionCount = selectedPaths.size,
+                    onExtractAll = { onExtract(target.archive, archivePassword, emptyList()) },
+                    onExtractSelected = {
+                        onExtract(target.archive, archivePassword, selectedPaths.toList())
+                    },
+                    onClearSelection = { selectedPaths = emptySet() },
                     onTest = ::testArchive,
                     testing = testing,
                     onInfo = {
@@ -340,12 +422,16 @@ fun ArchiveScreen(
                     items(nodes, key = { it.path }) { node ->
                         ArchiveRow(
                             node = node,
+                            selected = node.path in selectedPaths,
                             onClick = {
-                                if (node.isDirectory) {
-                                    currentPath = node.path
-                                } else {
-                                    onExtract(target.archive, archivePassword)
+                                when {
+                                    selectedPaths.isNotEmpty() -> toggleSelection(node.path)
+                                    node.isDirectory -> currentPath = node.path
+                                    else -> openEntry(node)
                                 }
+                            },
+                            onLongClick = {
+                                if (!node.isDirectory) toggleSelection(node.path)
                             }
                         )
                         HorizontalDivider(
@@ -374,7 +460,11 @@ fun ArchiveScreen(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        "仅预览 · 解压后才能使用这些文件",
+                        if (selectedPaths.isEmpty()) {
+                            "点按文件直接打开 · 长按可多选解压"
+                        } else {
+                            "已选 ${selectedPaths.size} 项 · 点按继续选择"
+                        },
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -385,10 +475,11 @@ fun ArchiveScreen(
             )
             EdgeSwipeBackZones(
                 onBack = {
-                    if (currentPath.isNotEmpty()) {
-                        currentPath = parentArchivePath(currentPath)
-                    } else {
-                        onBack()
+                    when {
+                        selectedPaths.isNotEmpty() -> selectedPaths = emptySet()
+                        currentPath.isNotEmpty() ->
+                            currentPath = parentArchivePath(currentPath)
+                        else -> onBack()
                     }
                 }
             )
@@ -494,7 +585,10 @@ private fun DreamPreviewBorder(modifier: Modifier = Modifier) {
 
 @Composable
 private fun ArchiveBottomBar(
-    onExtract: () -> Unit,
+    selectionCount: Int,
+    onExtractAll: () -> Unit,
+    onExtractSelected: () -> Unit,
+    onClearSelection: () -> Unit,
     onTest: () -> Unit,
     testing: Boolean,
     onInfo: () -> Unit
@@ -510,15 +604,25 @@ private fun ArchiveBottomBar(
                 .height(64.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ArchiveAction(Icons.Outlined.Unarchive, "解压", true, onExtract)
-            ArchiveAction(
-                Icons.Outlined.CheckCircle,
-                if (testing) "测试中" else "测试",
-                false,
-                onTest,
-                enabled = !testing
-            )
-            ArchiveAction(Icons.Outlined.Info, "信息", false, onInfo)
+            if (selectionCount > 0) {
+                ArchiveAction(Icons.Outlined.Close, "取消", false, onClearSelection)
+                ArchiveAction(
+                    Icons.Outlined.Unarchive,
+                    "解压所选 $selectionCount",
+                    true,
+                    onExtractSelected
+                )
+            } else {
+                ArchiveAction(Icons.Outlined.Unarchive, "全部解压", true, onExtractAll)
+                ArchiveAction(
+                    Icons.Outlined.CheckCircle,
+                    if (testing) "测试中" else "测试",
+                    false,
+                    onTest,
+                    enabled = !testing
+                )
+                ArchiveAction(Icons.Outlined.Info, "信息", false, onInfo)
+            }
         }
     }
 }
@@ -562,13 +666,25 @@ private fun androidx.compose.foundation.layout.RowScope.ArchiveAction(
 }
 
 @Composable
-private fun ArchiveRow(node: ArchiveNode, onClick: () -> Unit) {
+private fun ArchiveRow(
+    node: ArchiveNode,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
     val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 60.dp)
-            .combinedClickable(onClick = onClick)
+            .background(
+                if (selected) {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+                } else {
+                    Color.Transparent
+                }
+            )
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -620,7 +736,13 @@ private fun ArchiveRow(node: ArchiveNode, onClick: () -> Unit) {
                 )
             }
         }
-        if (node.isDirectory) {
+        if (selected) {
+            Icon(
+                Icons.Outlined.CheckCircle,
+                contentDescription = "已选择",
+                tint = MaterialTheme.colorScheme.primary
+            )
+        } else if (node.isDirectory) {
             Icon(
                 Icons.Outlined.ChevronRight,
                 contentDescription = null,
@@ -777,7 +899,10 @@ fun ExtractSheet(
                                     destinationMode != DestinationMode.CURRENT_FOLDER,
                                 conflictPolicy = conflictPolicy,
                                 encoding = encoding,
-                                passwords = passwords
+                                passwords = passwords,
+                                parentPath = target.parentPath,
+                                parentName = target.parentName,
+                                entryPaths = target.entryPaths
                             )
                         )
                         onExtractionStarted()

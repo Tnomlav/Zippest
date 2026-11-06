@@ -21,12 +21,16 @@ android {
         applicationId = "com.decompress.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 72
-        versionName = "1.6.1"
+        versionCode = 73
+        versionName = "1.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+        // 依赖（JNA / libarchive）带的 mips、x86 等预编译库一律不打进包。
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
     }
 
@@ -56,6 +60,18 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    // 只保留 ARM 设备真正用到的两种 ABI；universal 包用于 GitHub 直发，
+    // arm64 单包用于绝大多数真机，体积从 13 MB 降到约 5 MB。
+    // AGP 不允许 ABI 拆分与 AAB 同时构建，所以打 AAB 时用 -PzippestBundle 关掉拆分。
+    splits {
+        abi {
+            isEnable = !providers.gradleProperty("zippestBundle").isPresent
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = true
         }
     }
 

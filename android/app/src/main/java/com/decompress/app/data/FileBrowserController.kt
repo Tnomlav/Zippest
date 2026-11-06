@@ -10,8 +10,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.File
 
 data class TransferSummary(
@@ -19,6 +23,12 @@ data class TransferSummary(
     val sourceRetained: Int,
     val failed: Int,
     val firstError: String?
+)
+
+/** 全局搜索结果：条目本身 + 它所在目录的可读路径。 */
+data class GlobalSearchHit(
+    val entry: BrowserEntry,
+    val parentPath: String
 )
 
 class FileBrowserController(context: Context) {
@@ -124,8 +134,7 @@ class FileBrowserController(context: Context) {
         return true
     }
 
-    suspend fun openStorageRoot(root: File, label: String): Boolean {
-        if (!hasDirectStorageAccess() || !root.isDirectory) return false
+    suspend fun openStorageRoot(root: File, label: String): Boolean {        if (!hasDirectStorageAccess() || !root.isDirectory) return false
         val internalRoot = Environment.getExternalStorageDirectory()
         storageMode = StorageMode.DIRECT
         treeUri = Uri.fromFile(root)
@@ -165,6 +174,37 @@ class FileBrowserController(context: Context) {
         return true
     }
 
+    /**
+     * 任务完成后定位到结果目录：既支持直连存储的 file:// 目录，
+     * 也支持 SAF 的文档目录（需要 tree 授权才能继续读写）。
+     */
+    suspend fun openLocation(
+        location: Uri,
+        name: String,
+        treeUri: Uri?,
+        pathHint: String
+    ): Boolean {
+        val directory = location.localFile()
+        if (directory != null) {
+            if (!directory.isDirectory) return false
+            return openStorageRoot(directory, name.ifBlank { directory.name })
+        }
+        val targetTree = treeUri ?: this.treeUri ?: return false
+        runCatching { repository.persistPermission(targetTree) }
+        storageMode = StorageMode.SAF
+        this.treeUri = targetTree
+        currentUri = location
+        folderName = name.ifBlank { "目标文件夹" }
+        val base = pathHint.split(" / ")
+            .map { it.trim() }
+            .filter { it.isNotBlank() && it != folderName }
+        path = if (base.isEmpty()) listOf(folderName) else base + folderName
+        backStack.clear()
+        clearSelection()
+        loadCurrent()
+        return error == null
+    }
+
     suspend fun open(entry: BrowserEntry) {
         if (!entry.isDirectory) return
         val current = currentUri ?: return
@@ -192,6 +232,63 @@ class FileBrowserController(context: Context) {
 
     suspend fun refresh() {
         loadCurrent()
+    }
+
+    /**
+     * 全盘按文件名搜索（仅在直连存储模式下可用）。
+     *
+     * 做法：从内部存储根开始广度优先遍历，跳过隐藏目录与 Android/data、Android/obb，
+     * 命中数达到上限或遍历过久即停止；协程取消时立刻退出。
+     */
+    suspend fun searchGlobal(
+        query: String,
+        limit: Int = 200
+    ): List<GlobalSearchHit> = withContext(Dispatchers.IO) {
+        val needle = query.trim()
+        if (needle.isEmpty() || storageMode != StorageMode.DIRECT) return@withContext emptyList()
+        val root = Environment.getExternalStorageDirectory()
+        val hits = mutableListOf<GlobalSearchHit>()
+        val queue = ArrayDeque<File>()
+        queue.addLast(root)
+        var visited = 0
+        while (queue.isNotEmpty() && hits.size < limit && visited < MAX_SEARCH_ENTRIES) {
+            currentCoroutineContext().ensureActive()
+            val directory = queue.removeFirst()
+            val children = runCatching { directory.listFiles() }.getOrNull() ?: continue
+            for (child in children) {
+                visited++
+                val name = child.name
+                if (name.startsWith(".")) continue
+                if (child.isDirectory) {
+                    val relative = child.relativeTo(root).path
+                    if (relative.startsWith(SKIP_SEARCH_PREFIX)) continue
+                    queue.addLast(child)
+                    if (name.contains(needle, ignoreCase = true)) {
+                        hits += GlobalSearchHit(
+                            entry = repository.directEntry(child),
+                            parentPath = displayPath(root, child.parentFile)
+                        )
+                    }
+                } else if (name.contains(needle, ignoreCase = true)) {
+                    hits += GlobalSearchHit(
+                        entry = repository.directEntry(child),
+                        parentPath = displayPath(root, child.parentFile)
+                    )
+                }
+                if (hits.size >= limit || visited >= MAX_SEARCH_ENTRIES) break
+            }
+        }
+        hits.sortedWith(compareByDescending<GlobalSearchHit> { it.entry.lastModified })
+    }
+
+    private fun displayPath(root: File, directory: File?): String {
+        if (directory == null) return "内部存储"
+        val relative = runCatching { directory.relativeTo(root).path }.getOrDefault("")
+        return if (relative.isBlank()) {
+            "内部存储"
+        } else {
+            "内部存储 / " + relative.replace(File.separatorChar, '/')
+        }
     }
 
     fun captureLocation(): LocationSnapshot? {
@@ -590,5 +687,7 @@ class FileBrowserController(context: Context) {
         private const val KEY_TREE_URI = "tree_uri"
         private const val KEY_STORAGE_MODE = "storage_mode"
         private const val KEY_DIRECT_ROOT = "direct_root"
+        private const val MAX_SEARCH_ENTRIES = 25_000
+        private const val SKIP_SEARCH_PREFIX = "Android/"
     }
 }

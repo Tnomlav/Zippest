@@ -33,6 +33,7 @@ import com.decompress.app.data.CompressionOptions
 import kotlinx.coroutines.CancellationException
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.security.KeyStore
 import java.util.Base64
 import java.util.UUID
@@ -57,6 +58,10 @@ object CompressionScheduler {
         "com.decompress.app.action.COMPRESSION_FINISHED"
     const val EXTRA_COMPRESSION_SUCCESS = "compression_success"
     const val EXTRA_COMPRESSION_MESSAGE = "compression_message"
+    const val EXTRA_COMPRESSION_LOCATION = "compression_location"
+    const val EXTRA_COMPRESSION_LOCATION_NAME = "compression_location_name"
+    const val EXTRA_COMPRESSION_TREE_URI = "compression_tree_uri"
+    const val EXTRA_COMPRESSION_PATH = "compression_parent_path"
 
     const val QUEUE_NAME = "zippest-compression-queue"
     const val TAG_ALL_TASKS = "zippest-compression-task"
@@ -318,7 +323,14 @@ class CompressionWorker(
                 "已创建 ${result.partUris.size} 个分卷，打开 ${result.displayName} 可解压"
             }
             scan(result.partUris)
-            finish(true, message)
+            finish(
+                successful = true,
+                message = message,
+                location = task.targetParentUri,
+                locationName = folderLabel(task.targetParentUri),
+                treeUri = task.targetTreeUri,
+                path = ""
+            )
             Result.success(
                 workDataOf(ExtractionScheduler.KEY_MESSAGE to message)
             )
@@ -339,33 +351,61 @@ class CompressionWorker(
         }
     }
 
-    private fun finish(successful: Boolean, message: String) {
+    private fun finish(
+        successful: Boolean,
+        message: String,
+        location: Uri? = null,
+        locationName: String = "",
+        treeUri: Uri? = null,
+        path: String = ""
+    ) {
         val notify = AppSettingsRepository.read(applicationContext).notifyOnComplete
         if (notify) {
             ensureChannel()
-            notificationManager.notify(
-                notificationId,
-                NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-                    .setSmallIcon(R.drawable.ic_notification)
-                    .setContentTitle(if (successful) "压缩完成" else "压缩失败")
-                    .setContentText(message)
-                    .setContentIntent(openAppIntent())
-                    .setAutoCancel(true)
-                    .setPriority(
-                        if (successful) NotificationCompat.PRIORITY_DEFAULT
-                        else NotificationCompat.PRIORITY_HIGH
+            val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle(if (successful) "压缩完成" else "压缩失败")
+                .setContentText(message)
+                .setContentIntent(openAppIntent(location, locationName, treeUri, path))
+                .setAutoCancel(true)
+                .setPriority(
+                    if (successful) NotificationCompat.PRIORITY_DEFAULT
+                    else NotificationCompat.PRIORITY_HIGH
+                )
+                .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            if (successful && location != null) {
+                builder.addAction(
+                    0,
+                    "打开所在文件夹",
+                    TaskNavigation.pendingIntent(
+                        applicationContext,
+                        location,
+                        locationName,
+                        treeUri,
+                        path
                     )
-                    .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-                    .build()
-            )
+                )
+            }
+            notificationManager.notify(notificationId, builder.build())
         }
         applicationContext.sendBroadcast(
             Intent(CompressionScheduler.ACTION_COMPRESSION_FINISHED)
                 .setPackage(applicationContext.packageName)
                 .putExtra(CompressionScheduler.EXTRA_COMPRESSION_SUCCESS, successful)
                 .putExtra(CompressionScheduler.EXTRA_COMPRESSION_MESSAGE, message)
+                .putExtra(CompressionScheduler.EXTRA_COMPRESSION_LOCATION, location?.toString())
+                .putExtra(CompressionScheduler.EXTRA_COMPRESSION_LOCATION_NAME, locationName)
+                .putExtra(CompressionScheduler.EXTRA_COMPRESSION_TREE_URI, treeUri?.toString())
+                .putExtra(CompressionScheduler.EXTRA_COMPRESSION_PATH, path)
         )
     }
+
+    private fun folderLabel(uri: Uri): String =
+        if (uri.scheme == "file") {
+            uri.path?.let { File(it).name }?.takeIf { it.isNotBlank() } ?: "目标文件夹"
+        } else {
+            "目标文件夹"
+        }
 
     private fun scan(uris: List<Uri>) {
         uris.mapNotNull { it.path }
@@ -430,9 +470,24 @@ class CompressionWorker(
         }
     }
 
-    private fun openAppIntent(): PendingIntent {
-        val intent = Intent(applicationContext, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    private fun openAppIntent(
+        location: Uri? = null,
+        locationName: String = "",
+        treeUri: Uri? = null,
+        path: String = ""
+    ): PendingIntent {
+        val intent = if (location != null) {
+            TaskNavigation.intent(
+                applicationContext,
+                location,
+                locationName,
+                treeUri,
+                path
+            )
+        } else {
+            Intent(applicationContext, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
         }
         return PendingIntent.getActivity(
             applicationContext,

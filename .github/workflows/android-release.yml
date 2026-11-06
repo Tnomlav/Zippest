@@ -1,0 +1,124 @@
+name: android-release
+
+# 打 tag 即发版：构建 -> 签名与 16 KB 页校验 -> 产物与 SHA256SUMS 挂到 Release。
+# 需要的仓库 Secrets：
+#   KEYSTORE_BASE64  发布 keystore 的 base64（.signing/zippest-release.jks）
+#   STORE_PASSWORD   keystore 口令
+#   KEY_ALIAS        密钥别名
+#   KEY_PASSWORD     密钥口令
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare signing config
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "缺少 KEYSTORE_BASE64，拒绝发布未签名产物" >&2
+            exit 1
+          fi
+          mkdir -p .signing
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > .signing/zippest-release.jks
+          cat > .signing/zippest-release.properties <<EOF
+          storeFile=zippest-release.jks
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      - name: Verify version matches tag
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#v}"
+          VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' android/app/build.gradle.kts)
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "tag=$TAG 与 versionName=$VERSION 不一致" >&2
+            exit 1
+          fi
+          echo "版本校验通过：$VERSION"
+
+      # AGP 不允许 ABI 拆分与 AAB 同时构建：先出分 ABI 的 APK，再用 -PzippestBundle 出 AAB。
+      - name: Build APKs
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon --stacktrace \
+            lintDebug testDebugUnitTest assembleRelease
+
+      - name: Build bundle
+        working-directory: android
+        run: ./gradlew --no-daemon --stacktrace -PzippestBundle bundleRelease
+
+      - name: Verify APK payload
+        run: |
+          set -euo pipefail
+          for apk in android/app/build/outputs/apk/release/*.apk; do
+            echo "== $apk"
+            unzip -l "$apk" | grep -q "lib/mips" && { echo "仍含 mips"; exit 1; } || true
+            unzip -l "$apk" | grep -q "lib/x86" && { echo "仍含 x86"; exit 1; } || true
+            unzip -l "$apk" | grep -q "lib/arm64-v8a" || { echo "缺少 arm64-v8a"; exit 1; }
+          done
+          ls -l android/app/build/outputs/apk/release/
+
+      - name: Verify 16 KB page alignment
+        run: |
+          set -euo pipefail
+          ZIPALIGN=$(find "$ANDROID_HOME/build-tools" -name zipalign -type f | sort -r | head -n 1)
+          for apk in android/app/build/outputs/apk/release/*.apk; do
+            "$ZIPALIGN" -c -P 16 -v 4 "$apk" > /dev/null
+            echo "16 KB ok: $apk"
+          done
+
+      - name: Verify signature
+        run: |
+          set -euo pipefail
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -r | head -n 1)
+          "$APKSIGNER" verify --print-certs android/app/build/outputs/apk/release/app-arm64-v8a-release.apk
+
+      - name: Collect artifacts and checksums
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          cp android/app/build/outputs/apk/release/app-arm64-v8a-release.apk "dist/Zippest-${VERSION}-arm64-v8a.apk"
+          cp android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk "dist/Zippest-${VERSION}-armeabi-v7a.apk"
+          cp android/app/build/outputs/apk/release/app-universal-release.apk "dist/Zippest-${VERSION}-universal.apk"
+          cp android/app/build/outputs/bundle/release/app-release.aab "dist/Zippest-${VERSION}.aab"
+          cd dist
+          sha256sum * > "SHA256SUMS-${VERSION}.txt"
+          cat "SHA256SUMS-${VERSION}.txt"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.apk
+            dist/*.aab
+            dist/SHA256SUMS-*.txt
+          generate_release_notes: true
+          fail_on_unmatched_files: true

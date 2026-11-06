@@ -20,6 +20,7 @@ Zippest 最独特的两项能力是便捷的后缀重命名与批量密码填充
 ### 文件管理
 
 - 浏览本地文件和文件夹，支持搜索、排序、新建目录、重命名和下拉刷新。
+- 搜索可切换「当前文件夹 / 全部存储」：全部模式会扫描整个内部存储并显示文件所在路径。
 - 长按进入多选，可复制、移动、分享、压缩、解压、删除及查看打开方式。
 - 复制和移动直接在当前文件页选择目标目录，完成后停留在目标文件夹。
 - 删除前显示一次确认，默认移入回收站，可从文件页菜单恢复或永久删除。
@@ -44,6 +45,8 @@ Zippest 最独特的两项能力是便捷的后缀重命名与批量密码填充
 - 多压缩包任务可复用同一密码，也可逐个输入密码。
 - 解压前可直接修改压缩包名称和后缀，支持 7Z、ZIP、RAR 与自定义后缀。
 - 解压预览使用边框特效区分预览内容，点击预览文件可进入完整解压设置。
+- 包内点按文件会只解出该条目并用系统应用打开；长按可多选，底部「解压所选」只解选中的文件。
+- 解压或压缩完成后，通知栏与页面内 Snackbar 都能直接打开结果文件夹。
 - 支持完整性检查，并防止路径穿越、异常条目数量和磁盘空间不足等问题。
 
 ### 后台任务
@@ -70,14 +73,17 @@ cd android
 $env:JAVA_HOME='C:\Android Studio\jbr'
 .\gradlew.bat assembleDebug
 .\gradlew.bat lintDebug
-.\gradlew.bat assembleRelease
-.\gradlew.bat bundleRelease
+.\gradlew.bat assembleRelease          # 产出 arm64 / v7a / universal 三个 APK
+.\gradlew.bat -PzippestBundle bundleRelease   # 打 AAB（AGP 不允许与 ABI 拆分同时构建）
 ```
 
 签名后的 Release APK 输出位置：
 
 ```text
-android/app/build/outputs/apk/release/app-release.apk
+android/app/build/outputs/apk/release/app-arm64-v8a-release.apk
+android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk
+android/app/build/outputs/apk/release/app-universal-release.apk
+android/app/build/outputs/bundle/release/app-release.aab
 ```
 
 可以直接使用 Android Studio 打开 `android/` 目录。发布签名配置位于本地、
@@ -85,26 +91,24 @@ android/app/build/outputs/apk/release/app-release.apk
 
 ## 当前版本
 
-当前版本为 `1.6.1`，包名继续使用 `com.decompress.app`，以保持已有版本升级
+当前版本为 `1.7.0`（versionCode 73），包名继续使用 `com.decompress.app`，以保持已有版本升级
 兼容性。
 
-此版本让密码输入框使用普通文本键盘，从而保留输入法自带的剪贴板与粘贴入口，
-并实时监听系统剪贴板变化。应用不会读取输入法私有的剪贴板历史。
+此版本补齐了压缩包内的操作：点按包内文件可直接用系统应用打开（只解出这一个条目），
+长按可多选并「解压所选」；解压与压缩完成后，通知栏与页面内的 Snackbar 都能直接
+「打开所在文件夹」。
 
-此版本补全了“关于”页面，提供应用信息、完整隐私政策、第三方开源许可和
-GitHub 项目入口。
+此版本给搜索加上「当前 / 全部」范围切换：切换到「全部」会扫描整个内部存储，
+结果显示所在路径，文件夹与压缩包都可直接打开。全盘搜索跳过 `Android/` 与隐藏
+目录，最多扫描 25k 个条目，输入有 250 ms 防抖。
 
-此版本将文件页顶栏中的内部存储路径前缀改为“快速访问”，快速访问面板中的
-根快捷项仍保持“内部存储”，并与其他快捷入口使用相同的单格尺寸。
+此版本把安装包从 7 个 ABI 收敛到 `arm64-v8a` 与 `armeabi-v7a`：arm64 单包
+4.87 MB、v7a 4.47 MB、通用包 7.01 MB，AAB 7.71 MB，并已通过 16 KB 页面
+对齐校验。
 
-此版本将快捷位置入口命名为“快速访问”，根快捷项改为“内部存储”，并在手机
-接入 SD 卡或 USB 存储设备时动态显示可实际打开的外部存储入口。
-
-此版本支持读取并展示剪贴板中的多个文本条目，同时允许普通文件直接打开解压
-设置并在解压前修改后缀。
-
-此版本统一了删除确认弹窗的样式：显示删除数量，并提供标准的“取消”和警示色
-“确认”操作。
+此版本新增 tag 触发的发布流水线（`.github/workflows/android-release.yml`）：
+校验 tag 与 versionName、构建分 ABI 的 APK 与 AAB、检查载荷与 16 KB 对齐、
+校验签名，并把产物与 SHA256SUMS 一起发布。
 
 完整版本历史与安装包请查看：
 

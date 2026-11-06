@@ -106,8 +106,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -153,10 +155,12 @@ import androidx.core.content.FileProvider
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.decompress.app.IncomingArchive
+import com.decompress.app.OpenLocationRequest
 import com.decompress.app.data.AppSettingsRepository
 import com.decompress.app.data.BrowserSortMode
 import com.decompress.app.data.BrowserEntry
 import com.decompress.app.data.FileBrowserController
+import com.decompress.app.data.GlobalSearchHit
 import com.decompress.app.data.QuickLocation
 import com.decompress.app.data.QuickLocationIcon
 import com.decompress.app.data.QuickLocationRepository
@@ -188,7 +192,9 @@ data class ExtractTarget(
     val parentPath: String,
     val parentName: String,
     val requiresCustomDestination: Boolean = false,
-    val initialPassword: String = ""
+    val initialPassword: String = "",
+    /** 非空时只解压这些包内条目。 */
+    val entryPaths: List<String> = emptyList()
 )
 
 private data class TransferSession(
@@ -203,7 +209,11 @@ private data class ExternalStorageLocation(
 )
 
 @Composable
-fun ZippestApp(incomingArchive: IncomingArchive? = null) {
+fun ZippestApp(
+    incomingArchive: IncomingArchive? = null,
+    openLocation: OpenLocationRequest? = null,
+    onOpenLocationHandled: () -> Unit = {}
+) {
     val context = LocalContext.current
     val controller = remember { FileBrowserController(context.applicationContext) }
     val settingsRepository = remember { AppSettingsRepository(context.applicationContext) }
@@ -239,6 +249,21 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
         restored = true
     }
 
+    LaunchedEffect(openLocation, restored) {
+        val request = openLocation ?: return@LaunchedEffect
+        if (!restored) return@LaunchedEffect
+        archiveTarget = null
+        extractTarget = null
+        showSettings = false
+        controller.openLocation(
+            location = request.uri,
+            name = request.name,
+            treeUri = request.treeUri,
+            pathHint = request.path
+        )
+        onOpenLocationHandled()
+    }
+
     LaunchedEffect(Unit) {
         while (true) {
             archiveTasks = runCatching { loadArchiveWorkInfos(context) }
@@ -267,6 +292,13 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
     DisposableEffect(controller) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
+                val finishedTaskName = intent?.getStringExtra(
+                    if (intent?.action == CompressionScheduler.ACTION_COMPRESSION_FINISHED) {
+                        CompressionScheduler.EXTRA_COMPRESSION_MESSAGE
+                    } else {
+                        ExtractionScheduler.EXTRA_EXTRACTION_MESSAGE
+                    }
+                )
                 val successful = intent?.getBooleanExtra(
                     if (intent?.action == CompressionScheduler.ACTION_COMPRESSION_FINISHED) {
                         CompressionScheduler.EXTRA_COMPRESSION_SUCCESS
@@ -275,17 +307,57 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
                     },
                     false
                 ) == true
-                val message = intent?.getStringExtra(
-                    if (intent?.action == CompressionScheduler.ACTION_COMPRESSION_FINISHED) {
-                        CompressionScheduler.EXTRA_COMPRESSION_MESSAGE
+                val message = finishedTaskName ?: if (successful) "后台任务完成" else "后台任务失败"
+                val isCompression =
+                    intent?.action == CompressionScheduler.ACTION_COMPRESSION_FINISHED
+                val location = intent?.getStringExtra(
+                    if (isCompression) {
+                        CompressionScheduler.EXTRA_COMPRESSION_LOCATION
                     } else {
-                        ExtractionScheduler.EXTRA_EXTRACTION_MESSAGE
+                        ExtractionScheduler.EXTRA_EXTRACTION_LOCATION
                     }
-                ) ?: if (successful) "后台任务完成" else "后台任务失败"
+                )?.let(Uri::parse)
+                val locationName = intent?.getStringExtra(
+                    if (isCompression) {
+                        CompressionScheduler.EXTRA_COMPRESSION_LOCATION_NAME
+                    } else {
+                        ExtractionScheduler.EXTRA_EXTRACTION_LOCATION_NAME
+                    }
+                ).orEmpty()
+                val locationTree = intent?.getStringExtra(
+                    if (isCompression) {
+                        CompressionScheduler.EXTRA_COMPRESSION_TREE_URI
+                    } else {
+                        ExtractionScheduler.EXTRA_EXTRACTION_TREE_URI
+                    }
+                )?.let(Uri::parse)
+                val locationPath = intent?.getStringExtra(
+                    if (isCompression) {
+                        CompressionScheduler.EXTRA_COMPRESSION_PATH
+                    } else {
+                        ExtractionScheduler.EXTRA_EXTRACTION_PATH
+                    }
+                ).orEmpty()
                 archiveTarget = null
                 scope.launch {
                     controller.refresh()
-                    snackbarHostState.showSnackbar(message)
+                    val result = snackbarHostState.showSnackbar(
+                        message = message,
+                        actionLabel = if (location != null) "打开" else null,
+                        duration = if (location != null) {
+                            SnackbarDuration.Long
+                        } else {
+                            SnackbarDuration.Short
+                        }
+                    )
+                    if (result == SnackbarResult.ActionPerformed && location != null) {
+                        controller.openLocation(
+                            location = location,
+                            name = locationName,
+                            treeUri = locationTree,
+                            pathHint = locationPath
+                        )
+                    }
                 }
             }
         }
@@ -353,7 +425,7 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
                     ArchiveScreen(
                         target = currentArchive,
                         onBack = { archiveTarget = null },
-                        onExtract = { archive, password ->
+                        onExtract = { archive, password, entryPaths ->
                             extractTarget = ExtractTarget(
                                 archives = listOf(archive),
                                 parentUri = currentArchive.parentUri,
@@ -362,7 +434,8 @@ fun ZippestApp(incomingArchive: IncomingArchive? = null) {
                                 parentName = currentArchive.parentName,
                                 requiresCustomDestination =
                                     currentArchive.requiresCustomDestination,
-                                initialPassword = password
+                                initialPassword = password,
+                                entryPaths = entryPaths
                             )
                         },
                         onNotify = { message ->
@@ -467,6 +540,9 @@ private fun FileBrowserScreen(
 
     var searchMode by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
+    var globalSearch by rememberSaveable { mutableStateOf(false) }
+    var globalHits by remember { mutableStateOf<List<GlobalSearchHit>>(emptyList()) }
+    var globalSearching by remember { mutableStateOf(false) }
     var pullRefreshing by remember { mutableStateOf(false) }
     var externalStorages by remember {
         mutableStateOf<List<ExternalStorageLocation>>(emptyList())
@@ -652,6 +728,19 @@ private fun FileBrowserScreen(
         )
     val allSelected = visibleEntries.isNotEmpty() &&
         visibleEntries.all { it.uri in controller.selected }
+
+    LaunchedEffect(searchMode, globalSearch, query) {
+        if (!searchMode || !globalSearch || query.isBlank()) {
+            globalHits = emptyList()
+            globalSearching = false
+            return@LaunchedEffect
+        }
+        delay(250)
+        globalSearching = true
+        globalHits = runCatching { controller.searchGlobal(query) }
+            .getOrDefault(emptyList())
+        globalSearching = false
+    }
     val selectedCount = controller.selected.size
     val selectedEntries = controller.entries.filter { it.uri in controller.selected }
 
@@ -894,7 +983,9 @@ private fun FileBrowserScreen(
                                     .fillMaxWidth()
                                     .focusRequester(searchFocus),
                                 singleLine = true,
-                                placeholder = { Text("搜索当前文件夹") },
+                                placeholder = {
+                                    Text(if (globalSearch) "搜索全部存储" else "搜索当前文件夹")
+                                },
                                 colors = TextFieldDefaults.colors(
                                     focusedContainerColor = Color.Transparent,
                                     unfocusedContainerColor = Color.Transparent,
@@ -904,6 +995,17 @@ private fun FileBrowserScreen(
                             )
                         },
                         actions = {
+                            TextButton(
+                                onClick = {
+                                    if (!directStorage) {
+                                        notify("全局搜索需要「所有文件访问」权限")
+                                    } else {
+                                        globalSearch = !globalSearch
+                                    }
+                                }
+                            ) {
+                                Text(if (globalSearch) "全部" else "当前")
+                            }
                             if (query.isNotEmpty()) {
                                 IconButton(onClick = { query = "" }) {
                                     Icon(Icons.Outlined.Close, contentDescription = "清除搜索")
@@ -1112,7 +1214,59 @@ private fun FileBrowserScreen(
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                if (visibleEntries.isEmpty()) {
+                val showGlobalResults = searchMode && globalSearch && query.isNotBlank()
+                if (showGlobalResults) {
+                    when {
+                        globalSearching -> Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                        globalHits.isEmpty() -> LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            item {
+                                EmptyState(
+                                    modifier = Modifier.fillParentMaxSize(),
+                                    filtered = true
+                                )
+                            }
+                        }
+                        else -> LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 12.dp,
+                                top = 8.dp,
+                                end = 12.dp,
+                                bottom = 8.dp
+                            )
+                        ) {
+                            items(globalHits, key = { it.entry.uri.toString() }) { hit ->
+                                GlobalSearchRow(
+                                    hit = hit,
+                                    onClick = {
+                                        if (hit.entry.isDirectory) {
+                                            hit.entry.uri.path?.let { path ->
+                                                scope.launch {
+                                                    controller.openStorageRoot(
+                                                        File(path),
+                                                        hit.entry.name
+                                                    )
+                                                }
+                                            }
+                                        } else {
+                                            openWithFile(hit.entry)
+                                        }
+                                        searchMode = false
+                                        query = ""
+                                    }
+                                )
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.32f)
+                                )
+                            }
+                        }
+                    }
+                } else if (visibleEntries.isEmpty()) {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         item {
                             EmptyState(
@@ -2908,6 +3062,55 @@ private fun Onboarding(
         TextButton(onClick = onChooseFolder) {
             Text("或仅选择一个文件夹")
         }
+    }
+}
+
+@Composable
+private fun GlobalSearchRow(hit: GlobalSearchHit, onClick: () -> Unit) {
+    val context = LocalContext.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            if (hit.entry.isDirectory) Icons.Outlined.Folder else Icons.Outlined.InsertDriveFile,
+            contentDescription = null,
+            tint = if (hit.entry.isDirectory) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                hit.entry.name,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                hit.parentPath,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            if (hit.entry.isDirectory) {
+                "文件夹"
+            } else {
+                Formatter.formatShortFileSize(context, hit.entry.size)
+            },
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
