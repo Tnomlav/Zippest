@@ -461,7 +461,152 @@ class MultiArchiveEngine(private val context: Context) {
             .map { repository.directEntry(it) }
     }
 
+    private suspend fun listNative(uri: Uri, password: String): List<ArchiveItem> =
+        withArchiveFile(uri) { file ->
+            val entries = scanNative(file, file.name, password, "UTF-8")
+            entries.map { entry ->
+                ArchiveItem(
+                    path = entry.path,
+                    isDirectory = entry.isDirectory,
+                    size = entry.size
+                )
+            }
+        }
+
+    private fun scanNative(
+        file: File,
+        archiveName: String,
+        password: String,
+        charsetName: String
+    ): List<NativeArchiveEntry> {
+        val files = nativeArchiveFiles(file, archiveName)
+        val entries = mutableListOf<NativeArchiveEntry>()
+        NativeArchiveReader.open(files, password, charsetName).use { reader ->
+            while (true) {
+                val entry = reader.nextEntry() ?: break
+                if (entries.size >= MAX_ENTRIES) {
+                    throw ArchiveException("压缩包条目过多，已停止读取")
+                }
+                entries += entry
+            }
+        }
+        return entries
+    }
+
+    private fun extractNative(
+        file: File,
+        archiveName: String,
+        settings: ExtractSettings,
+        entries: List<NativeArchiveEntry>,
+        onProgress: (Int, Int) -> Unit,
+        onFractionProgress: (Float) -> Unit
+    ) {
+        val files = nativeArchiveFiles(file, archiveName)
+        val packedSize = files.sumOf { it.length() }.coerceAtLeast(files.first().length())
+        val declaredBytes = entries.sumOf { it.size }
+        ensureSafeExpansion(declaredBytes, packedSize)
+        ensureLocalFreeSpace(context, settings.targetTreeUri, declaredBytes)
+
+        val output = outputWriter(settings)
+        val destination = prepareDestination(output, settings, archiveName)
+        var processed = 0
+        var writtenBytes = 0L
+        onFractionProgress(0f)
+        NativeArchiveReader.open(
+            files,
+            settings.password,
+            settings.encoding.charsetName
+        ).use { reader ->
+            while (true) {
+                val entry = reader.nextEntry() ?: break
+                if (processed >= MAX_ENTRIES) {
+                    throw ArchiveException("压缩包条目过多，已停止解压")
+                }
+                writtenBytes += writeEntry(
+                    output = output,
+                    destination = destination,
+                    path = entry.path,
+                    isDirectory = entry.isDirectory,
+                    settings = settings,
+                    inputFactory = reader::openEntryInputStream,
+                    closeInput = true,
+                    remainingBytes = MAX_TOTAL_BYTES - writtenBytes,
+                    onProgress = { entryBytes ->
+                        reportFraction(
+                            onFractionProgress,
+                            writtenBytes + entryBytes,
+                            declaredBytes
+                        )
+                    }
+                )
+                ensureSafeExpansion(writtenBytes, packedSize)
+                processed++
+                onProgress(processed, entries.size.coerceAtLeast(processed))
+            }
+        }
+        onFractionProgress(1f)
+    }
+
+    private fun nativeArchiveFiles(file: File, archiveName: String): List<File> =
+        if (archiveName.endsWith(".rar", ignoreCase = true)) {
+            rarVolumeFiles(file)
+        } else {
+            listOf(file)
+        }
+
+    private suspend fun testNative(
+        uri: Uri,
+        password: String,
+        onProgress: (Int, Int) -> Unit
+    ): Int = withArchiveFile(uri) { file ->
+        val entries = scanNative(file, file.name, password, "UTF-8")
+        if (entries.size > MAX_ENTRIES) {
+            throw ArchiveException("压缩包条目过多，已停止测试")
+        }
+        val files = nativeArchiveFiles(file, file.name)
+        val packedSize = files.sumOf { it.length() }.coerceAtLeast(files.first().length())
+        val declaredBytes = entries.sumOf { it.size }
+        ensureSafeExpansion(declaredBytes, packedSize)
+        var processed = 0
+        var writtenBytes = 0L
+        NativeArchiveReader.open(files, password, "UTF-8").use { reader ->
+            while (true) {
+                val entry = reader.nextEntry() ?: break
+                if (processed >= MAX_ENTRIES) {
+                    throw ArchiveException("压缩包条目过多，已停止测试")
+                }
+                if (!entry.isDirectory) {
+                    reader.openEntryInputStream().use { input ->
+                        writtenBytes += copyWithLimit(
+                            input = input,
+                            output = DiscardOutputStream,
+                            remainingBytes = MAX_TOTAL_BYTES - writtenBytes
+                        )
+                    }
+                }
+                ensureSafeExpansion(writtenBytes, packedSize)
+                processed++
+                onProgress(processed, entries.size.coerceAtLeast(processed))
+            }
+        }
+        processed
+    }
+
     private suspend fun testSevenZ(
+        uri: Uri,
+        password: String,
+        onProgress: (Int, Int) -> Unit
+    ): Int {
+        if (password.isEmpty()) {
+            val nativeResult = runCatching {
+                testNative(uri, password, onProgress)
+            }.getOrNull()
+            if (nativeResult != null) return nativeResult
+        }
+        return testSevenZJava(uri, password, onProgress)
+    }
+
+    private suspend fun testSevenZJava(
         uri: Uri,
         password: String,
         onProgress: (Int, Int) -> Unit
@@ -501,6 +646,20 @@ class MultiArchiveEngine(private val context: Context) {
     }
 
     private suspend fun testRar(
+        uri: Uri,
+        password: String,
+        onProgress: (Int, Int) -> Unit
+    ): Int {
+        if (password.isEmpty()) {
+            val nativeResult = runCatching {
+                testNative(uri, password, onProgress)
+            }.getOrNull()
+            if (nativeResult != null) return nativeResult
+        }
+        return testRarJava(uri, password, onProgress)
+    }
+
+    private suspend fun testRarJava(
         uri: Uri,
         password: String,
         onProgress: (Int, Int) -> Unit
@@ -606,6 +765,17 @@ class MultiArchiveEngine(private val context: Context) {
     }
 
     private suspend fun listSevenZ(uri: Uri, password: String): List<ArchiveItem> =
+        if (password.isNotEmpty()) {
+            listSevenZJava(uri, password)
+        } else {
+            runCatching {
+                listNative(uri, password)
+            }.getOrElse {
+                listSevenZJava(uri, password)
+            }
+        }
+
+    private suspend fun listSevenZJava(uri: Uri, password: String): List<ArchiveItem> =
         withTempArchive(uri) { file ->
             runCatching {
                 val sevenZ = if (password.isBlank()) {
@@ -626,6 +796,48 @@ class MultiArchiveEngine(private val context: Context) {
         }
 
     private suspend fun extractSevenZ(
+        uri: Uri,
+        archiveName: String,
+        settings: ExtractSettings,
+        onProgress: (Int, Int) -> Unit,
+        onFractionProgress: (Float) -> Unit
+    ) {
+        if (settings.password.isNotEmpty()) {
+            extractSevenZJava(
+                uri,
+                archiveName,
+                settings,
+                onProgress,
+                onFractionProgress
+            )
+            return
+        }
+        val handled = withArchiveFile(uri) { file ->
+            val entries = runCatching {
+                scanNative(file, archiveName, settings.password, "UTF-8")
+            }.getOrNull() ?: return@withArchiveFile false
+            extractNative(
+                file = file,
+                archiveName = archiveName,
+                settings = settings,
+                entries = entries,
+                onProgress = onProgress,
+                onFractionProgress = onFractionProgress
+            )
+            true
+        }
+        if (!handled) {
+            extractSevenZJava(
+                uri,
+                archiveName,
+                settings,
+                onProgress,
+                onFractionProgress
+            )
+        }
+    }
+
+    private suspend fun extractSevenZJava(
         uri: Uri,
         archiveName: String,
         settings: ExtractSettings,
@@ -679,6 +891,17 @@ class MultiArchiveEngine(private val context: Context) {
     }
 
     private suspend fun listRar(uri: Uri, password: String): List<ArchiveItem> =
+        if (password.isNotEmpty()) {
+            listRarJava(uri, password)
+        } else {
+            runCatching {
+                listNative(uri, password)
+            }.getOrElse {
+                listRarJava(uri, password)
+            }
+        }
+
+    private suspend fun listRarJava(uri: Uri, password: String): List<ArchiveItem> =
         withArchiveFile(uri) { file ->
             runCatching {
                 rarHeaders(file, password).take(MAX_ENTRIES).map { header ->
@@ -692,6 +915,48 @@ class MultiArchiveEngine(private val context: Context) {
         }
 
     private suspend fun extractRar(
+        uri: Uri,
+        archiveName: String,
+        settings: ExtractSettings,
+        onProgress: (Int, Int) -> Unit,
+        onFractionProgress: (Float) -> Unit
+    ) {
+        if (settings.password.isNotEmpty()) {
+            extractRarJava(
+                uri,
+                archiveName,
+                settings,
+                onProgress,
+                onFractionProgress
+            )
+            return
+        }
+        val handled = withArchiveFile(uri) { file ->
+            val entries = runCatching {
+                scanNative(file, archiveName, settings.password, "UTF-8")
+            }.getOrNull() ?: return@withArchiveFile false
+            extractNative(
+                file = file,
+                archiveName = archiveName,
+                settings = settings,
+                entries = entries,
+                onProgress = onProgress,
+                onFractionProgress = onFractionProgress
+            )
+            true
+        }
+        if (!handled) {
+            extractRarJava(
+                uri,
+                archiveName,
+                settings,
+                onProgress,
+                onFractionProgress
+            )
+        }
+    }
+
+    private suspend fun extractRarJava(
         uri: Uri,
         archiveName: String,
         settings: ExtractSettings,

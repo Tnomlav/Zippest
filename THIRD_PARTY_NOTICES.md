@@ -57,3 +57,16 @@ Zippest 使用以下开源组件。各组件版权归原作者所有，具体条
 组件：RAR4 与 RAR5 解压支持
 
 许可证：[UnRAR License](https://github.com/junrar/junrar/blob/master/LICENSE)
+
+## libarchive for Android 1.1.4
+
+组件：Android NDK 原生 7Z、RAR4、RAR5 读取与解压绑定
+
+许可证：[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+
+## libarchive 与内置原生编解码库
+
+组件：libarchive、bzip2、XZ Utils、LZ4、Zstandard、Mbed TLS
+
+许可证：[BSD 2-Clause](https://github.com/libarchive/libarchive/blob/master/COPYING)
+及各上游组件许可证

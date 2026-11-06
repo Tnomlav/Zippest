@@ -100,5 +100,11 @@ internal val zippestOpenSourceLicenses = listOf(
         components = "RAR4 与 RAR5 解压支持",
         license = "UnRAR License",
         licenseUrl = "https://github.com/junrar/junrar/blob/master/LICENSE"
+    ),
+    OpenSourceLicense(
+        name = "libarchive for Android 1.1.4",
+        components = "NDK 原生 7Z、RAR4、RAR5 解压，内置 bzip2、XZ、LZ4、Zstandard 与 Mbed TLS",
+        license = "Apache License 2.0 / BSD 2-Clause 及上游组件许可证",
+        licenseUrl = "https://github.com/zhanghai/libarchive-android"
     )
 )

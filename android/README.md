@@ -7,7 +7,7 @@ creating common archive formats. The product UI follows the finalized prototype 
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.5.19`
+- Version: `1.6.0`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct
@@ -25,6 +25,9 @@ creating common archive formats. The product UI follows the finalized prototype 
   extraction defaults, notifications, permissions, and task maintenance.
 - Browse and extract ZIP, 7Z, RAR, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, TAR.ZST,
   TAR.BR, CPIO, GZ, BZ2, XZ, LZMA, LZ4, ZST, and BR archives.
+- Use the bundled libarchive NDK engine for unencrypted 7Z, RAR4, and RAR5
+  listing and extraction, with an automatic Java-engine fallback for password
+  and encrypted-header archives.
 - Create ZIP, 7Z, TAR, TAR.GZ, TAR.BZ2, TAR.XZ, TAR.ZST, CPIO, GZ, BZ2,
   XZ, LZMA, LZ4, and ZST archives with selectable compression levels.
 - Create encrypted ZIP and 7Z archives.
@@ -118,7 +121,9 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
-Version `1.5.19` adds a direct battery-optimization request and a Vivo-specific
+Version `1.6.0` adds a native libarchive engine for unencrypted 7Z and RAR
+archives while retaining the existing engines for encrypted formats and
+compatibility fallback. Version `1.5.19` adds a direct battery-optimization request and a Vivo-specific
 shortcut to its “Autostart / Background start” permission page, caches resolved
 output directories, and documents that GPU rendering acceleration does not
 accelerate archive algorithms. Version `1.5.18` reports byte-level progress while combining and extracting

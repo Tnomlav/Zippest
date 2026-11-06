@@ -21,8 +21,8 @@ android {
         applicationId = "com.decompress.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 70
-        versionName = "1.5.19"
+        versionCode = 71
+        versionName = "1.6.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -96,6 +96,7 @@ dependencies {
     implementation("org.lz4:lz4-java:1.8.0")
     implementation("com.github.junrar:junrar:8.1.2")
     implementation("net.lingala.zip4j:zip4j:2.11.5")
+    implementation("me.zhanghai.android.libarchive:library:1.1.4")
 
     debugImplementation("androidx.compose.ui:ui-tooling:$composeUi")
     testImplementation("junit:junit:4.13.2")
