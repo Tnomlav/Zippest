@@ -234,6 +234,7 @@ class ExtractionWorker(
             var lastUpdate = 0L
             var currentProgress = 0
             val checkpoint = {
+                if (isStopped) throw CancellationException("解压已取消")
                 val wasPaused = ArchiveTaskControl.isPaused(applicationContext, id)
                 val pauseHandled = ArchiveTaskControl.waitWhilePaused(
                     applicationContext,
@@ -244,8 +245,9 @@ class ExtractionWorker(
                             notificationId,
                             buildProgressNotification(
                                 effectiveTask.displayName,
-                                "已暂停，点击任务队列继续",
-                                currentProgress
+                                "已暂停，点按继续",
+                                currentProgress,
+                                paused = true
                             )
                         )
                         setProgressAsync(
@@ -297,8 +299,9 @@ class ExtractionWorker(
                             notificationId,
                             buildProgressNotification(
                                 effectiveTask.displayName,
-                                "已暂停，点击任务队列继续",
-                                progress
+                                "已暂停，点按继续",
+                                progress,
+                                paused = true
                             )
                         )
                         setProgressAsync(
@@ -513,9 +516,10 @@ class ExtractionWorker(
     private fun buildProgressNotification(
         displayName: String,
         text: String,
-        progress: Int
-    ): Notification =
-        NotificationCompat.Builder(applicationContext, CHANNEL_ID)
+        progress: Int,
+        paused: Boolean = false
+    ): Notification {
+        val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Zippest · ${displayName.take(48)}")
             .setContentText(text)
@@ -525,7 +529,18 @@ class ExtractionWorker(
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setProgress(100, progress.coerceIn(0, 100), false)
-            .build()
+        builder.addAction(
+            0,
+            if (paused) "继续" else "暂停",
+            TaskNotificationControl.pauseIntent(applicationContext, id, !paused)
+        )
+        builder.addAction(
+            0,
+            "取消",
+            TaskNotificationControl.cancelIntent(applicationContext, id)
+        )
+        return builder.build()
+    }
 
     private fun notifyFinished(
         title: String,

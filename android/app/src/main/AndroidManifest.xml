@@ -108,6 +108,9 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/zippest_file_paths" />
         </provider>
+        <receiver
+            android:name=".service.TaskControlReceiver"
+            android:exported="false" />
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"

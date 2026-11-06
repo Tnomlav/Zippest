@@ -254,6 +254,9 @@ class CompressionWorker(
             var lastUpdate = 0L
             var currentProgress = 0
             val checkpoint = {
+                // 用户从通知栏取消时，WorkManager 只会标记取消；这里必须主动检查，
+                // 否则阻塞的 copy 循环会一直跑完。
+                if (isStopped) throw CancellationException("压缩已取消")
                 val wasPaused = ArchiveTaskControl.isPaused(applicationContext, id)
                 val pauseHandled = ArchiveTaskControl.waitWhilePaused(
                     applicationContext,
@@ -264,8 +267,9 @@ class CompressionWorker(
                             notificationId,
                             progressNotification(
                                 task.displayName,
-                                "已暂停，点击任务队列继续",
-                                currentProgress
+                                "已暂停，点按继续",
+                                currentProgress,
+                                paused = true
                             )
                         )
                         setProgressAsync(
@@ -332,12 +336,13 @@ class CompressionWorker(
                             notificationId,
                             progressNotification(
                                 task.displayName,
-                                "已暂停，点击任务队列继续",
+                                "已暂停，点按继续",
                                 if (total > 0) {
                                     (processed * 100 / total).coerceIn(0, 99)
                                 } else {
                                     0
-                                }
+                                },
+                                paused = true
                             )
                         )
                         setProgressAsync(
@@ -531,9 +536,10 @@ class CompressionWorker(
     private fun progressNotification(
         displayName: String,
         text: String,
-        progress: Int
-    ): Notification =
-        NotificationCompat.Builder(applicationContext, CHANNEL_ID)
+        progress: Int,
+        paused: Boolean = false
+    ): Notification {
+        val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Zippest · ${displayName.take(48)}")
             .setContentText(text)
@@ -543,7 +549,18 @@ class CompressionWorker(
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setProgress(100, progress.coerceIn(0, 100), false)
-            .build()
+        builder.addAction(
+            0,
+            if (paused) "继续" else "暂停",
+            TaskNotificationControl.pauseIntent(applicationContext, id, !paused)
+        )
+        builder.addAction(
+            0,
+            "取消",
+            TaskNotificationControl.cancelIntent(applicationContext, id)
+        )
+        return builder.build()
+    }
 
     private fun ensureChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
