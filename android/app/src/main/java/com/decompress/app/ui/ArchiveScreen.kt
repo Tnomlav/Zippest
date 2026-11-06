@@ -370,11 +370,24 @@ fun ArchiveScreen(
                 .padding(padding)
         ) {
             when {
-                loading -> Box(
+                loading -> Column(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
                     CircularProgressIndicator()
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "正在读取压缩包目录…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "大压缩包第一次打开可能需要几秒",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 error != null -> Column(
                     modifier = Modifier
@@ -831,6 +844,18 @@ fun ExtractSheet(
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     var archives by remember(target.archives) { mutableStateOf(target.archives) }
+    val destinationHint = when (destinationMode) {
+        DestinationMode.CURRENT_FOLDER ->
+            "将解压到 ${target.parentPath.ifBlank { target.parentName }}"
+        DestinationMode.NEW_FOLDER -> if (archives.size > 1) {
+            "将解压到 ${target.parentPath} 下，每个压缩包建同名文件夹"
+        } else {
+            val folder = archives.firstOrNull()?.name?.substringBeforeLast('.') ?: "新文件夹"
+            "将解压到 ${target.parentPath} / $folder"
+        }
+        DestinationMode.CUSTOM ->
+            "将解压到 ${customName?.ifBlank { "自定义位置" } ?: "自定义位置"}"
+    }
     var archiveNameValue by remember(target.archives) {
         mutableStateOf(
             fileNameWithSuffixSelected(
@@ -1274,6 +1299,17 @@ fun ExtractSheet(
                 }
                 Spacer(Modifier.height(12.dp))
             }
+
+            Text(
+                destinationHint,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
 
             Row(
                 modifier = Modifier

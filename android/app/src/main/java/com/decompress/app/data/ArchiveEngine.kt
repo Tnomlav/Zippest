@@ -178,17 +178,40 @@ internal fun reportFraction(
 internal fun Throwable.archiveMessage(): String {
     val detail = message?.trim().orEmpty()
     val lower = detail.lowercase()
-    return when {
+    val mapped = when {
         "without a password" in lower ||
             "missing password" in lower ||
             "wrong password" in lower ||
-            javaClass.simpleName == "WrongPasswordException" -> "密码错误或密码缺失"
+            "password" in lower && "invalid" in lower ||
+            javaClass.simpleName == "WrongPasswordException" ->
+            "密码错误。加密 ZIP 注意大小写；7Z / RAR 头加密需要先解锁。"
+        "crc" in lower ||
+            "corrupt" in lower ||
+            "unexpected end" in lower ||
+            "truncated" in lower ||
+            "damaged" in lower ->
+            "压缩包可能损坏或没下载完整。可以重新下载后再试，ZIP 还能试试修复。"
+        "enospc" in lower ||
+            "no space" in lower ||
+            "space" in lower && "insufficient" in lower ->
+            "存储空间不足。清理一些文件，或换到空间更大的位置再解压。"
+        "enoent" in lower ||
+            "no such file" in lower ||
+            "not found" in lower ->
+            "文件已被移动或删除，刷新后再试。"
+        "unsupported" in lower ||
+            "not supported" in lower ->
+            "暂不支持这个压缩格式或加密方式。"
+        "permission" in lower ||
+            "eacces" in lower ->
+            "没有写入权限。换一个文件夹，或先授予所有文件访问权限。"
         detail.isNotEmpty() -> detail
         else -> when (javaClass.simpleName) {
             "UnsupportedRarV5Exception" -> "当前 RAR5 压缩包不受支持"
             else -> javaClass.simpleName
         }
     }
+    return mapped
 }
 
 internal object DiscardOutputStream : OutputStream() {

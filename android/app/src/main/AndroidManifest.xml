@@ -111,6 +111,9 @@
         <receiver
             android:name=".service.TaskControlReceiver"
             android:exported="false" />
+        <receiver
+            android:name=".service.ExtractionUndoReceiver"
+            android:exported="false" />
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"

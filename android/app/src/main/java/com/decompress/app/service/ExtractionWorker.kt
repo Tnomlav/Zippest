@@ -181,6 +181,7 @@ class ExtractionWorker(
     private val notificationManager =
         appContext.getSystemService(NotificationManager::class.java)
     private val notificationId = (id.hashCode() and 0x7fffffff).coerceAtLeast(1)
+    private val undoUris = Collections.synchronizedList(mutableListOf<Uri>())
 
     override suspend fun doWork(): Result {
         val task = runCatching { ExtractionScheduler.readTask(inputData) }
@@ -342,6 +343,15 @@ class ExtractionWorker(
                     ExtractionScheduler.KEY_PAUSED to false
                 )
             )
+            val undoable = undoUris.isNotEmpty() &&
+                undoUris.size <= ExtractionUndoStore.MAX_ENTRIES
+            if (undoable) {
+                ExtractionUndoStore.save(
+                    applicationContext,
+                    id.toString(),
+                    undoUris.toList()
+                )
+            }
             if (shouldNotifyFinished()) {
                 notifyFinished(
                     title = "解压完成",
@@ -350,7 +360,8 @@ class ExtractionWorker(
                     location = outcome.locationUri,
                     locationName = outcome.locationName,
                     treeUri = outcome.treeUri,
-                    path = outcome.path
+                    path = outcome.path,
+                    undoable = undoable
                 )
             }
             broadcastFinished(
@@ -438,6 +449,9 @@ class ExtractionWorker(
                     onFileCreated = { uri ->
                         if (uri.scheme == "file") {
                             createdFiles += uri
+                        }
+                        if (undoUris.size < ExtractionUndoStore.MAX_ENTRIES) {
+                            undoUris += uri
                         }
                     }
                 ),
@@ -549,7 +563,8 @@ class ExtractionWorker(
         location: Uri? = null,
         locationName: String = "",
         treeUri: Uri? = null,
-        path: String = ""
+        path: String = "",
+        undoable: Boolean = false
     ) {
         ensureNotificationChannel()
         val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
@@ -575,6 +590,13 @@ class ExtractionWorker(
                     treeUri,
                     path
                 )
+            )
+        }
+        if (successful && undoable) {
+            builder.addAction(
+                0,
+                "撤销解压",
+                ExtractionUndoReceiver.pendingIntent(applicationContext)
             )
         }
         notificationManager.notify(notificationId, builder.build())
