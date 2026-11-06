@@ -7,7 +7,7 @@ creating common archive formats. The product UI follows the finalized prototype 
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.6.0`
+- Version: `1.6.1`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct
@@ -121,7 +121,10 @@ The encrypted RAR fixtures use the password `junrar`, and the encrypted-header
 
 ## Scope
 
-Version `1.6.0` adds a native libarchive engine for unencrypted 7Z and RAR
+Version `1.6.1` applies delete and rename changes to the file list immediately,
+then completes the real filesystem mutation in the background and restores the
+previous state if it fails. Copy and move controls also dismiss before the
+background transfer begins. Version `1.6.0` adds a native libarchive engine for unencrypted 7Z and RAR
 archives while retaining the existing engines for encrypted formats and
 compatibility fallback. Version `1.5.19` adds a direct battery-optimization request and a Vivo-specific
 shortcut to its “Autostart / Background start” permission page, caches resolved

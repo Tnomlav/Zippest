@@ -10,6 +10,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 
 data class TransferSummary(
@@ -25,6 +27,9 @@ class FileBrowserController(context: Context) {
     private val preferences =
         context.getSharedPreferences("decompress-browser", Context.MODE_PRIVATE)
     private val backStack = ArrayDeque<Pair<Uri, String>>()
+    private val mutationMutex = Mutex()
+    private val pendingRemovals = mutableSetOf<Uri>()
+    private val pendingNames = mutableMapOf<Uri, String>()
 
     enum class StorageMode {
         SAF,
@@ -233,8 +238,15 @@ class FileBrowserController(context: Context) {
                 null -> emptyList()
             }
         }.onSuccess { loaded ->
-            entries = loaded
-            val visibleUris = loaded.mapTo(mutableSetOf()) { it.uri }
+            val visible = loaded
+                .asSequence()
+                .filterNot { it.uri in pendingRemovals }
+                .map { entry ->
+                    pendingNames[entry.uri]?.let { name -> entry.copy(name = name) } ?: entry
+                }
+                .toList()
+            entries = visible
+            val visibleUris = visible.mapTo(mutableSetOf()) { it.uri }
             selected = selected.filterTo(mutableSetOf()) { it in visibleUris }
         }.onFailure {
             error = it.message ?: "无法读取此文件夹"
@@ -286,29 +298,60 @@ class FileBrowserController(context: Context) {
     }
 
     suspend fun renameSelected(name: String): Boolean {
-        val selectedUri = selected.singleOrNull() ?: return false
+        val entry = entries.singleOrNull { it.uri in selected } ?: return false
         val cleanName = validFileName(name) ?: return false
-        val directFile = if (hasDirectStorageAccess()) {
-            repository.localFileForUri(selectedUri)
-        } else {
-            null
-        }
-        val renamed = when {
-            directFile != null ->
-                repository.renameDirect(Uri.fromFile(directFile), cleanName)
-            storageMode == StorageMode.SAF ->
-                repository.rename(selectedUri, cleanName)
-            else -> false
-        }
-        if (renamed) {
-            clearSelection()
-            loadCurrent()
-        }
-        return renamed
+        if (!beginRename(entry, cleanName)) return false
+        return commitRename(entry, cleanName) != null
     }
+
+    fun beginRename(entry: BrowserEntry, name: String): Boolean {
+        val cleanName = validFileName(name) ?: return false
+        if (entry.name != cleanName) {
+            pendingNames[entry.uri] = cleanName
+            entries = entries.map { current ->
+                if (current.uri == entry.uri) {
+                    current.copy(name = cleanName)
+                } else {
+                    current
+                }
+            }
+        }
+        clearSelection()
+        return true
+    }
+
+    suspend fun commitRename(entry: BrowserEntry, name: String): BrowserEntry? =
+        mutationMutex.withLock {
+            val cleanName = validFileName(name)
+            if (cleanName == null) {
+                pendingNames.remove(entry.uri)
+                loadCurrent()
+                return@withLock null
+            }
+            val renamed = renameEntryLocked(entry, cleanName, refreshAfter = false)
+            pendingNames.remove(entry.uri)
+            if (renamed == null) {
+                loadCurrent()
+                return@withLock null
+            }
+            entries = entries.map { current ->
+                if (current.uri == entry.uri) renamed else current
+            }
+            renamed
+        }
 
     suspend fun renameEntry(entry: BrowserEntry, name: String): BrowserEntry? {
         val cleanName = validFileName(name) ?: return null
+        return mutationMutex.withLock {
+            renameEntryLocked(entry, cleanName, refreshAfter = true)
+        }
+    }
+
+    private suspend fun renameEntryLocked(
+        entry: BrowserEntry,
+        cleanName: String,
+        refreshAfter: Boolean
+    ): BrowserEntry? {
         val directFile = if (hasDirectStorageAccess()) {
             repository.localFileForUri(entry.uri)
         } else {
@@ -318,23 +361,31 @@ class FileBrowserController(context: Context) {
             val renamed = repository.renameDirect(Uri.fromFile(directFile), cleanName)
             if (!renamed) return null
             val target = File(directFile.parentFile ?: return null, cleanName)
-            loadCurrent()
+            if (refreshAfter) loadCurrent()
             return repository.directEntry(target)
         }
         if (storageMode == StorageMode.SAF) {
             val renamedUri = repository.renameWithUri(entry.uri, cleanName)
                 ?: return null
-            loadCurrent()
+            if (refreshAfter) loadCurrent()
             return entry.copy(uri = renamedUri, name = cleanName)
         }
         return null
     }
 
-    suspend fun deleteSelected(refreshAfter: Boolean = true): Int {
+    fun beginDelete(targets: List<BrowserEntry>) {
+        val uris = targets.mapTo(mutableSetOf()) { it.uri }
+        pendingRemovals += uris
+        entries = entries.filterNot { it.uri in uris }
+        clearSelection()
+    }
+
+    suspend fun commitDelete(targets: List<BrowserEntry>): Int = mutationMutex.withLock {
         val useTrash = AppSettingsRepository.read(appContext).useTrash
         val trash = TrashRepository(appContext)
         var deleted = 0
-        selected.forEach { uri ->
+        targets.forEach { target ->
+            val uri = target.uri
             val directFile = if (hasDirectStorageAccess()) {
                 repository.localFileForUri(uri)
             } else {
@@ -352,8 +403,16 @@ class FileBrowserController(context: Context) {
             }
             if (success) deleted++
         }
-        clearSelection()
-        if (refreshAfter) loadCurrent()
+        pendingRemovals -= targets.mapTo(mutableSetOf()) { it.uri }
+        if (deleted < targets.size) loadCurrent()
+        deleted
+    }
+
+    suspend fun deleteSelected(refreshAfter: Boolean = true): Int {
+        val targets = entries.filter { it.uri in selected }
+        beginDelete(targets)
+        val deleted = commitDelete(targets)
+        if (refreshAfter && deleted == targets.size) loadCurrent()
         return deleted
     }
 
@@ -432,7 +491,7 @@ class FileBrowserController(context: Context) {
         destinationDirectoryUri: Uri,
         destinationTreeUri: Uri,
         move: Boolean
-    ): TransferSummary {
+    ): TransferSummary = mutationMutex.withLock {
         if (
             move &&
             sourceDirectoryUri?.let {
@@ -485,7 +544,7 @@ class FileBrowserController(context: Context) {
             }
             firstError = firstError ?: result.message
         }
-        return TransferSummary(completed, sourceRetained, failed, firstError)
+        TransferSummary(completed, sourceRetained, failed, firstError)
     }
 
     fun forgetRoot() {

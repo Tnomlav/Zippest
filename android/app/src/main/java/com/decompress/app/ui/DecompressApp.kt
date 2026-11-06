@@ -700,7 +700,12 @@ private fun FileBrowserScreen(
             notify("请选择其他文件夹")
             return
         }
-        transferBusy = true
+        transferSession = null
+        transferBusy = false
+        notify(
+            "正在${if (session.move) "移动" else "复制"} " +
+                "${session.sources.size} 项…"
+        )
         scope.launch {
             val action = if (session.move) "移动" else "复制"
             val summary = runCatching {
@@ -712,8 +717,6 @@ private fun FileBrowserScreen(
                     move = session.move
                 )
             }.getOrNull()
-            transferSession = null
-            transferBusy = false
             val message = when {
                 summary == null -> "${action}失败"
                 summary.completed > 0 &&
@@ -1342,7 +1345,7 @@ private fun FileBrowserScreen(
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {
                             moreExpanded = false
-                            notify("Zippest 1.6.0 · 文件浏览与压缩")
+                            notify("Zippest 1.6.1 · 文件浏览与压缩")
                         }
                     )
                 }
@@ -1411,18 +1414,24 @@ private fun FileBrowserScreen(
             onDismiss = { showDeleteConfirmation = false },
             onConfirm = {
                 showDeleteConfirmation = false
-                scope.launch {
-                    val count = controller.deleteSelected(refreshAfter = false)
-                    notify(
-                        when {
-                            count <= 0 ->
-                                "删除失败，目标可能位于 Android 受保护目录"
-                            appSettings.useTrash ->
-                                "已将 $count 项移入回收站"
-                            else -> "已永久删除 $count 项"
-                        }
-                    )
-                    controller.refresh()
+                val targets = selectedEntries.toList()
+                if (targets.isNotEmpty()) {
+                    controller.beginDelete(targets)
+                    scope.launch {
+                        val count = controller.commitDelete(targets)
+                        notify(
+                            when {
+                                count == targets.size && appSettings.useTrash ->
+                                    "已将 $count 项移入回收站"
+                                count == targets.size ->
+                                    "已永久删除 $count 项"
+                                count <= 0 ->
+                                    "删除失败，已恢复文件"
+                                else ->
+                                    "已删除 $count 项，${targets.size - count} 项已恢复"
+                            }
+                        )
+                    }
                 }
             }
         )
@@ -1546,18 +1555,18 @@ private fun FileBrowserScreen(
                 TextButton(
                     enabled = renameValue.text.isNotBlank(),
                     onClick = {
+                        val entry = selectedEntries.singleOrNull()
+                        val name = renameValue.text.trim()
+                        showRenameDialog = false
+                        if (entry == null || !controller.beginRename(entry, name)) {
+                            notify("重命名失败，名称无效或已存在")
+                            return@TextButton
+                        }
                         scope.launch {
-                            val renamed = controller.renameSelected(
-                                renameValue.text.trim()
-                            )
-                            showRenameDialog = false
-                            notify(
-                                if (renamed) {
-                                    "重命名成功"
-                                } else {
-                                    "重命名失败，名称无效或已存在"
-                                }
-                            )
+                            val renamed = controller.commitRename(entry, name)
+                            if (renamed == null) {
+                                notify("重命名失败，文件名称已恢复")
+                            }
                         }
                     }
                 ) {

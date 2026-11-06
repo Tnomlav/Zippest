@@ -85,7 +85,7 @@ android/app/build/outputs/apk/release/app-release.apk
 
 ## 当前版本
 
-当前版本为 `1.6.0`，包名继续使用 `com.decompress.app`，以保持已有版本升级
+当前版本为 `1.6.1`，包名继续使用 `com.decompress.app`，以保持已有版本升级
 兼容性。
 
 此版本让密码输入框使用普通文本键盘，从而保留输入法自带的剪贴板与粘贴入口，

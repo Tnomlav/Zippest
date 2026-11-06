@@ -91,6 +91,41 @@ class FileOperationsDeviceTest {
     }
 
     @Test
+    fun optimisticRenameUpdatesTheListBeforeTheFileSystem() = runBlocking {
+        openFolder("Download", baseDirectory.name)
+        val source = File(baseDirectory, "before.txt").apply { writeText("content") }
+        controller.refresh()
+        val entry = controller.entries.single { it.name == source.name }
+
+        assertTrue(controller.beginRename(entry, "after.txt"))
+        assertEquals(
+            "after.txt",
+            controller.entries.single { it.uri == entry.uri }.name
+        )
+        assertTrue(source.exists())
+
+        val renamed = controller.commitRename(entry, "after.txt")
+        assertEquals("after.txt", renamed?.name)
+        assertFalse(source.exists())
+        assertTrue(File(baseDirectory, "after.txt").isFile)
+    }
+
+    @Test
+    fun optimisticDeleteHidesTheEntryBeforeTheFileSystem() = runBlocking {
+        openFolder("Download", baseDirectory.name)
+        val source = File(baseDirectory, "pending-delete.txt").apply { writeText("content") }
+        controller.refresh()
+        val entry = controller.entries.single { it.name == source.name }
+
+        controller.beginDelete(listOf(entry))
+        assertTrue(controller.entries.none { it.uri == entry.uri })
+        assertTrue(source.exists())
+
+        assertEquals(1, controller.commitDelete(listOf(entry)))
+        assertFalse(source.exists())
+    }
+
+    @Test
     fun externalStorageDocumentMapsToDirectFilePath() {
         val relative = "Download/${baseDirectory.name}"
         val treeUri = DocumentsContract.buildTreeDocumentUri(
