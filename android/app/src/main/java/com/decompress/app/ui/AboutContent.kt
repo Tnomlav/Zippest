@@ -1,6 +1,7 @@
 package com.decompress.app.ui
 
 internal const val ZIPPEST_GITHUB_URL = "https://github.com/Tnomlav/Zippest"
+internal const val ZIPPEST_LICENSE_URL = "$ZIPPEST_GITHUB_URL/blob/main/LICENSE"
 internal const val ZIPPEST_PRIVACY_EFFECTIVE_DATE = "2026-11-04"
 
 internal data class PrivacySection(

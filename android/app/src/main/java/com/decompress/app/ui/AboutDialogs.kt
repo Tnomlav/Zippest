@@ -50,9 +50,29 @@ internal fun AboutInfoDialog(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Text(
+                        "网络权限：无\n" +
+                            "Zippest 没有申请 INTERNET 权限，文件、密码和文件名都不会离开本机。" +
+                            "可在 系统设置 → 应用 → Zippest → 权限 里核实。",
+                        modifier = Modifier.padding(top = 12.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        "开源许可：Apache-2.0",
+                        modifier = Modifier.padding(top = 8.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    TextButton(
+                        onClick = { onOpenLink(ZIPPEST_LICENSE_URL) },
+                        modifier = Modifier.padding(top = 0.dp)
+                    ) {
+                        Text("查看项目许可证")
+                    }
                     TextButton(
                         onClick = { onOpenLink(ZIPPEST_GITHUB_URL) },
-                        modifier = Modifier.padding(top = 4.dp)
+                        modifier = Modifier.padding(top = 0.dp)
                     ) {
                         Text("打开 GitHub 项目")
                     }

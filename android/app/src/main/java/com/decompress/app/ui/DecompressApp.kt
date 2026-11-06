@@ -3045,7 +3045,8 @@ private fun Onboarding(
         )
         Spacer(Modifier.height(10.dp))
         Text(
-            "授予所有文件访问权限后，可以直接浏览内部存储、下载、相册和所有文件夹，体验更接近 ZArchiver。",
+            "授予所有文件访问权限后，可以直接浏览内部存储、下载和所有文件夹，" +
+                "像桌面文件管理器一样连续工作。Zippest 不联网，文件只在本机处理。",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

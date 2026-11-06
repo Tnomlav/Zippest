@@ -124,3 +124,5 @@ https://github.com/Tnomlav/Zippest/releases
 
 - [隐私政策](PRIVACY.md)
 - [第三方开源许可](THIRD_PARTY_NOTICES.md)
+- [项目许可证](LICENSE)（Apache-2.0）
+- Zippest 不申请 `INTERNET` 权限，文件、密码与文件名都不会离开本机；可在系统设置的应用权限页核实。
