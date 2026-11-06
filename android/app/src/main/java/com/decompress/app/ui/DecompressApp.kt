@@ -172,6 +172,7 @@ import com.decompress.app.data.QuickLocationRepository
 import com.decompress.app.data.ThemeMode
 import com.decompress.app.data.TrashRepository
 import com.decompress.app.service.ExtractionScheduler
+import com.decompress.app.service.ExtractionTaskRegistry
 import com.decompress.app.service.CompressionScheduler
 import com.decompress.app.service.ArchiveTaskControl
 import com.decompress.app.ui.theme.ZippestTheme
@@ -2109,7 +2110,20 @@ internal fun TaskCenterContent(
             if (finishedTasks.isNotEmpty()) {
                 item { TaskSectionLabel("已结束", "${finishedTasks.size} 项") }
                 items(finishedTasks, key = { "done-${it.id}" }) { task ->
-                    TaskQueueRow(task = task, paused = false, onTogglePause = {})
+                    TaskQueueRow(
+                        task = task,
+                        paused = false,
+                        onTogglePause = {},
+                        onResumeTimedOut = {
+                            val remembered = ExtractionTaskRegistry.find(task.id)
+                            if (remembered != null) {
+                                ExtractionScheduler.enqueue(context.applicationContext, remembered)
+                                onNotify("已重新加入队列")
+                            } else {
+                                onNotify("任务参数已释放，请重新选择文件解压")
+                            }
+                        }
+                    )
                 }
             }
         }

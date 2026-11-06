@@ -73,8 +73,18 @@ data class ExtractionTask(
     }
 }
 
-object ExtractionScheduler {
-    const val ACTION_EXTRACTION_FINISHED =
+/** 进程内记住任务参数，供前台超时后「继续」重新入队；进程被杀则退回手动重选。 */
+object ExtractionTaskRegistry {
+    private val tasks = java.util.concurrent.ConcurrentHashMap<String, ExtractionTask>()
+
+    fun remember(id: java.util.UUID, task: ExtractionTask) {
+        tasks[id.toString()] = task
+    }
+
+    fun find(id: java.util.UUID): ExtractionTask? = tasks[id.toString()]
+}
+
+object ExtractionScheduler {    const val ACTION_EXTRACTION_FINISHED =
         "com.decompress.app.action.EXTRACTION_FINISHED"
     const val EXTRA_EXTRACTION_SUCCESS = "extraction_success"
     const val EXTRA_EXTRACTION_MESSAGE = "extraction_message"
@@ -131,6 +141,7 @@ object ExtractionScheduler {
             .build()
         WorkManager.getInstance(context.applicationContext)
             .enqueueUniqueWork(QUEUE_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, request)
+        ExtractionTaskRegistry.remember(request.id, task)
         return request.id
     }
 
