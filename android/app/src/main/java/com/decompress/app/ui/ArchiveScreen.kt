@@ -54,6 +54,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.ArrowBack
@@ -138,7 +139,7 @@ import java.io.File
 fun ArchiveScreen(
     target: ArchiveTarget,
     onBack: () -> Unit,
-    onExtract: (BrowserEntry, String, List<String>) -> Unit,
+    onExtract: (BrowserEntry, String, List<String>, FileNameEncoding) -> Unit,
     onNotify: (String) -> Unit
 ) {
     val context = LocalContext.current
@@ -158,10 +159,13 @@ fun ArchiveScreen(
     var testing by remember { mutableStateOf(false) }
     var selectedPaths by remember { mutableStateOf<Set<String>>(emptySet()) }
     var openingEntry by remember { mutableStateOf(false) }
+    var encoding by rememberSaveable { mutableStateOf(FileNameEncoding.AUTO) }
+    var showEncodingDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(target.archive.uri, archivePassword) {
+    LaunchedEffect(target.archive.uri, archivePassword, encoding) {
         loading = true
         error = null
+        items = emptyList()
         if (!engine.supports(target.archive.name)) {
             error = "暂不支持此格式。已接入 ZIP / 7Z / RAR / TAR / ZST / BR / " +
                 "GZ / BZ2 / XZ / LZMA / LZ4 / CPIO"
@@ -174,7 +178,13 @@ fun ArchiveScreen(
                 archiveName = target.archive.name,
                 password = archivePassword,
                 archiveTreeUri = target.parentTreeUri,
-                archiveParentUri = target.parentUri
+                archiveParentUri = target.parentUri,
+                encoding = encoding,
+                onBatch = { batch, _ ->
+                    if (batch.isNotEmpty()) {
+                        items = items + batch
+                    }
+                }
             )
         }
             .onSuccess { items = it }
@@ -337,6 +347,9 @@ fun ArchiveScreen(
                             contentDescription = "压缩包密码"
                         )
                     }
+                    IconButton(onClick = { showEncodingDialog = true }) {
+                        Icon(Icons.Outlined.MoreVert, contentDescription = "更多")
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
@@ -347,9 +360,16 @@ fun ArchiveScreen(
             if (error == null) {
                 ArchiveBottomBar(
                     selectionCount = selectedPaths.size,
-                    onExtractAll = { onExtract(target.archive, archivePassword, emptyList()) },
+                    onExtractAll = {
+                        onExtract(target.archive, archivePassword, emptyList(), encoding)
+                    },
                     onExtractSelected = {
-                        onExtract(target.archive, archivePassword, selectedPaths.toList())
+                        onExtract(
+                            target.archive,
+                            archivePassword,
+                            selectedPaths.toList(),
+                            encoding
+                        )
                     },
                     onClearSelection = { selectedPaths = emptySet() },
                     onTest = ::testArchive,
@@ -370,25 +390,7 @@ fun ArchiveScreen(
                 .padding(padding)
         ) {
             when {
-                loading -> Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    CircularProgressIndicator()
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        "正在读取压缩包目录…",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "大压缩包第一次打开可能需要几秒",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                loading && items.isEmpty() -> ArchiveSkeleton()
                 error != null -> Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -432,6 +434,19 @@ fun ArchiveScreen(
                         bottom = 8.dp
                     )
                 ) {
+                    if (loading) {
+                        item {
+                            Column(modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)) {
+                                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    "正在读取… 已读取 ${items.size} 项",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                     items(nodes, key = { it.path }) { node ->
                         ArchiveRow(
                             node = node,
@@ -497,6 +512,52 @@ fun ArchiveScreen(
                 }
             )
         }
+    }
+
+    if (showEncodingDialog) {
+        AlertDialog(
+            onDismissRequest = { showEncodingDialog = false },
+            title = { Text("文件名编码") },
+            text = {
+                Column {
+                    Text(
+                        "预览里文件名乱码时换一个编码试试；只影响显示和解压后的文件名，不改文件内容。",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    FileNameEncoding.entries.forEach { option ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    encoding = option
+                                    showEncodingDialog = false
+                                }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = encoding == option,
+                                onClick = {
+                                    encoding = option
+                                    showEncodingDialog = false
+                                }
+                            )
+                            Text(
+                                option.label,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showEncodingDialog = false }) {
+                    Text("关闭")
+                }
+            }
+        )
     }
 
     if (showPasswordDialog) {
@@ -593,6 +654,38 @@ private fun DreamPreviewBorder(modifier: Modifier = Modifier) {
             cornerRadius = CornerRadius(18.dp.toPx()),
             style = Stroke(width = stroke)
         )
+    }
+}
+
+@Composable
+private fun ArchiveSkeleton() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 18.dp)
+    ) {
+        Text(
+            "正在读取压缩包目录…",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "条目多的大包会先显示前面的部分",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(14.dp))
+        repeat(7) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            )
+            Spacer(Modifier.height(8.dp))
+        }
     }
 }
 
@@ -831,7 +924,13 @@ fun ExtractSheet(
         mutableStateOf(settings.defaultConflictPolicy)
     }
     var encoding by rememberSaveable {
-        mutableStateOf(settings.defaultEncoding)
+        mutableStateOf(
+            if (target.initialEncoding == FileNameEncoding.AUTO) {
+                settings.defaultEncoding
+            } else {
+                target.initialEncoding
+            }
+        )
     }
     var samePassword by rememberSaveable { mutableStateOf(false) }
     var perArchivePasswords by remember(target.archives) {

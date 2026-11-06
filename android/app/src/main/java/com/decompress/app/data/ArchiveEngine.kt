@@ -223,22 +223,38 @@ private const val MAX_ARCHIVE_UNPACKED_BYTES = 20L * 1024 * 1024 * 1024
 private const val SAFE_RATIO_BYTES = 1024L * 1024 * 1024
 private const val MAX_ARCHIVE_RATIO = 1_000L
 private const val DEFAULT_ARCHIVE_BUFFER_SIZE = 64 * 1024
+private const val LIST_BATCH_SIZE = 200
 
 class ZipArchiveEngine(private val context: Context) {
     private val resolver: ContentResolver = context.contentResolver
 
-    suspend fun list(archiveUri: Uri): List<ArchiveItem> = withContext(Dispatchers.IO) {
+    suspend fun list(
+        archiveUri: Uri,
+        encoding: FileNameEncoding = FileNameEncoding.AUTO,
+        onBatch: ((List<ArchiveItem>, Boolean) -> Unit)? = null
+    ): List<ArchiveItem> = withContext(Dispatchers.IO) {
+        val charset = if (encoding == FileNameEncoding.AUTO) {
+            null
+        } else {
+            Charset.forName(encoding.charsetName)
+        }
         runCatching {
             archiveUri.localFile()?.takeIf { it.isFile }?.let { localFile ->
                 if (Zip4jFile(localFile).isSplitArchive) {
-                    return@withContext listWithCentralDirectory(archiveUri)
+                    return@withContext listWithCentralDirectory(archiveUri, charset)
                 }
             }
             val input = resolver.openInputStream(archiveUri)
                 ?: throw ArchiveException("无法读取压缩包")
             BufferedInputStream(input).use { buffered ->
-                ZipInputStream(buffered).use { zip ->
+                val source = if (charset != null) {
+                    ZipInputStream(buffered, charset)
+                } else {
+                    ZipInputStream(buffered)
+                }
+                source.use { zip ->
                     val result = mutableListOf<ArchiveItem>()
+                    var emitted = 0
                     var entry: ZipEntry? = zip.nextEntry
                     var count = 0
                     while (entry != null) {
@@ -250,14 +266,19 @@ class ZipArchiveEngine(private val context: Context) {
                             isDirectory = entry.isDirectory,
                             size = entry.size.coerceAtLeast(0L)
                         )
+                        if (onBatch != null && result.size - emitted >= LIST_BATCH_SIZE) {
+                            onBatch(result.subList(emitted, result.size).toList(), false)
+                            emitted = result.size
+                        }
                         zip.closeEntry()
                         entry = zip.nextEntry
                     }
+                    onBatch?.invoke(result.subList(emitted, result.size).toList(), true)
                     result
                 }
             }
         }.getOrElse { streamingError ->
-            runCatching { listWithCentralDirectory(archiveUri) }
+            runCatching { listWithCentralDirectory(archiveUri, charset) }
                 .getOrElse { directoryError ->
                     throw ArchiveException(
                         "无法读取 ZIP：${directoryError.message ?: streamingError.message}",
@@ -267,7 +288,10 @@ class ZipArchiveEngine(private val context: Context) {
         }
     }
 
-    private fun listWithCentralDirectory(archiveUri: Uri): List<ArchiveItem> {
+    private fun listWithCentralDirectory(
+        archiveUri: Uri,
+        charset: Charset? = null
+    ): List<ArchiveItem> {
         val direct = archiveUri.localFile()?.takeIf { it.isFile }
         val temp = if (direct == null) {
             File.createTempFile("zip-index-", ".zip", context.cacheDir)
@@ -283,7 +307,9 @@ class ZipArchiveEngine(private val context: Context) {
                     }
                 } ?: throw ArchiveException("无法读取压缩包")
             }
-            val headers = Zip4jFile(archiveFile).fileHeaders
+            val headers = Zip4jFile(archiveFile).apply {
+                if (charset != null) setCharset(charset)
+            }.fileHeaders
             if (headers.size > MAX_ENTRIES) {
                 throw ArchiveException("压缩包条目过多，已停止读取")
             }
@@ -304,7 +330,8 @@ class ZipArchiveEngine(private val context: Context) {
         archiveName: String,
         settings: ExtractSettings,
         onProgress: (Int, Int) -> Unit,
-        onFractionProgress: (Float) -> Unit = {}
+        onFractionProgress: (Float) -> Unit = {},
+        onEntry: (String) -> Unit = {}
     ) {
         val localZip = archiveUri.localFile()?.takeIf { it.isFile }
         val splitZip = localZip?.let {
@@ -363,6 +390,7 @@ class ZipArchiveEngine(private val context: Context) {
                             entry = zip.nextEntry
                             continue
                         }
+                        onEntry(entry.name)
 
                         val segments = sanitizePath(entry.name)
                         if (segments.isNotEmpty()) {

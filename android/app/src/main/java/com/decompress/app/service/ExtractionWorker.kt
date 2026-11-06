@@ -420,6 +420,8 @@ class ExtractionWorker(
         val createdFiles = Collections.synchronizedList(mutableListOf<Uri>())
         val destinations = Collections.synchronizedList(mutableListOf<Pair<Uri, String>>())
         val requestedEntries = task.entryPaths.toSet()
+        var currentEntry = ""
+        var entryStartedAt = SystemClock.elapsedRealtime()
         task.archiveUris.forEachIndexed { index, archiveUri ->
             if (!engine.supports(task.archiveNames[index])) {
                 throw IllegalArgumentException("暂不支持 ${task.archiveNames[index]}")
@@ -456,14 +458,24 @@ class ExtractionWorker(
                     }
                 ),
                 onProgress = { _, _ -> },
+                onEntry = { name ->
+                    currentEntry = name
+                    entryStartedAt = SystemClock.elapsedRealtime()
+                },
                 onFractionProgress = { archiveFraction ->
                     val within = archiveFraction.coerceIn(0f, 1f)
                     val overall = (
                         (index + within) / total * 100f
                         ).toInt().coerceIn(0, 100)
+                    val slowEntry = SystemClock.elapsedRealtime() - entryStartedAt > 700
+                    val entryLabel = if (slowEntry && currentEntry.isNotBlank()) {
+                        " · " + currentEntry.substringAfterLast('/')
+                    } else {
+                        ""
+                    }
                     onProgress(
                         overall,
-                        "正在解压 ${index + 1}/$total · ${task.archiveNames[index]}"
+                        "正在解压 ${index + 1}/$total · ${task.archiveNames[index]}$entryLabel"
                     )
                 },
                 archiveTreeUri = task.parentTreeUri,

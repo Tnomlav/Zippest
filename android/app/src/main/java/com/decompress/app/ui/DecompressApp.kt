@@ -164,6 +164,7 @@ import com.decompress.app.data.AppSettingsRepository
 import com.decompress.app.data.BrowserSortMode
 import com.decompress.app.data.BrowserEntry
 import com.decompress.app.data.FileBrowserController
+import com.decompress.app.data.FileNameEncoding
 import com.decompress.app.data.GlobalSearchHit
 import com.decompress.app.data.QuickLocation
 import com.decompress.app.data.QuickLocationIcon
@@ -197,6 +198,7 @@ data class ExtractTarget(
     val parentName: String,
     val requiresCustomDestination: Boolean = false,
     val initialPassword: String = "",
+    val initialEncoding: FileNameEncoding = FileNameEncoding.AUTO,
     /** 非空时只解压这些包内条目。 */
     val entryPaths: List<String> = emptyList()
 )
@@ -436,7 +438,7 @@ fun ZippestApp(
                     ArchiveScreen(
                         target = currentArchive,
                         onBack = { archiveTarget = null },
-                        onExtract = { archive, password, entryPaths ->
+                        onExtract = { archive, password, entryPaths, archiveEncoding ->
                             extractTarget = ExtractTarget(
                                 archives = listOf(archive),
                                 parentUri = currentArchive.parentUri,
@@ -446,6 +448,7 @@ fun ZippestApp(
                                 requiresCustomDestination =
                                     currentArchive.requiresCustomDestination,
                                 initialPassword = password,
+                                initialEncoding = archiveEncoding,
                                 entryPaths = entryPaths
                             )
                         },
@@ -2296,13 +2299,17 @@ private fun TaskQueueRow(
     task: WorkInfo,
     paused: Boolean,
     onTogglePause: () -> Unit,
-    onCancel: (() -> Unit)? = null
+    onCancel: (() -> Unit)? = null,
+    onResumeTimedOut: (() -> Unit)? = null
 ) {
     val title = task.tags
         .firstOrNull { it.startsWith(ExtractionScheduler.TAG_NAME_PREFIX) }
         ?.removePrefix(ExtractionScheduler.TAG_NAME_PREFIX)
         ?: "后台任务"
+    val foregroundTimeout =
+        task.stopReason == WorkInfo.STOP_REASON_FOREGROUND_SERVICE_TIMEOUT
     val message = when {
+        foregroundTimeout -> "系统限制了后台运行时长，点「继续」接着解压"
         paused -> "已暂停"
         task.state == WorkInfo.State.SUCCEEDED ->
             task.outputData.getString(ExtractionScheduler.KEY_MESSAGE) ?: "任务完成"
@@ -2370,6 +2377,11 @@ private fun TaskQueueRow(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (foregroundTimeout && onResumeTimedOut != null) {
+                    TextButton(onClick = onResumeTimedOut) {
+                        Text("继续")
+                    }
+                }
                 if (active) {
                     if (onCancel != null) {
                         IconButton(onClick = onCancel, modifier = Modifier.size(34.dp)) {

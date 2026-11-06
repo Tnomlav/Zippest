@@ -41,7 +41,9 @@ class MultiArchiveEngine(private val context: Context) {
         archiveName: String,
         password: String = "",
         archiveTreeUri: Uri? = null,
-        archiveParentUri: Uri? = null
+        archiveParentUri: Uri? = null,
+        encoding: FileNameEncoding = FileNameEncoding.AUTO,
+        onBatch: ((List<ArchiveItem>, Boolean) -> Unit)? = null
     ): List<ArchiveItem> = withResolvedArchive(
         archiveUri,
         archiveName,
@@ -51,10 +53,14 @@ class MultiArchiveEngine(private val context: Context) {
         val lower = name.lowercase()
         when {
             lower.endsWith(".zip") || lower.endsWith(".jar") ->
-                zipEngine.list(uri)
-            lower.endsWith(".7z") -> listSevenZ(uri, password)
-            lower.endsWith(".rar") -> listRar(uri, password)
-            else -> listStream(uri, name.lowercase(), name)
+                zipEngine.list(uri, encoding, onBatch)
+            lower.endsWith(".7z") -> listSevenZ(uri, password).also {
+                onBatch?.invoke(it, true)
+            }
+            lower.endsWith(".rar") -> listRar(uri, password).also {
+                onBatch?.invoke(it, true)
+            }
+            else -> listStream(uri, name.lowercase(), name, encoding, onBatch)
         }
     }
 
@@ -64,6 +70,7 @@ class MultiArchiveEngine(private val context: Context) {
         settings: ExtractSettings,
         onProgress: (Int, Int) -> Unit,
         onFractionProgress: (Float) -> Unit = {},
+        onEntry: (String) -> Unit = {},
         archiveTreeUri: Uri? = null,
         archiveParentUri: Uri? = null
     ) = withResolvedArchive(
@@ -89,7 +96,8 @@ class MultiArchiveEngine(private val context: Context) {
                     name,
                     settings,
                     onProgress,
-                    reportExtraction
+                    reportExtraction,
+                    onEntry
                 )
             lower.endsWith(".7z") ->
                 extractSevenZ(uri, name, settings, onProgress, reportExtraction)
@@ -111,7 +119,8 @@ class MultiArchiveEngine(private val context: Context) {
                     name,
                     settings,
                     onProgress,
-                    reportExtraction
+                    reportExtraction,
+                    onEntry
                 )
             lower.endsWith(".gz") ||
                 lower.endsWith(".bz2") ||
@@ -1022,7 +1031,9 @@ class MultiArchiveEngine(private val context: Context) {
     private suspend fun listStream(
         uri: Uri,
         lowerName: String,
-        archiveName: String
+        archiveName: String,
+        encoding: FileNameEncoding = FileNameEncoding.AUTO,
+        onBatch: ((List<ArchiveItem>, Boolean) -> Unit)? = null
     ): List<ArchiveItem> {
         if (lowerName.endsWith(".gz") && !lowerName.endsWith(".tar.gz") ||
             lowerName.endsWith(".bz2") && !lowerName.endsWith(".tar.bz2") ||
@@ -1032,18 +1043,21 @@ class MultiArchiveEngine(private val context: Context) {
             lowerName.endsWith(".zst") && !lowerName.endsWith(".tar.zst") ||
             lowerName.endsWith(".br") && !lowerName.endsWith(".tar.br")
         ) {
-            return listOf(
+            val single = listOf(
                 ArchiveItem(
                     path = singleOutputName(archiveName, lowerName),
                     isDirectory = false,
                     size = 0L
                 )
             )
+            onBatch?.invoke(single, true)
+            return single
         }
 
         return withContext(Dispatchers.IO) {
-            openStreamArchive(uri, lowerName).use { archive ->
+            openStreamArchive(uri, lowerName, encoding = encoding).use { archive ->
                 val result = mutableListOf<ArchiveItem>()
+                var emitted = 0
                 var entry: ArchiveEntry? = archive.nextEntry
                 while (entry != null) {
                     if (result.size >= MAX_ENTRIES) {
@@ -1054,8 +1068,13 @@ class MultiArchiveEngine(private val context: Context) {
                         isDirectory = entry.isDirectory,
                         size = entry.size.coerceAtLeast(0L)
                     )
+                    if (onBatch != null && result.size - emitted >= LIST_BATCH_SIZE) {
+                        onBatch(result.subList(emitted, result.size).toList(), false)
+                        emitted = result.size
+                    }
                     entry = archive.nextEntry
                 }
+                onBatch?.invoke(result.subList(emitted, result.size).toList(), true)
                 result
             }
         }
@@ -1067,10 +1086,11 @@ class MultiArchiveEngine(private val context: Context) {
         archiveName: String,
         settings: ExtractSettings,
         onProgress: (Int, Int) -> Unit,
-        onFractionProgress: (Float) -> Unit
+        onFractionProgress: (Float) -> Unit,
+        onEntry: (String) -> Unit = {}
     ) = withContext(Dispatchers.IO) {
         onFractionProgress(0f)
-        openStreamArchive(uri, lowerName, onFractionProgress).use { archive ->
+        openStreamArchive(uri, lowerName, onFractionProgress, settings.encoding).use { archive ->
             val output = outputWriter(settings)
             val destination = prepareDestination(output, settings, archiveName)
             var entry: ArchiveEntry? = archive.nextEntry
@@ -1081,6 +1101,7 @@ class MultiArchiveEngine(private val context: Context) {
                 if (processed >= MAX_ENTRIES) {
                     throw ArchiveException("压缩包条目过多，已停止解压")
                 }
+                onEntry(entry.name)
                 writtenBytes += writeEntry(
                     output = output,
                     destination = destination,
@@ -1153,26 +1174,32 @@ class MultiArchiveEngine(private val context: Context) {
     private fun openStreamArchive(
         uri: Uri,
         lowerName: String,
-        onFractionProgress: (Float) -> Unit = {}
+        onFractionProgress: (Float) -> Unit = {},
+        encoding: FileNameEncoding = FileNameEncoding.AUTO
     ): ArchiveInputStream<*> {
         val input = resolver.openInputStream(uri)
             ?: throw ArchiveException("无法读取压缩包")
         val buffered = BufferedInputStream(
             ProgressInputStream(input, fileSize(uri), onFractionProgress)
         )
+        val tarEncoding = if (encoding == FileNameEncoding.AUTO) {
+            "UTF-8"
+        } else {
+            encoding.charsetName
+        }
         return when {
             lowerName.endsWith(".tar.gz") || lowerName.endsWith(".tgz") ->
-                TarArchiveInputStream(GzipCompressorInputStream(buffered, true))
+                TarArchiveInputStream(GzipCompressorInputStream(buffered, true), tarEncoding)
             lowerName.endsWith(".tar.bz2") || lowerName.endsWith(".tbz2") ->
-                TarArchiveInputStream(BZip2CompressorInputStream(buffered, true))
+                TarArchiveInputStream(BZip2CompressorInputStream(buffered, true), tarEncoding)
             lowerName.endsWith(".tar.xz") || lowerName.endsWith(".txz") ->
-                TarArchiveInputStream(XZCompressorInputStream(buffered, true))
+                TarArchiveInputStream(XZCompressorInputStream(buffered, true), tarEncoding)
             lowerName.endsWith(".tar.zst") ->
-                TarArchiveInputStream(ZstdCodec.inputStream(buffered))
+                TarArchiveInputStream(ZstdCodec.inputStream(buffered), tarEncoding)
             lowerName.endsWith(".tar.br") ->
-                TarArchiveInputStream(BrotliInputStream(buffered))
-            lowerName.endsWith(".tar") -> TarArchiveInputStream(buffered)
-            lowerName.endsWith(".cpio") -> CpioArchiveInputStream(buffered, "UTF-8")
+                TarArchiveInputStream(BrotliInputStream(buffered), tarEncoding)
+            lowerName.endsWith(".tar") -> TarArchiveInputStream(buffered, tarEncoding)
+            lowerName.endsWith(".cpio") -> CpioArchiveInputStream(buffered, tarEncoding)
             else -> throw ArchiveException("暂不支持此压缩格式")
         }
     }
@@ -1488,6 +1515,7 @@ class MultiArchiveEngine(private val context: Context) {
 
     companion object {
         private const val PREPARATION_SHARE = 0.1f
+private const val LIST_BATCH_SIZE = 200
         private const val MAX_ENTRIES = 50_000
         private const val MAX_TOTAL_BYTES = 20L * 1024 * 1024 * 1024
     }
