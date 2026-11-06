@@ -19,11 +19,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Restore
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -53,15 +53,38 @@ import com.decompress.app.data.TrashItem
 import com.decompress.app.data.TrashRepository
 import kotlinx.coroutines.launch
 
+/** 底部导航「回收站」页与弹层共用的一份内容。 */
 @Composable
 fun TrashSheet(
     onDismiss: () -> Unit,
     onChanged: (String) -> Unit
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        TrashContent(
+            onChanged = onChanged,
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.88f),
+            onClose = onDismiss
+        )
+    }
+}
+
+@Composable
+fun TrashContent(
+    onChanged: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    onClose: (() -> Unit)? = null,
+    showHeader: Boolean = true
+) {
     val context = LocalContext.current
     val repository = remember { TrashRepository(context.applicationContext) }
     val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var items by remember { mutableStateOf<List<TrashItem>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var refreshVersion by remember { mutableIntStateOf(0) }
@@ -79,107 +102,104 @@ fun TrashSheet(
         onChanged(message)
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface
+    Column(
+        modifier = modifier
+            .padding(horizontal = 16.dp)
     ) {
-        Column(
+        if (showHeader) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "回收站",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    if (items.isEmpty()) "删除的文件会先放在这里" else "${items.size} 项",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (items.isNotEmpty()) {
+                TextButton(onClick = { confirmEmpty = true }) {
+                    Text("清空", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        }
+
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.88f)
-                .padding(horizontal = 16.dp)
+                .weight(1f),
+            shape = RoundedCornerShape(18.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        "回收站",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        "${items.size} 项",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                if (items.isNotEmpty()) {
-                    TextButton(
-                        onClick = { confirmEmpty = true }
+            Box(modifier = Modifier.fillMaxSize()) {
+                when {
+                    loading -> Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("清空", color = MaterialTheme.colorScheme.error)
+                        CircularProgressIndicator()
                     }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-            ) {
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    when {
-                        loading -> Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(180.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                        items.isEmpty() -> Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 48.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                Icons.Outlined.Delete,
-                                contentDescription = null,
-                                modifier = Modifier.size(40.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                "回收站为空",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        else -> LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(420.dp)
-                        ) {
-                            items(items, key = { it.id }) { item ->
-                                TrashItemRow(
-                                    item = item,
-                                    onRestore = {
-                                        scope.launch {
-                                            val restored = repository.restore(item.id)
-                                            refresh(
-                                                if (restored) "已恢复 ${item.name}" else "恢复失败"
-                                            )
-                                        }
-                                    },
-                                    onDelete = {
-                                        deleteTarget = item
+                    items.isEmpty() -> Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(vertical = 48.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            Icons.Outlined.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(40.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "回收站为空",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "删除文件时默认先移到这里，保留期可在设置里调整",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(items, key = { it.id }) { item ->
+                            TrashItemRow(
+                                item = item,
+                                onRestore = {
+                                    scope.launch {
+                                        val restored = repository.restore(item.id)
+                                        refresh(
+                                            if (restored) "已恢复 ${item.name}" else "恢复失败"
+                                        )
                                     }
-                                )
-                            }
+                                },
+                                onDelete = {
+                                    deleteTarget = item
+                                }
+                            )
                         }
                     }
                 }
             }
-            Spacer(Modifier.weight(1f))
+        }
+        if (onClose != null) {
+            Spacer(Modifier.height(8.dp))
             Button(
-                onClick = onDismiss,
+                onClick = onClose,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp)
+                    .padding(vertical = 8.dp)
             ) {
                 Text("关闭")
             }

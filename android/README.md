@@ -7,7 +7,7 @@ creating common archive formats. The product UI follows the finalized prototype 
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.7.2`
+- Version: `1.8.0`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct

@@ -102,6 +102,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
@@ -207,6 +211,13 @@ private data class ExternalStorageLocation(
     val label: String,
     val path: String
 )
+
+/** 首屏底部导航：文件 / 任务 / 回收站。 */
+internal enum class HomeTab(val label: String) {
+    FILES("文件"),
+    TASKS("任务"),
+    TRASH("回收站")
+}
 
 @Composable
 fun ZippestApp(
@@ -448,6 +459,7 @@ fun ZippestApp(
                         settingsRepository = settingsRepository,
                         quickLocationRepository = quickLocationRepository,
                         archiveTaskActive = activeTasks.isNotEmpty(),
+                        activeTaskCount = activeTasks.size,
                         onOpenArchive = { entry ->
                             val parentUri = controller.currentUri
                             val parentTreeUri = controller.treeUri
@@ -482,6 +494,8 @@ fun ZippestApp(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
+                            // 给底部导航栏留位置，避免浮条盖住「文件 / 任务 / 回收站」
+                            .padding(bottom = 84.dp)
                             .zIndex(20f)
                     ) {
                         ActiveArchiveTaskBar(
@@ -526,6 +540,7 @@ private fun FileBrowserScreen(
     settingsRepository: AppSettingsRepository,
     quickLocationRepository: QuickLocationRepository,
     archiveTaskActive: Boolean,
+    activeTaskCount: Int,
     onOpenArchive: (BrowserEntry) -> Unit,
     onExtract: (List<BrowserEntry>, Uri, Uri, String, String) -> Unit,
     onOpenSettings: () -> Unit,
@@ -539,6 +554,8 @@ private fun FileBrowserScreen(
     val renameFocus = remember { FocusRequester() }
 
     var searchMode by rememberSaveable { mutableStateOf(false) }
+    var homeTab by rememberSaveable { mutableStateOf(HomeTab.FILES) }
+    var onboardingDenied by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     var globalSearch by rememberSaveable { mutableStateOf(false) }
     var globalHits by remember { mutableStateOf<List<GlobalSearchHit>>(emptyList()) }
@@ -578,8 +595,10 @@ private fun FileBrowserScreen(
         ActivityResultContracts.StartActivityForResult()
     ) {
         if (controller.hasDirectStorageAccess()) {
+            onboardingDenied = false
             scope.launch { controller.openInternalStorage() }
         } else {
+            onboardingDenied = true
             onNotify("尚未获得所有文件访问权限")
         }
     }
@@ -588,8 +607,10 @@ private fun FileBrowserScreen(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { grants ->
         if (grants.values.all { it } && controller.hasDirectStorageAccess()) {
+            onboardingDenied = false
             scope.launch { controller.openInternalStorage() }
         } else {
+            onboardingDenied = true
             onNotify("存储权限被拒绝，可改为选择一个文件夹")
         }
     }
@@ -920,12 +941,25 @@ private fun FileBrowserScreen(
         if (opening) refreshExternalStorages()
     }
 
-    BackHandler { handleBack() }
+    BackHandler {
+        when {
+            homeTab != HomeTab.FILES -> homeTab = HomeTab.FILES
+            else -> handleBack()
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             when {
+                homeTab == HomeTab.TASKS || homeTab == HomeTab.TRASH -> {
+                    TopAppBar(
+                        title = { Text(homeTab.label) },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background
+                        )
+                    )
+                }
                 controller.selectionMode -> {
                     TopAppBar(
                         navigationIcon = {
@@ -1104,6 +1138,7 @@ private fun FileBrowserScreen(
         },
         bottomBar = {
             Column {
+                if (homeTab == HomeTab.FILES) {
                 when {
                     transferSession != null -> TransferToolbar(
                         move = transferSession?.move == true,
@@ -1157,15 +1192,74 @@ private fun FileBrowserScreen(
                         }
                     )
                 }
+                }
+                if (!controller.selectionMode && transferSession == null && !searchMode) {
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 3.dp
+                    ) {
+                        NavigationBarItem(
+                            selected = homeTab == HomeTab.FILES,
+                            onClick = {
+                                closePanelPopups()
+                                homeTab = HomeTab.FILES
+                            },
+                            icon = { Icon(Icons.Outlined.FolderOpen, contentDescription = null) },
+                            label = { Text(HomeTab.FILES.label) }
+                        )
+                        NavigationBarItem(
+                            selected = homeTab == HomeTab.TASKS,
+                            onClick = {
+                                closePanelPopups()
+                                homeTab = HomeTab.TASKS
+                            },
+                            icon = {
+                                BadgedBox(
+                                    badge = {
+                                        if (activeTaskCount > 0) {
+                                            Badge { Text(activeTaskCount.toString()) }
+                                        }
+                                    }
+                                ) {
+                                    Icon(Icons.Outlined.Schedule, contentDescription = null)
+                                }
+                            },
+                            label = { Text(HomeTab.TASKS.label) }
+                        )
+                        NavigationBarItem(
+                            selected = homeTab == HomeTab.TRASH,
+                            onClick = {
+                                closePanelPopups()
+                                homeTab = HomeTab.TRASH
+                            },
+                            icon = { Icon(Icons.Outlined.Delete, contentDescription = null) },
+                            label = { Text(HomeTab.TRASH.label) }
+                        )
+                    }
+                }
             }
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
             when {
+            homeTab == HomeTab.TASKS -> TaskCenterContent(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                onNotify = ::notify
+            )
+            homeTab == HomeTab.TRASH -> TrashContent(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                onChanged = ::notify,
+                showHeader = false
+            )
             controller.treeUri == null -> Onboarding(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
+                deniedOnce = onboardingDenied,
                 onRequestAccess = {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         val appSettings = Intent(
@@ -1919,6 +2013,153 @@ internal fun TaskQueueDialog(onDismiss: () -> Unit) {
     )
 }
 
+@Composable
+internal fun TaskCenterContent(
+    modifier: Modifier = Modifier,
+    onNotify: (String) -> Unit
+) {
+    val context = LocalContext.current
+    var tasks by remember { mutableStateOf<List<WorkInfo>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var pausedTaskIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            tasks = runCatching { loadArchiveWorkInfos(context) }.getOrDefault(emptyList())
+            pausedTaskIds = tasks
+                .filter { ArchiveTaskControl.isPaused(context, it.id) }
+                .mapTo(mutableSetOf()) { it.id.toString() }
+            loading = false
+            delay(1000)
+        }
+    }
+
+    val runningStates = setOf(
+        WorkInfo.State.RUNNING,
+        WorkInfo.State.ENQUEUED,
+        WorkInfo.State.BLOCKED
+    )
+    val activeTasks = tasks.filter { it.state in runningStates }
+    val finishedTasks = tasks.filterNot { it.state in runningStates }
+
+    if (loading) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    if (tasks.isEmpty()) {
+        Column(
+            modifier = modifier.padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                Icons.Outlined.Schedule,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(10.dp))
+            Text("还没有任务", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "压缩或解压后会出现在这里，可以暂停、继续或取消",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
+
+    Column(modifier = modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            if (activeTasks.isNotEmpty()) {
+                item { TaskSectionLabel("进行中", "${activeTasks.size} 项") }
+                items(activeTasks, key = { "active-${it.id}" }) { task ->
+                    TaskQueueRow(
+                        task = task,
+                        paused = task.id.toString() in pausedTaskIds,
+                        onTogglePause = {
+                            val paused = task.id.toString() !in pausedTaskIds
+                            ArchiveTaskControl.setPaused(context, task.id, paused)
+                            pausedTaskIds = if (paused) {
+                                pausedTaskIds + task.id.toString()
+                            } else {
+                                pausedTaskIds - task.id.toString()
+                            }
+                        },
+                        onCancel = {
+                            ArchiveTaskControl.clear(context, task.id)
+                            WorkManager.getInstance(context.applicationContext)
+                                .cancelWorkById(task.id)
+                            onNotify("已取消任务")
+                        }
+                    )
+                }
+            }
+            if (finishedTasks.isNotEmpty()) {
+                item { TaskSectionLabel("已结束", "${finishedTasks.size} 项") }
+                items(finishedTasks, key = { "done-${it.id}" }) { task ->
+                    TaskQueueRow(task = task, paused = false, onTogglePause = {})
+                }
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
+            if (finishedTasks.isNotEmpty()) {
+                TextButton(
+                    onClick = {
+                        WorkManager.getInstance(context.applicationContext).pruneWork()
+                    }
+                ) {
+                    Text("清理历史")
+                }
+            }
+            if (activeTasks.isNotEmpty()) {
+                TextButton(
+                    onClick = {
+                        WorkManager.getInstance(context.applicationContext).apply {
+                            cancelUniqueWork(ExtractionScheduler.QUEUE_NAME)
+                            cancelUniqueWork(CompressionScheduler.QUEUE_NAME)
+                        }
+                        onNotify("已取消全部任务")
+                    }
+                ) {
+                    Text("取消全部", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TaskSectionLabel(title: String, subtitle: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(title, style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.width(6.dp))
+        Text(
+            subtitle,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
 private suspend fun loadArchiveWorkInfos(context: Context): List<WorkInfo> =
     withContext(Dispatchers.IO) {
         val workManager = WorkManager.getInstance(context.applicationContext)
@@ -2054,7 +2295,8 @@ private fun ActiveArchiveTaskBar(
 private fun TaskQueueRow(
     task: WorkInfo,
     paused: Boolean,
-    onTogglePause: () -> Unit
+    onTogglePause: () -> Unit,
+    onCancel: (() -> Unit)? = null
 ) {
     val title = task.tags
         .firstOrNull { it.startsWith(ExtractionScheduler.TAG_NAME_PREFIX) }
@@ -2129,6 +2371,15 @@ private fun TaskQueueRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 if (active) {
+                    if (onCancel != null) {
+                        IconButton(onClick = onCancel, modifier = Modifier.size(34.dp)) {
+                            Icon(
+                                Icons.Outlined.Close,
+                                contentDescription = "取消任务",
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
+                    }
                     TextButton(onClick = onTogglePause) {
                         Icon(
                             if (paused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
@@ -3015,41 +3266,45 @@ private fun StorageBar(
 @Composable
 private fun Onboarding(
     modifier: Modifier,
+    deniedOnce: Boolean,
     onRequestAccess: () -> Unit,
     onChooseFolder: () -> Unit
 ) {
     Column(
         modifier = modifier.padding(horizontal = 28.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.Center
     ) {
         Surface(
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(22.dp),
             color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(92.dp)
+            modifier = Modifier.size(76.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     Icons.Outlined.FolderOpen,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(42.dp)
+                    modifier = Modifier.size(36.dp)
                 )
             }
         }
-        Spacer(Modifier.height(22.dp))
+        Spacer(Modifier.height(20.dp))
         Text(
             "访问手机文件",
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(8.dp))
         Text(
-            "授予所有文件访问权限后，可以直接浏览内部存储、下载和所有文件夹，" +
-                "像桌面文件管理器一样连续工作。Zippest 不联网，文件只在本机处理。",
+            "解压、压缩和整理文件都在这台手机上完成，过程中不需要联网。",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Spacer(Modifier.height(18.dp))
+        OnboardingBenefit("打开所有文件夹，不用每次选目录")
+        OnboardingBenefit("只在本机读写，不联网、不上传")
+        OnboardingBenefit("随时可以在系统设置里撤销")
         Spacer(Modifier.height(24.dp))
         Button(
             onClick = onRequestAccess,
@@ -3059,10 +3314,46 @@ private fun Onboarding(
         ) {
             Text("授予所有文件访问权限")
         }
-        Spacer(Modifier.height(6.dp))
-        TextButton(onClick = onChooseFolder) {
-            Text("或仅选择一个文件夹")
+        Spacer(Modifier.height(4.dp))
+        TextButton(
+            onClick = onChooseFolder,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("只选一个文件夹（更保守）")
         }
+        if (deniedOnce) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "上次没有授权成功。可以再试一次，或先用文件夹模式——解压、压缩、搜索都能用。",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "Zippest 不申请网络权限，可在 系统设置 → 应用 → Zippest → 权限 里核实。",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun OnboardingBenefit(text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Outlined.Check,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(text, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

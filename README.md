@@ -1,128 +1,77 @@
 # Zippest
 
-Zippest 最独特的两项能力是便捷的后缀重命名与批量密码填充：重命名时会自动
-选中最后一个点及其后的后缀，并提供 7Z、ZIP、RAR 和自定义后缀快捷替换；
-批量解压多个压缩包时可启用“使用相同密码”，一次填写后自动应用到整个任务，
-无需逐个输入。在此基础上，Zippest 还把文件管理、压缩、解压和删除整合成
-不跳转系统文件管理器的连续工作流，支持复制或移动后停留在目标文件夹、熄屏
-和后台继续处理、实时进度浮窗、任务暂停与恢复、持久回收站及分卷操作。
+**手机上的压缩包工具：点开就能看，只解你要的，压到一半断了也能接着来。不联网、无广告、无账号。**
 
-![Zippest 文件浏览界面](design/screens/01-root.png)
+你收到一个压缩包想先看看里面有什么——Zippest 点开就能浏览，不用先解压。
+只想拿其中一个文件，也不用把整个包解开。
+压缩到一半手机把应用关掉了，重新打开会从断点接着压。
+全程不连网，文件不出手机。
 
-## 项目结构
+<p align="center">
+  <img src="docs/screenshots/02-files.png" width="260" alt="文件页" />
+  <img src="docs/screenshots/05-compress.png" width="260" alt="压缩设置" />
+  <img src="docs/screenshots/03-tasks.png" width="260" alt="任务中心" />
+</p>
 
-- `android/`：使用 Kotlin 和 Jetpack Compose 开发的 Android 应用
-- `design/`：产品原型、图标和界面参考图
-- `tools/`：本地测试素材与自动化脚本
+## 四个最不用学的功能
 
-## 主要功能
+- **点开就看**：ZIP、7Z、RAR、TAR 系列直接浏览；点里面的文件，只解这一个，用系统应用打开。
+- **只解你要的**：包里长按多选，只解选中的几个，不用把几 GB 全倒出来。
+- **断了能接**：TAR / TAR.GZ / TAR.BZ2 / TAR.XZ 压缩到一半被系统杀掉，下次打开从断点继续。
+- **干干净净**：不申请联网权限，没有广告，不用注册，也没有统计 SDK。
 
-### 文件管理
+## 它还能做什么
 
-- 浏览本地文件和文件夹，支持搜索、排序、新建目录、重命名和下拉刷新。
-- 搜索可切换「当前文件夹 / 全部存储」：全部模式会扫描整个内部存储并显示文件所在路径。
-- 长按进入多选，可复制、移动、分享、压缩、解压、删除及查看打开方式。
-- 复制和移动直接在当前文件页选择目标目录，完成后停留在目标文件夹。
-- 删除前显示一次确认，默认移入回收站，可从文件页菜单恢复或永久删除。
-- 支持直接内部存储访问，也保留 Android Storage Access Framework
-  文件夹授权作为兼容方案。
-- 内部存储快捷位置支持通过系统文件管理器新建、改址和删除。
+**文件管理**
+- 直接浏览内部存储、SD 卡和 U 盘，不用每次选目录
+- 搜索可分「当前文件夹 / 全部存储」，结果带所在路径
+- 长按多选：复制、移动、重命名、删除、分享、压缩、解压
+- 删除默认进回收站，可恢复；保留期 7 / 30 / 90 天或永久
 
-### 压缩与解压
+**压缩与解压**
+- 解压 17 种格式，压缩 12 种（含 Zstd、Brotli、LZ4、XZ、7Z、TAR 系列）
+- RAR 只解不压——RAR 的压缩算法不允许第三方实现
+- 分卷：`.001` / `.z01` / `.part1.rar` 自动收卷，点第一个文件就能解
+- 加密 ZIP（AES-256）和 7Z（含头部加密）
+- 一次给多个压缩包填同一个密码；解压前就能改包名和后缀
+- 文件名乱码可以切 GBK / UTF-8，不用回设置里翻
 
-- 浏览并解压 ZIP、7Z、RAR、TAR、TAR.GZ、TAR.BZ2、TAR.XZ、
-  TAR.ZST、TAR.BR、CPIO、GZ、BZ2、XZ、LZMA、LZ4、ZST 和 BR。
-- 创建 ZIP、7Z、TAR 系列、CPIO、GZ、BZ2、XZ、LZMA、LZ4 和 ZST
-  压缩包，并可选择压缩级别。
-- 创建带密码的 ZIP 和 7Z 压缩包。
-- 将支持的压缩包分卷为 `.001`、`.002` 等格式，或创建
-  `.z01`、`.z02`、`.zip` 分卷集合。
-- 打开分卷压缩包的第一个文件时，会自动读取同目录中的全部后续分卷；
-  支持数字分卷、`.partN.rar`、`.000.rar`、RAR5 以及旧式 `.rar/.r00`。
-- 未加密的 7Z、RAR4 和 RAR5 使用 NDK 原生 libarchive 引擎解压，
-  加密数据或加密文件头会自动回退到兼容性引擎。
-- 打开 ZIP、7Z 和 RAR 密码压缩包，并支持加密 7Z、RAR 头部解锁。
-- 多压缩包任务可复用同一密码，也可逐个输入密码。
-- 解压前可直接修改压缩包名称和后缀，支持 7Z、ZIP、RAR 与自定义后缀。
-- 解压预览使用边框特效区分预览内容，点击预览文件可进入完整解压设置。
-- 包内点按文件会只解出该条目并用系统应用打开；长按可多选，底部「解压所选」只解选中的文件。
-- 解压或压缩完成后，通知栏与页面内 Snackbar 都能直接打开结果文件夹。
-- TAR / TAR.GZ / TAR.BZ2 / TAR.XZ 支持断点续传：进程被系统杀掉后，重新打开应用会从上次写到的条目继续，而不是从头再压一遍。
-- 支持完整性检查，并防止路径穿越、异常条目数量和磁盘空间不足等问题。
+**任务**
+- 后台排队，熄屏也继续
+- 任务中心可暂停、继续、取消；进度通知展开就能操作
+- 完成时点通知或页面提示，直接跳到结果文件夹
 
-### 后台任务
+> 说明：ZIP / 7Z 的目录信息写在文件末尾，中断后需要重新压缩；目前只有 TAR 系列支持断点续传。
 
-- 使用 WorkManager 排队执行压缩和解压任务。
-- 应用进入后台或屏幕熄灭后，任务可继续运行。
-- 提供常驻通知、应用内任务中心和浮动进度条。
-- 支持暂停、继续、取消与恢复检查点。
-- 进度通知可展开直接「暂停 / 继续」或「取消」，熄屏时不用回到应用。
-- 队列密码使用 Android Keystore 管理的密钥加密。
+## 安装
 
-### 界面与系统集成
+到 [Releases](https://github.com/Tnomlav/Zippest/releases) 下载最新的 `arm64-v8a` 安装包；不确定机型就下 `universal`。
 
-- 支持系统主题、手动浅色和深色主题。
-- 图片和视频显示缩略图，普通文件支持调用系统应用打开。
-- 打开方式优先展示查看器和编辑器，其次才是分享或发送类应用。
-- 相册和播放器应用打开媒体时，可访问同文件夹内的其他媒体。
-- 文件菜单、排序菜单、内部存储面板和选择菜单采用互斥显示。
-- 支持 Android 分享、文件关联和“用 Zippest 打开”流程。
+- 系统要求：Android 8.0（API 26）及以上
+- 安装包约 4.6 MB（arm64 单包）
+- 发布包签名一致，可以直接覆盖升级
 
-## 构建
+## 隐私
+
+- 应用**没有申请 `INTERNET` 权限**，也不含广告、追踪或统计 SDK
+- 文件、文件名和密码都只在本机处理
+- 可在「系统设置 → 应用 → Zippest → 权限」里核实没有网络权限
+
+详见 [隐私政策](PRIVACY.md)。
+
+## 从源码构建
 
 ```powershell
 cd android
 $env:JAVA_HOME='C:\Android Studio\jbr'
 .\gradlew.bat assembleDebug
-.\gradlew.bat lintDebug
-.\gradlew.bat assembleRelease          # 产出 arm64 / v7a / universal 三个 APK
-.\gradlew.bat -PzippestBundle bundleRelease   # 打 AAB（AGP 不允许与 ABI 拆分同时构建）
-.\gradlew.bat -PzippestEmulator assembleDebug # 模拟器联调包（x86_64）
+.\gradlew.bat assembleRelease                   # arm64 / v7a / universal 三个包
+.\gradlew.bat -PzippestBundle bundleRelease     # AAB
+.\gradlew.bat -PzippestEmulator assembleDebug   # 模拟器用 x86_64 调试包
 ```
 
-签名后的 Release APK 输出位置：
+发布签名配置放在本地 `.signing/`（不纳入 Git）。打 `v*` tag 会触发 GitHub Actions 自动构建、签名校验并发版。
 
-```text
-android/app/build/outputs/apk/release/app-arm64-v8a-release.apk
-android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk
-android/app/build/outputs/apk/release/app-universal-release.apk
-android/app/build/outputs/bundle/release/app-release.aab
-```
+## 许可
 
-可以直接使用 Android Studio 打开 `android/` 目录。发布签名配置位于本地、
-不纳入 Git 的 `.signing/` 目录，发布前应同时备份密钥库及其配置。
-
-## 当前版本
-
-当前版本为 `1.7.2`（versionCode 75），包名继续使用 `com.decompress.app`，以保持已有版本升级
-兼容性。
-
-此版本把压缩与解压的进度通知变成可操作：展开通知可以直接「暂停 / 继续」或「取消」。
-暂停只写一个标志位，任务在下个检查点停住；取消会立刻结束任务并清理未完成的临时文件。
-
-此版本补齐了压缩包内的操作：点按包内文件可直接用系统应用打开（只解出这一个条目），
-长按可多选并「解压所选」；解压与压缩完成后，通知栏与页面内的 Snackbar 都能直接
-「打开所在文件夹」。
-
-此版本给搜索加上「当前 / 全部」范围切换：切换到「全部」会扫描整个内部存储，
-结果显示所在路径，文件夹与压缩包都可直接打开。全盘搜索跳过 `Android/` 与隐藏
-目录，最多扫描 25k 个条目，输入有 250 ms 防抖。
-
-此版本把安装包从 7 个 ABI 收敛到 `arm64-v8a` 与 `armeabi-v7a`：arm64 单包
-4.87 MB、v7a 4.47 MB、通用包 7.01 MB，AAB 7.71 MB，并已通过 16 KB 页面
-对齐校验。
-
-此版本新增 tag 触发的发布流水线（`.github/workflows/android-release.yml`）：
-校验 tag 与 versionName、构建分 ABI 的 APK 与 AAB、检查载荷与 16 KB 对齐、
-校验签名，并把产物与 SHA256SUMS 一起发布。
-
-完整版本历史与安装包请查看：
-
-https://github.com/Tnomlav/Zippest/releases
-
-## 隐私与许可
-
-- [隐私政策](PRIVACY.md)
-- [第三方开源许可](THIRD_PARTY_NOTICES.md)
-- [项目许可证](LICENSE)（Apache-2.0）
-- Zippest 不申请 `INTERNET` 权限，文件、密码与文件名都不会离开本机；可在系统设置的应用权限页核实。
+项目代码以 [Apache-2.0](LICENSE) 发布；第三方组件许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
