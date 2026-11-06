@@ -12,6 +12,8 @@ val releaseSigningProperties = Properties().apply {
     }
 }
 val hasReleaseSigning = releaseSigningProperties.isNotEmpty()
+// 本地模拟器（x86_64）联调用：-PzippestEmulator，只影响调试构建。
+val emulatorBuild = providers.gradleProperty("zippestEmulator").isPresent
 
 android {
     namespace = "com.decompress.app"
@@ -21,8 +23,8 @@ android {
         applicationId = "com.decompress.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 73
-        versionName = "1.7.0"
+        versionCode = 74
+        versionName = "1.7.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -30,7 +32,11 @@ android {
         }
         // 依赖（JNA / libarchive）带的 mips、x86 等预编译库一律不打进包。
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            abiFilters += if (emulatorBuild) {
+                listOf("x86_64")
+            } else {
+                listOf("arm64-v8a", "armeabi-v7a")
+            }
         }
     }
 
@@ -68,7 +74,8 @@ android {
     // AGP 不允许 ABI 拆分与 AAB 同时构建，所以打 AAB 时用 -PzippestBundle 关掉拆分。
     splits {
         abi {
-            isEnable = !providers.gradleProperty("zippestBundle").isPresent
+            isEnable = !emulatorBuild &&
+                !providers.gradleProperty("zippestBundle").isPresent
             reset()
             include("arm64-v8a", "armeabi-v7a")
             isUniversalApk = true

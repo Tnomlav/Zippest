@@ -96,6 +96,9 @@ class CompressionEngine(private val context: Context) {
         targetParentUri: Uri,
         targetTreeUri: Uri,
         options: CompressionOptions,
+        staging: File? = null,
+        resume: CompressionResumeState? = null,
+        onSection: ((Int, String, Long) -> Unit)? = null,
         onProgress: (Int, Int) -> Unit = { _, _ -> }
     ): CompressionResult = withContext(Dispatchers.IO) {
         require(selected.isNotEmpty()) { "请选择要压缩的文件" }
@@ -113,6 +116,19 @@ class CompressionEngine(private val context: Context) {
 
         val nodes = collectNodes(selected, sourceTreeUri)
         if (nodes.isEmpty()) throw ArchiveException("没有可压缩的内容")
+
+        // TAR 系列走可续写路径：直接在目标目录里写临时文件，完成后再改名。
+        if (staging != null && ResumableTarWriter.supports(options.format)) {
+            return@withContext writeResumableTar(
+                staging = staging,
+                nodes = nodes,
+                options = options,
+                resume = resume,
+                onSection = onSection,
+                onProgress = onProgress
+            )
+        }
+
         val output = ArchiveOutputTarget(
             resolver = resolver,
             parentUri = targetParentUri,
@@ -160,6 +176,130 @@ class CompressionEngine(private val context: Context) {
                 error
             )
         }
+    }
+
+    /**
+     * 可续写的 TAR 系列输出：在目标目录的临时文件上按分段写，完成后改名为正式文件名。
+     *
+     * 续传前提：临时文件还在、偏移没有超过文件长度、且“上一条写过的条目”与当前
+     * 节点清单一致；任何一条不满足都退化为从头写，不会产出半截可用文件。
+     */
+    private suspend fun writeResumableTar(
+        staging: File,
+        nodes: List<SourceNode>,
+        options: CompressionOptions,
+        resume: CompressionResumeState?,
+        onSection: ((Int, String, Long) -> Unit)?,
+        onProgress: (Int, Int) -> Unit
+    ): CompressionResult = withContext(Dispatchers.IO) {
+        var startCount = 0
+        var startOffset = 0L
+        var lastEntry = ""
+        if (resume == null && staging.exists()) {
+            // 没有可用的断点现场时，先清掉遗留半成品，避免把新内容追加到旧文件后面。
+            staging.delete()
+        }
+        if (resume != null && resume.entryCount > 0) {
+            val previous = nodes.getOrNull(resume.entryCount - 1)
+            if (previous != null &&
+                previous.path.trimEnd('/') == resume.lastEntryName.trimEnd('/') &&
+                resume.offset in 1..staging.length()
+            ) {
+                startCount = resume.entryCount
+                startOffset = resume.offset
+                lastEntry = resume.lastEntryName
+            }
+        }
+        val writer = ResumableTarWriter(
+            file = staging,
+            format = options.format,
+            level = options.level.zipLevel,
+            startOffset = startOffset,
+            startEntryCount = startCount,
+            lastEntryName = lastEntry,
+            onSection = { count, name, offset -> onSection?.invoke(count, name, offset) }
+        )
+        try {
+            for (index in startCount until nodes.size) {
+                val node = nodes[index]
+                val name = if (node.isDirectory) {
+                    node.path.trimEnd('/') + "/"
+                } else {
+                    node.path
+                }
+                writer.putEntry(
+                    name = name,
+                    size = if (node.isDirectory) 0L else node.size,
+                    lastModified = node.lastModified,
+                    isDirectory = node.isDirectory,
+                    writeBody = if (node.isDirectory) {
+                        null
+                    } else {
+                        { out ->
+                            openInput(node.uri, options.onCheckpoint).use {
+                                it.copyTo(out, BUFFER_SIZE)
+                            }
+                        }
+                    }
+                )
+                onProgress(index + 1, nodes.size)
+            }
+            writer.finish()
+        } catch (error: Throwable) {
+            writer.abandon()
+            throw error
+        }
+
+        val parent = staging.parentFile ?: throw ArchiveException("目标目录不可用")
+        val finalFile = promoteStaging(
+            staging = staging,
+            parent = parent,
+            requested = normalizedArchiveName(options.archiveName, options.format),
+            extension = options.format.extension
+        )
+        CompressionResult(
+            displayName = finalFile.name,
+            primaryUri = Uri.fromFile(finalFile),
+            partUris = listOf(Uri.fromFile(finalFile))
+        )
+    }
+
+    private fun promoteStaging(
+        staging: File,
+        parent: File,
+        requested: String,
+        extension: String
+    ): File {
+        val target = File(parent, uniqueName(parent, requested, extension))
+        if (staging.renameTo(target)) return target
+        // 同目录改名失败（少见），退回复制，保证结果正确。
+        try {
+            staging.inputStream().use { input ->
+                target.outputStream().use { output -> input.copyTo(output, BUFFER_SIZE) }
+            }
+        } catch (error: Exception) {
+            target.delete()
+            throw error
+        }
+        staging.delete()
+        return target
+    }
+
+    private fun uniqueName(directory: File, requested: String, extension: String): String {
+        if (!File(directory, requested).exists()) return requested
+        val base = if (requested.endsWith(extension, ignoreCase = true)) {
+            requested.dropLast(extension.length)
+        } else {
+            requested.substringBeforeLast('.', requested)
+        }
+        val suffix = requested.removePrefix(base)
+        var index = 1
+        while (index < 10_000) {
+            val candidate = "$base ($index)$suffix"
+            if (!File(directory, candidate).exists()) return candidate
+            index++
+        }
+        throw ArchiveException("无法生成可用文件名")
     }
 
     private fun writeNativeSplitZip(

@@ -30,6 +30,11 @@ import com.decompress.app.data.BrowserEntry
 import com.decompress.app.data.CompressionEngine
 import com.decompress.app.data.CompressionFormat
 import com.decompress.app.data.CompressionOptions
+import com.decompress.app.data.CompressionResumeState
+import com.decompress.app.data.CompressionResumeStore
+import com.decompress.app.data.ResumableTarWriter
+import com.decompress.app.data.compressionSignature
+import com.decompress.app.data.localFile
 import kotlinx.coroutines.CancellationException
 import org.json.JSONArray
 import org.json.JSONObject
@@ -172,6 +177,8 @@ class CompressionWorker(
     private val notificationManager =
         appContext.getSystemService(NotificationManager::class.java)
     private val notificationId = (id.hashCode() and 0x7fffffff).coerceAtLeast(1)
+    private val resumeStore by lazy { CompressionResumeStore(applicationContext) }
+    private var stagingFile: File? = null
 
     override suspend fun doWork(): Result {
         val task = runCatching { CompressionScheduler.readTask(inputData) }
@@ -184,6 +191,48 @@ class CompressionWorker(
                     )
                 )
             }
+
+        // 只有“直连目录 + TAR 系列 + 不分卷”才具备续传条件。
+        val parentDirectory = task.targetParentUri.localFile()
+        val resumable = parentDirectory != null &&
+            parentDirectory.isDirectory &&
+            task.options.splitSizeBytes == null &&
+            ResumableTarWriter.supports(task.options.format)
+        val staging = if (resumable) {
+            File(parentDirectory, "$STAGING_PREFIX$id${task.options.format.extension}")
+        } else {
+            null
+        }
+        stagingFile = staging
+        cleanupStaleStaging(parentDirectory)
+        val signature = compressionSignature(task.sources)
+        val resumeState = staging?.let { file ->
+            resumeStore.load(id.toString())?.takeIf { state ->
+                state.signature == signature &&
+                    state.stagingName == file.name &&
+                    file.isFile &&
+                    file.length() >= state.offset
+            }
+        }
+        if (staging != null) {
+            if (resumeState == null) {
+                runCatching { staging.delete() }
+            } else {
+                android.util.Log.i(
+                    "ZippestResume",
+                    "resume ${resumeState.entryCount} entries at ${resumeState.offset} " +
+                        "(${staging.name})"
+                )
+                setProgressAsync(
+                    workDataOf(
+                        ExtractionScheduler.KEY_DISPLAY_NAME to task.displayName,
+                        ExtractionScheduler.KEY_PROGRESS to 0,
+                        ExtractionScheduler.KEY_MESSAGE to "继续上次未完成的压缩…",
+                        ExtractionScheduler.KEY_PAUSED to false
+                    )
+                )
+            }
+        }
 
         val wakeLock = ArchiveWorkWakeLock.acquire(applicationContext, id.toString())
         return try {
@@ -254,8 +303,26 @@ class CompressionWorker(
                 sourceTreeUri = task.sourceTreeUri,
                 targetParentUri = task.targetParentUri,
                 targetTreeUri = task.targetTreeUri,
-                options = task.options.copy(onCheckpoint = checkpoint)
-            ) { processed, total ->
+                options = task.options.copy(onCheckpoint = checkpoint),
+                staging = staging,
+                resume = resumeState,
+                onSection = { count, name, offset ->
+                    if (staging != null) {
+                        resumeStore.save(
+                            id.toString(),
+                            CompressionResumeState(
+                                format = task.options.format.name,
+                                archiveName = task.options.archiveName,
+                                stagingName = staging.name,
+                                entryCount = count,
+                                lastEntryName = name,
+                                offset = offset,
+                                signature = signature
+                            )
+                        )
+                    }
+                },
+                onProgress = { processed, total ->
                 val pauseHandled = ArchiveTaskControl.waitWhilePaused(
                     applicationContext,
                     id,
@@ -317,6 +384,8 @@ class CompressionWorker(
                     )
                 }
             }
+            )
+            resumeStore.clear(id.toString())
             val message = if (task.options.splitSizeBytes == null) {
                 "已创建 ${result.displayName}"
             } else {
@@ -348,6 +417,27 @@ class CompressionWorker(
         } finally {
             ArchiveTaskControl.clear(applicationContext, id)
             if (wakeLock.isHeld) wakeLock.release()
+            // 走到 finally 说明任务已收尾（成功/失败/取消）；进程被杀不会执行到这里，
+            // 半成品与断点现场留给下次启动续传。
+            stagingFile?.let { file ->
+                if (file.exists()) {
+                    file.delete()
+                    resumeStore.clear(id.toString())
+                }
+            }
+        }
+    }
+
+    private fun cleanupStaleStaging(directory: File?) {
+        if (directory == null) return
+        val cutoff = System.currentTimeMillis() - STALE_STAGING_MS
+        directory.listFiles()?.forEach { file ->
+            if (file.isFile &&
+                file.name.startsWith(STAGING_PREFIX) &&
+                file.lastModified() < cutoff
+            ) {
+                file.delete()
+            }
         }
     }
 
@@ -499,6 +589,8 @@ class CompressionWorker(
 
     companion object {
         private const val CHANNEL_ID = "compression_tasks"
+        private const val STAGING_PREFIX = ".zippest-partial-"
+        private const val STALE_STAGING_MS = 7L * 24 * 60 * 60 * 1000
     }
 }
 

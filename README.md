@@ -47,6 +47,7 @@ Zippest 最独特的两项能力是便捷的后缀重命名与批量密码填充
 - 解压预览使用边框特效区分预览内容，点击预览文件可进入完整解压设置。
 - 包内点按文件会只解出该条目并用系统应用打开；长按可多选，底部「解压所选」只解选中的文件。
 - 解压或压缩完成后，通知栏与页面内 Snackbar 都能直接打开结果文件夹。
+- TAR / TAR.GZ / TAR.BZ2 / TAR.XZ 支持断点续传：进程被系统杀掉后，重新打开应用会从上次写到的条目继续，而不是从头再压一遍。
 - 支持完整性检查，并防止路径穿越、异常条目数量和磁盘空间不足等问题。
 
 ### 后台任务
@@ -75,6 +76,7 @@ $env:JAVA_HOME='C:\Android Studio\jbr'
 .\gradlew.bat lintDebug
 .\gradlew.bat assembleRelease          # 产出 arm64 / v7a / universal 三个 APK
 .\gradlew.bat -PzippestBundle bundleRelease   # 打 AAB（AGP 不允许与 ABI 拆分同时构建）
+.\gradlew.bat -PzippestEmulator assembleDebug # 模拟器联调包（x86_64）
 ```
 
 签名后的 Release APK 输出位置：
@@ -91,8 +93,12 @@ android/app/build/outputs/bundle/release/app-release.aab
 
 ## 当前版本
 
-当前版本为 `1.7.0`（versionCode 73），包名继续使用 `com.decompress.app`，以保持已有版本升级
+当前版本为 `1.7.1`（versionCode 74），包名继续使用 `com.decompress.app`，以保持已有版本升级
 兼容性。
+
+此版本给 TAR / TAR.GZ / TAR.BZ2 / TAR.XZ 加上压缩断点续传：压缩时先在目标目录写一个
+隐藏临时文件，按 64 MB 分段记录进度；进程被系统杀掉后，下次启动会从断点截断续写，
+完成后再改名为正式文件。ZIP 与 7Z 的目录结构在文件末尾，暂不支持续传，界面会明确提示。
 
 此版本补齐了压缩包内的操作：点按包内文件可直接用系统应用打开（只解出这一个条目），
 长按可多选并「解压所选」；解压与压缩完成后，通知栏与页面内的 Snackbar 都能直接

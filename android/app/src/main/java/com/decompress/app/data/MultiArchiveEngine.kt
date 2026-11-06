@@ -1162,11 +1162,11 @@ class MultiArchiveEngine(private val context: Context) {
         )
         return when {
             lowerName.endsWith(".tar.gz") || lowerName.endsWith(".tgz") ->
-                TarArchiveInputStream(GzipCompressorInputStream(buffered))
+                TarArchiveInputStream(GzipCompressorInputStream(buffered, true))
             lowerName.endsWith(".tar.bz2") || lowerName.endsWith(".tbz2") ->
-                TarArchiveInputStream(BZip2CompressorInputStream(buffered))
+                TarArchiveInputStream(BZip2CompressorInputStream(buffered, true))
             lowerName.endsWith(".tar.xz") || lowerName.endsWith(".txz") ->
-                TarArchiveInputStream(XZCompressorInputStream(buffered))
+                TarArchiveInputStream(XZCompressorInputStream(buffered, true))
             lowerName.endsWith(".tar.zst") ->
                 TarArchiveInputStream(ZstdCodec.inputStream(buffered))
             lowerName.endsWith(".tar.br") ->

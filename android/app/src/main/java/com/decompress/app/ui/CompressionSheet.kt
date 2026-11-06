@@ -57,6 +57,7 @@ import androidx.core.content.ContextCompat
 import com.decompress.app.data.ArchiveCompressionLevel
 import com.decompress.app.data.BrowserEntry
 import com.decompress.app.data.CompressionFormat
+import com.decompress.app.data.ResumableTarWriter
 import com.decompress.app.data.CompressionOptions
 import com.decompress.app.data.archiveNameWithoutExtension
 import com.decompress.app.service.CompressionScheduler
@@ -271,6 +272,17 @@ fun CompressionSheet(
                         )
                     }
                 }
+
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    if (ResumableTarWriter.supports(format)) {
+                        "TAR 系列支持断点续传：进程被系统中断后会自动接着压"
+                    } else {
+                        "中断后需要重新压缩（ZIP / 7Z 暂不支持续传）"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
                 Spacer(Modifier.height(14.dp))
                 SectionLabel("文件名")
