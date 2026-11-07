@@ -219,13 +219,6 @@ private data class ExternalStorageLocation(
     val path: String
 )
 
-/** 首屏底部导航：文件 / 任务 / 回收站。 */
-internal enum class HomeTab(val label: String) {
-    FILES("文件"),
-    TASKS("任务"),
-    TRASH("回收站")
-}
-
 @Composable
 fun ZippestApp(
     incomingArchive: IncomingArchive? = null,
@@ -502,8 +495,6 @@ fun ZippestApp(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            // 给底部导航栏留位置，避免浮条盖住「文件 / 任务 / 回收站」
-                            .padding(bottom = 84.dp)
                             .zIndex(20f)
                     ) {
                         ActiveArchiveTaskBar(
@@ -562,7 +553,6 @@ private fun FileBrowserScreen(
     val renameFocus = remember { FocusRequester() }
 
     var searchMode by rememberSaveable { mutableStateOf(false) }
-    var homeTab by rememberSaveable { mutableStateOf(HomeTab.FILES) }
     var onboardingDenied by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     var globalSearch by rememberSaveable { mutableStateOf(false) }
@@ -949,25 +939,12 @@ private fun FileBrowserScreen(
         if (opening) refreshExternalStorages()
     }
 
-    BackHandler {
-        when {
-            homeTab != HomeTab.FILES -> homeTab = HomeTab.FILES
-            else -> handleBack()
-        }
-    }
+    BackHandler { handleBack() }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             when {
-                homeTab == HomeTab.TASKS || homeTab == HomeTab.TRASH -> {
-                    TopAppBar(
-                        title = { Text(homeTab.label) },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.background
-                        )
-                    )
-                }
                 controller.selectionMode -> {
                     TopAppBar(
                         navigationIcon = {
@@ -1146,7 +1123,6 @@ private fun FileBrowserScreen(
         },
         bottomBar = {
             Column {
-                if (homeTab == HomeTab.FILES) {
                 when {
                     transferSession != null -> TransferToolbar(
                         move = transferSession?.move == true,
@@ -1200,69 +1176,11 @@ private fun FileBrowserScreen(
                         }
                     )
                 }
-                }
-                if (!controller.selectionMode && transferSession == null && !searchMode) {
-                    NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 3.dp
-                    ) {
-                        NavigationBarItem(
-                            selected = homeTab == HomeTab.FILES,
-                            onClick = {
-                                closePanelPopups()
-                                homeTab = HomeTab.FILES
-                            },
-                            icon = { Icon(Icons.Outlined.FolderOpen, contentDescription = null) },
-                            label = { Text(HomeTab.FILES.label) }
-                        )
-                        NavigationBarItem(
-                            selected = homeTab == HomeTab.TASKS,
-                            onClick = {
-                                closePanelPopups()
-                                homeTab = HomeTab.TASKS
-                            },
-                            icon = {
-                                BadgedBox(
-                                    badge = {
-                                        if (activeTaskCount > 0) {
-                                            Badge { Text(activeTaskCount.toString()) }
-                                        }
-                                    }
-                                ) {
-                                    Icon(Icons.Outlined.Schedule, contentDescription = null)
-                                }
-                            },
-                            label = { Text(HomeTab.TASKS.label) }
-                        )
-                        NavigationBarItem(
-                            selected = homeTab == HomeTab.TRASH,
-                            onClick = {
-                                closePanelPopups()
-                                homeTab = HomeTab.TRASH
-                            },
-                            icon = { Icon(Icons.Outlined.Delete, contentDescription = null) },
-                            label = { Text(HomeTab.TRASH.label) }
-                        )
-                    }
-                }
             }
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
             when {
-            homeTab == HomeTab.TASKS -> TaskCenterContent(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                onNotify = ::notify
-            )
-            homeTab == HomeTab.TRASH -> TrashContent(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                onChanged = ::notify,
-                showHeader = false
-            )
             controller.treeUri == null -> Onboarding(
                 modifier = Modifier
                     .fillMaxSize()
