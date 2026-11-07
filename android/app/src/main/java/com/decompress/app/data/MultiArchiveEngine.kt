@@ -1437,10 +1437,25 @@ class MultiArchiveEngine(private val context: Context) {
             .filter { it.isNotBlank() && it != "." }
         if (segments.any { it == ".." }) return emptyList()
         return segments.mapNotNull { segment ->
-            segment
+            val cleaned = segment
                 .replace(Regex("[\\u0000-\\u001F<>:\"|?*]"), "_")
                 .trim()
-                .ifBlank { null }
+            if (cleaned.isBlank()) return@mapNotNull null
+            if (cleaned.toByteArray(Charsets.UTF_8).size <= 255) {
+                cleaned
+            } else {
+                val dot = cleaned.lastIndexOf('.')
+                val extension = if (dot > 0 && cleaned.length - dot <= 12) {
+                    cleaned.substring(dot)
+                } else {
+                    ""
+                }
+                var base = cleaned.removeSuffix(extension)
+                while (base.toByteArray(Charsets.UTF_8).size > 200 && base.isNotEmpty()) {
+                    base = base.dropLast(1)
+                }
+                base + "_" + Integer.toHexString(cleaned.hashCode()) + extension
+            }
         }
     }
 
