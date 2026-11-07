@@ -171,6 +171,10 @@ import com.decompress.app.data.QuickLocationIcon
 import com.decompress.app.data.QuickLocationRepository
 import com.decompress.app.data.ThemeMode
 import com.decompress.app.data.TrashRepository
+import com.decompress.app.service.TaskNavigation
+import com.decompress.app.data.TaskHistoryCodec
+import com.decompress.app.data.TaskHistoryEntry
+import com.decompress.app.data.TaskHistoryStore
 import com.decompress.app.service.ExtractionScheduler
 import com.decompress.app.service.ExtractionTaskRegistry
 import com.decompress.app.service.CompressionScheduler
@@ -2026,6 +2030,7 @@ internal fun TaskCenterContent(
     var tasks by remember { mutableStateOf<List<WorkInfo>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var pausedTaskIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var history by remember { mutableStateOf<List<TaskHistoryEntry>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -2033,6 +2038,9 @@ internal fun TaskCenterContent(
             pausedTaskIds = tasks
                 .filter { ArchiveTaskControl.isPaused(context, it.id) }
                 .mapTo(mutableSetOf()) { it.id.toString() }
+            history = runCatching {
+                TaskHistoryStore(context.applicationContext).list()
+            }.getOrDefault(emptyList())
             loading = false
             delay(1000)
         }
@@ -2126,6 +2134,60 @@ internal fun TaskCenterContent(
                     )
                 }
             }
+            if (history.isNotEmpty()) {
+                item { TaskSectionLabel("历史", "${history.size} 条") }
+                items(history, key = { "history-${it.id}" }) { entry ->
+                    TaskHistoryRow(
+                        entry = entry,
+                        onOpen = {
+                            entry.locationUri?.let { uri ->
+                                val intent = android.content.Intent(
+                                    context,
+                                    com.decompress.app.MainActivity::class.java
+                                ).apply {
+                                    action = TaskNavigation.ACTION_OPEN_LOCATION
+                                    putExtra(TaskNavigation.EXTRA_LOCATION_URI, uri)
+                                    putExtra(TaskNavigation.EXTRA_LOCATION_NAME, entry.locationName)
+                                    putExtra(TaskNavigation.EXTRA_LOCATION_TREE_URI, entry.treeUri)
+                                    putExtra(TaskNavigation.EXTRA_LOCATION_PATH, entry.path)
+                                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(intent)
+                            }
+                        },
+                        onRetry = {
+                            val queued = entry.retryPayload?.let { payload ->
+                                when (entry.kind) {
+                                    "extract" -> TaskHistoryCodec.decodeExtraction(payload)
+                                        ?.let {
+                                            ExtractionScheduler.enqueue(
+                                                context.applicationContext,
+                                                it
+                                            )
+                                        }
+                                    "compress" -> TaskHistoryCodec.decodeCompression(payload)
+                                        ?.let {
+                                            CompressionScheduler.enqueue(
+                                                context.applicationContext,
+                                                it
+                                            )
+                                        }
+                                    else -> null
+                                }
+                            }
+                            if (queued != null) {
+                                onNotify("已重新加入队列")
+                            } else {
+                                onNotify("任务参数已失效，请重新发起")
+                            }
+                        },
+                        onDelete = {
+                            TaskHistoryStore(context.applicationContext).delete(entry.id)
+                            history = history.filterNot { it.id == entry.id }
+                        }
+                    )
+                }
+            }
         }
         Row(
             modifier = Modifier
@@ -2153,6 +2215,63 @@ internal fun TaskCenterContent(
                     }
                 ) {
                     Text("取消全部", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TaskHistoryRow(
+    entry: TaskHistoryEntry,
+    onOpen: () -> Unit,
+    onRetry: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+    ) {
+        Column(modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    entry.title,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    if (entry.success) "完成" else "失败",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (entry.success) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    }
+                )
+            }
+            Spacer(Modifier.height(2.dp))
+            Text(
+                entry.message,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                if (entry.locationUri != null) {
+                    TextButton(onClick = onOpen) { Text("打开位置") }
+                }
+                if (entry.retryPayload != null) {
+                    TextButton(onClick = onRetry) { Text("重试") }
+                }
+                TextButton(onClick = onDelete) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
                 }
             }
         }

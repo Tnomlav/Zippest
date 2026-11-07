@@ -29,6 +29,9 @@ import com.decompress.app.data.ConflictPolicy
 import com.decompress.app.data.DestinationMode
 import com.decompress.app.data.ExtractSettings
 import com.decompress.app.data.FileNameEncoding
+import com.decompress.app.data.TaskHistoryCodec
+import com.decompress.app.data.TaskHistoryEntry
+import com.decompress.app.data.TaskHistoryStore
 import com.decompress.app.data.MultiArchiveEngine
 import kotlinx.coroutines.CancellationException
 import org.json.JSONArray
@@ -383,6 +386,15 @@ class ExtractionWorker(
                 treeUri = outcome.treeUri,
                 path = outcome.path
             )
+            recordHistory(
+                task = effectiveTask,
+                message = outcome.message,
+                success = true,
+                location = outcome.locationUri,
+                locationName = outcome.locationName,
+                treeUri = outcome.treeUri,
+                path = outcome.path
+            )
             ExtractionCheckpointStore.clear(applicationContext, id)
             Result.success(
                 workDataOf(ExtractionScheduler.KEY_MESSAGE to outcome.message)
@@ -400,6 +412,11 @@ class ExtractionWorker(
                 notifyFinished("解压失败", message, successful = false)
             }
             broadcastFinished(false, message)
+            recordHistory(
+                task = effectiveTask,
+                message = message,
+                success = false
+            )
             ExtractionCheckpointStore.clear(applicationContext, id)
             Result.failure(
                 workDataOf(ExtractionScheduler.KEY_MESSAGE to message)
@@ -690,6 +707,34 @@ class ExtractionWorker(
                 )
                 .putExtra(ExtractionScheduler.EXTRA_EXTRACTION_PATH, path)
         )
+    }
+
+    private fun recordHistory(
+        task: ExtractionTask,
+        message: String,
+        success: Boolean,
+        location: Uri? = null,
+        locationName: String = "",
+        treeUri: Uri? = null,
+        path: String = ""
+    ) {
+        runCatching {
+            TaskHistoryStore(applicationContext).record(
+                TaskHistoryEntry(
+                    id = id.toString(),
+                    kind = "extract",
+                    title = task.displayName,
+                    message = message,
+                    success = success,
+                    finishedAt = System.currentTimeMillis(),
+                    locationUri = location?.toString(),
+                    locationName = locationName,
+                    treeUri = treeUri?.toString(),
+                    path = path,
+                    retryPayload = TaskHistoryCodec.encodeExtraction(task)
+                )
+            )
+        }
     }
 
     private fun shouldNotifyFinished(): Boolean =

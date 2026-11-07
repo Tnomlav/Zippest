@@ -56,6 +56,12 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.decompress.app.data.ArchiveCompressionLevel
 import com.decompress.app.data.BrowserEntry
+import com.decompress.app.data.localFile
+import com.decompress.app.data.SafFileRepository
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import android.text.format.Formatter
+import androidx.compose.runtime.LaunchedEffect
 import com.decompress.app.data.CompressionFormat
 import com.decompress.app.data.ResumableTarWriter
 import com.decompress.app.data.CompressionOptions
@@ -102,6 +108,11 @@ fun CompressionSheet(
     var fileName by rememberSaveable { mutableStateOf("$initialBaseName.zip") }
     var level by rememberSaveable { mutableStateOf(ArchiveCompressionLevel.NORMAL) }
     var password by rememberSaveable { mutableStateOf("") }
+    var confirmPassword by rememberSaveable { mutableStateOf("") }
+    var excludeGit by rememberSaveable { mutableStateOf(false) }
+    var excludeNodeModules by rememberSaveable { mutableStateOf(false) }
+    var excludeMac by rememberSaveable { mutableStateOf(false) }
+    var originalBytes by remember { mutableStateOf<Long?>(null) }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var splitOptionIndex by rememberSaveable { mutableStateOf(0) }
     val splitOption = splitOptions[splitOptionIndex]
@@ -111,6 +122,30 @@ fun CompressionSheet(
     var useCustomLocation by rememberSaveable { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var notificationRequested by remember { mutableStateOf(false) }
+
+    LaunchedEffect(target.entries) {
+        originalBytes = withContext(Dispatchers.IO) {
+            runCatching {
+                val repository = SafFileRepository(context.applicationContext)
+                var total = 0L
+                var visited = 0
+                suspend fun walk(entry: BrowserEntry) {
+                    if (visited > 20_000) return
+                    if (!entry.isDirectory) {
+                        total += entry.size.coerceAtLeast(0L)
+                        visited++
+                        return
+                    }
+                    val children = entry.uri.localFile()?.let { directory ->
+                        repository.listDirectChildren(directory)
+                    } ?: repository.listChildren(target.sourceTreeUri, entry.uri)
+                    children.forEach { child -> walk(child) }
+                }
+                target.entries.forEach { entry -> walk(entry) }
+                total
+            }.getOrNull()
+        }
+    }
 
     val folderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -145,6 +180,10 @@ fun CompressionSheet(
             error = "${format.label} 不支持密码"
             return
         }
+        if (password.isNotEmpty() && confirmPassword != password) {
+            error = "两次输入的密码不一致"
+            return
+        }
         val normalizedName = fileName.trim()
         if (normalizedName.isBlank()) {
             error = "请输入文件名"
@@ -177,7 +216,12 @@ fun CompressionSheet(
                         archiveName = outputName,
                         level = level,
                         password = password,
-                        splitSizeBytes = splitOption.bytes
+                        splitSizeBytes = splitOption.bytes,
+                        excludedSegments = buildSet {
+                            if (excludeGit) add(".git")
+                            if (excludeNodeModules) add("node_modules")
+                            if (excludeMac) add("__MACOSX")
+                        }
                     )
                 )
             )
@@ -310,6 +354,47 @@ fun CompressionSheet(
                         )
                     }
                 }
+                originalBytes?.takeIf { it > 0 }?.let { bytes ->
+                    Spacer(Modifier.height(8.dp))
+                    val ratio = when (level) {
+                        ArchiveCompressionLevel.STORE -> 1.0f
+                        ArchiveCompressionLevel.FAST -> 0.82f
+                        ArchiveCompressionLevel.NORMAL -> 0.66f
+                        ArchiveCompressionLevel.MAXIMUM -> 0.54f
+                    }
+                    val estimate = (bytes * ratio).toLong()
+                    Text(
+                        "原始 ${Formatter.formatShortFileSize(context, bytes)} · " +
+                            "预计约 ${Formatter.formatShortFileSize(context, estimate)}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(Modifier.height(14.dp))
+                SectionLabel("排除规则")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = excludeGit,
+                        onClick = { excludeGit = !excludeGit },
+                        label = { Text("跳过 .git") }
+                    )
+                    FilterChip(
+                        selected = excludeNodeModules,
+                        onClick = { excludeNodeModules = !excludeNodeModules },
+                        label = { Text("跳过 node_modules") }
+                    )
+                    FilterChip(
+                        selected = excludeMac,
+                        onClick = { excludeMac = !excludeMac },
+                        label = { Text("跳过 __MACOSX") }
+                    )
+                }
 
                 if (format.supportsPassword) {
                     Spacer(Modifier.height(14.dp))
@@ -343,6 +428,38 @@ fun CompressionSheet(
                             }
                         }
                     )
+                    if (password.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = confirmPassword,
+                            onValueChange = { confirmPassword = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text("再输入一次") },
+                            isError = confirmPassword.isNotEmpty() &&
+                                confirmPassword != password,
+                            visualTransformation = if (passwordVisible) {
+                                VisualTransformation.None
+                            } else {
+                                PasswordVisualTransformation()
+                            }
+                        )
+                        if (confirmPassword.isNotEmpty() && confirmPassword != password) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "两次输入不一致",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        } else if (password.length < 6) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "密码少于 6 位，容易被猜到",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
 
                 Spacer(Modifier.height(14.dp))

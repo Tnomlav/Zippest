@@ -77,6 +77,7 @@ data class CompressionOptions(
     val level: ArchiveCompressionLevel = ArchiveCompressionLevel.NORMAL,
     val password: String = "",
     val splitSizeBytes: Long? = null,
+    val excludedSegments: Set<String> = emptySet(),
     val onCheckpoint: () -> Unit = {}
 )
 
@@ -114,7 +115,7 @@ class CompressionEngine(private val context: Context) {
             throw ArchiveException("分卷大小不能小于 64 KB")
         }
 
-        val nodes = collectNodes(selected, sourceTreeUri)
+        val nodes = collectNodes(selected, sourceTreeUri, options.excludedSegments)
         if (nodes.isEmpty()) throw ArchiveException("没有可压缩的内容")
 
         // TAR 系列走可续写路径：直接在目标目录里写临时文件，完成后再改名。
@@ -346,7 +347,8 @@ class CompressionEngine(private val context: Context) {
 
     private suspend fun collectNodes(
         selected: List<BrowserEntry>,
-        treeUri: Uri
+        treeUri: Uri,
+        excludedSegments: Set<String> = emptySet()
     ): List<SourceNode> {
         val result = mutableListOf<SourceNode>()
         val rootNames = mutableSetOf<String>()
@@ -356,6 +358,11 @@ class CompressionEngine(private val context: Context) {
             }
             val safePath = sanitizeArchivePath(path)
             if (safePath.isEmpty()) return
+            if (excludedSegments.isNotEmpty() &&
+                safePath.split('/').any { it in excludedSegments }
+            ) {
+                return
+            }
             result += SourceNode(
                 path = safePath,
                 uri = entry.uri,

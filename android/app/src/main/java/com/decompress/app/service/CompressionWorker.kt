@@ -33,6 +33,9 @@ import com.decompress.app.data.CompressionOptions
 import com.decompress.app.data.CompressionResumeState
 import com.decompress.app.data.CompressionResumeStore
 import com.decompress.app.data.ResumableTarWriter
+import com.decompress.app.data.TaskHistoryCodec
+import com.decompress.app.data.TaskHistoryEntry
+import com.decompress.app.data.TaskHistoryStore
 import com.decompress.app.data.compressionSignature
 import com.decompress.app.data.localFile
 import kotlinx.coroutines.CancellationException
@@ -405,6 +408,14 @@ class CompressionWorker(
                 treeUri = task.targetTreeUri,
                 path = ""
             )
+            recordHistory(
+                task = task,
+                message = message,
+                success = true,
+                location = task.targetParentUri,
+                locationName = folderLabel(task.targetParentUri),
+                treeUri = task.targetTreeUri
+            )
             Result.success(
                 workDataOf(ExtractionScheduler.KEY_MESSAGE to message)
             )
@@ -412,11 +423,16 @@ class CompressionWorker(
             finish(false, "压缩已取消")
             throw error
         } catch (error: Exception) {
-            finish(false, error.message ?: "无法完成压缩")
+            val message = error.message ?: "无法完成压缩"
+            finish(false, message)
+            recordHistory(
+                task = task,
+                message = message,
+                success = false
+            )
             Result.failure(
                 workDataOf(
-                    ExtractionScheduler.KEY_MESSAGE to
-                        (error.message ?: "无法完成压缩")
+                    ExtractionScheduler.KEY_MESSAGE to message
                 )
             )
         } finally {
@@ -443,6 +459,33 @@ class CompressionWorker(
             ) {
                 file.delete()
             }
+        }
+    }
+
+    private fun recordHistory(
+        task: CompressionTask,
+        message: String,
+        success: Boolean,
+        location: Uri? = null,
+        locationName: String = "",
+        treeUri: Uri? = null
+    ) {
+        runCatching {
+            TaskHistoryStore(applicationContext).record(
+                TaskHistoryEntry(
+                    id = id.toString(),
+                    kind = "compress",
+                    title = task.displayName,
+                    message = message,
+                    success = success,
+                    finishedAt = System.currentTimeMillis(),
+                    locationUri = location?.toString(),
+                    locationName = locationName,
+                    treeUri = treeUri?.toString(),
+                    path = "",
+                    retryPayload = TaskHistoryCodec.encodeCompression(task)
+                )
+            )
         }
     }
 
