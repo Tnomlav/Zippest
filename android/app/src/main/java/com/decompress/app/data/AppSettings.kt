@@ -35,6 +35,14 @@ enum class AppAccent(
     GRAPHITE("石墨", 0xFF3F4A45, 0xFFE2E7E4, 0xFF1B211E, 0xFFC2CFC8, 0xFF2B342F, 0xFFE6EDE9)
 }
 
+enum class ExtractSection(val label: String, val detail: String) {
+    PASSWORD("密码", "压缩包加密时填写"),
+    NAME("压缩包名称", "解压前改包名和后缀"),
+    DESTINATION("解压位置", "当前文件夹 / 同名文件夹 / 其他位置"),
+    CONFLICT("同名文件", "覆盖 / 跳过 / 重命名"),
+    ENCODING("文件名编码", "自动 / GBK / UTF-8")
+}
+
 enum class BrowserSortMode(val label: String) {
     NAME("名称"),
     SIZE("大小"),
@@ -65,11 +73,8 @@ enum class RestoreConflictPolicy(val label: String) {
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val accentColor: AppAccent = AppAccent.GREEN,
-    val showExtractPassword: Boolean = true,
-    val showExtractName: Boolean = true,
-    val showExtractDestination: Boolean = true,
-    val showExtractConflict: Boolean = true,
-    val showExtractEncoding: Boolean = true,
+    val extractOrder: List<ExtractSection> = ExtractSection.entries.toList(),
+    val hiddenExtractSections: Set<ExtractSection> = emptySet(),
     val showHiddenFiles: Boolean = false,
     val showThumbnails: Boolean = true,
     val showRecentExtractions: Boolean = true,
@@ -104,11 +109,11 @@ class AppSettingsRepository(context: Context) {
         preferences.edit {
             putString(KEY_THEME, updated.themeMode.name)
             putString(KEY_ACCENT, updated.accentColor.name)
-            putBoolean(KEY_EXTRACT_PASSWORD, updated.showExtractPassword)
-            putBoolean(KEY_EXTRACT_NAME, updated.showExtractName)
-            putBoolean(KEY_EXTRACT_DESTINATION, updated.showExtractDestination)
-            putBoolean(KEY_EXTRACT_CONFLICT, updated.showExtractConflict)
-            putBoolean(KEY_EXTRACT_ENCODING, updated.showExtractEncoding)
+            putString(KEY_EXTRACT_ORDER, updated.extractOrder.joinToString(",") { it.name })
+            putString(
+                KEY_EXTRACT_HIDDEN,
+                updated.hiddenExtractSections.joinToString(",") { it.name }
+            )
             putBoolean(KEY_SHOW_HIDDEN, updated.showHiddenFiles)
             putBoolean(KEY_SHOW_THUMBNAILS, updated.showThumbnails)
             putBoolean(KEY_SHOW_RECENT, updated.showRecentExtractions)
@@ -137,11 +142,8 @@ class AppSettingsRepository(context: Context) {
         private const val PREFERENCES = "zippest-settings"
         private const val KEY_THEME = "theme"
         private const val KEY_ACCENT = "accent"
-        private const val KEY_EXTRACT_PASSWORD = "extract_password"
-        private const val KEY_EXTRACT_NAME = "extract_name"
-        private const val KEY_EXTRACT_DESTINATION = "extract_destination"
-        private const val KEY_EXTRACT_CONFLICT = "extract_conflict"
-        private const val KEY_EXTRACT_ENCODING = "extract_encoding"
+        private const val KEY_EXTRACT_ORDER = "extract_order"
+        private const val KEY_EXTRACT_HIDDEN = "extract_hidden"
         private const val KEY_SHOW_HIDDEN = "show_hidden"
         private const val KEY_SHOW_THUMBNAILS = "show_thumbnails"
         private const val KEY_SHOW_RECENT = "show_recent_extractions"
@@ -172,11 +174,16 @@ class AppSettingsRepository(context: Context) {
         ): AppSettings = AppSettings(
             themeMode = preferences.enumValue(KEY_THEME, ThemeMode.SYSTEM),
             accentColor = preferences.enumValue(KEY_ACCENT, AppAccent.GREEN),
-            showExtractPassword = preferences.getBoolean(KEY_EXTRACT_PASSWORD, true),
-            showExtractName = preferences.getBoolean(KEY_EXTRACT_NAME, true),
-            showExtractDestination = preferences.getBoolean(KEY_EXTRACT_DESTINATION, true),
-            showExtractConflict = preferences.getBoolean(KEY_EXTRACT_CONFLICT, true),
-            showExtractEncoding = preferences.getBoolean(KEY_EXTRACT_ENCODING, true),
+            extractOrder = preferences.getString(KEY_EXTRACT_ORDER, null)
+                ?.split(',')
+                ?.mapNotNull { name -> ExtractSection.entries.firstOrNull { it.name == name } }
+                ?.takeIf { it.isNotEmpty() }
+                ?: ExtractSection.entries.toList(),
+            hiddenExtractSections = preferences.getString(KEY_EXTRACT_HIDDEN, null)
+                ?.split(',')
+                ?.mapNotNull { name -> ExtractSection.entries.firstOrNull { it.name == name } }
+                ?.toSet()
+                ?: emptySet(),
             showHiddenFiles = preferences.getBoolean(KEY_SHOW_HIDDEN, false),
             showThumbnails = preferences.getBoolean(KEY_SHOW_THUMBNAILS, true),
             showRecentExtractions = preferences.getBoolean(KEY_SHOW_RECENT, true),

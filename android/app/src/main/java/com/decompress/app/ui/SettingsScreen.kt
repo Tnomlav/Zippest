@@ -67,9 +67,22 @@ import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.draw.clip
+import com.decompress.app.data.ExtractSection
+import kotlin.math.roundToInt
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -140,6 +153,7 @@ fun SettingsScreen(
     var activePopup by remember { mutableStateOf<SettingsPopup?>(null) }
     var activeCategory by remember { mutableStateOf<SettingsCategory?>(null) }
     var checkingUpdate by remember { mutableStateOf(false) }
+    var editingExtractLayout by remember { mutableStateOf(false) }
 
     BackHandler {
         if (activeCategory != null) activeCategory = null else onBack()
@@ -281,16 +295,35 @@ fun SettingsScreen(
                         }
                     )
                     SettingsDivider()
-                    SettingsChoice(
-                        title = "主题色",
-                        options = AppAccent.entries.map { it.label },
-                        selectedIndex = AppAccent.entries.indexOf(settings.accentColor),
-                        onSelected = { index ->
-                            repository.update {
-                                it.copy(accentColor = AppAccent.entries[index])
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                        Text(
+                            "主题色",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            AppAccent.entries.forEach { accent ->
+                                val selected = settings.accentColor == accent
+                                Box(
+                                    modifier = Modifier
+                                        .size(30.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(accent.lightPrimary))
+                                        .border(
+                                            width = if (selected) 3.dp else 0.dp,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            shape = CircleShape
+                                        )
+                                        .clickable {
+                                            repository.update {
+                                                it.copy(accentColor = accent)
+                                            }
+                                        }
+                                )
                             }
                         }
-                    )
+                    }
                 }
             }
             }
@@ -531,59 +564,10 @@ fun SettingsScreen(
                         }
                     )
                     SettingsDivider()
-                    SettingsSwitch(
-                        title = "解压面板：密码",
-                        detail = "隐藏后不再显示密码输入框",
-                        checked = settings.showExtractPassword,
-                        onCheckedChange = {
-                            repository.update { current ->
-                                current.copy(showExtractPassword = it)
-                            }
-                        }
-                    )
-                    SettingsDivider()
-                    SettingsSwitch(
-                        title = "解压面板：文件名",
-                        detail = "隐藏后不改包名，直接解压",
-                        checked = settings.showExtractName,
-                        onCheckedChange = {
-                            repository.update { current ->
-                                current.copy(showExtractName = it)
-                            }
-                        }
-                    )
-                    SettingsDivider()
-                    SettingsSwitch(
-                        title = "解压面板：解压位置",
-                        detail = "隐藏后使用默认位置",
-                        checked = settings.showExtractDestination,
-                        onCheckedChange = {
-                            repository.update { current ->
-                                current.copy(showExtractDestination = it)
-                            }
-                        }
-                    )
-                    SettingsDivider()
-                    SettingsSwitch(
-                        title = "解压面板：同名文件",
-                        detail = "隐藏后使用默认的同名处理方式",
-                        checked = settings.showExtractConflict,
-                        onCheckedChange = {
-                            repository.update { current ->
-                                current.copy(showExtractConflict = it)
-                            }
-                        }
-                    )
-                    SettingsDivider()
-                    SettingsSwitch(
-                        title = "解压面板：文件名编码",
-                        detail = "隐藏后使用默认编码",
-                        checked = settings.showExtractEncoding,
-                        onCheckedChange = {
-                            repository.update { current ->
-                                current.copy(showExtractEncoding = it)
-                            }
-                        }
+                    SettingsAction(
+                        title = "自定义解压面板",
+                        detail = "拖动排序、隐藏或恢复组件",
+                        onClick = { editingExtractLayout = true }
                     )
                 }
             }
@@ -958,6 +942,20 @@ fun SettingsScreen(
         )
         null -> Unit
     }
+
+    if (editingExtractLayout) {
+        ExtractLayoutEditor(
+            order = settings.extractOrder,
+            hidden = settings.hiddenExtractSections,
+            onOrderChange = { newOrder ->
+                repository.update { it.copy(extractOrder = newOrder) }
+            },
+            onHiddenChange = { newHidden ->
+                repository.update { it.copy(hiddenExtractSections = newHidden) }
+            },
+            onClose = { editingExtractLayout = false }
+        )
+    }
 }
 
 @Composable
@@ -1007,6 +1005,159 @@ private fun QuickLocationSettingsRow(
                 contentDescription = "删除快捷位置",
                 tint = MaterialTheme.colorScheme.error
             )
+        }
+    }
+}
+
+@Composable
+private fun ExtractLayoutEditor(
+    order: List<ExtractSection>,
+    hidden: Set<ExtractSection>,
+    onOrderChange: (List<ExtractSection>) -> Unit,
+    onHiddenChange: (Set<ExtractSection>) -> Unit,
+    onClose: () -> Unit
+) {
+    val density = LocalDensity.current
+    val rowHeightPx = with(density) { 64.dp.toPx() }
+    var dragging by remember { mutableStateOf<ExtractSection?>(null) }
+    var dragOffset by remember { mutableStateOf(0f) }
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = onClose) {
+                        Icon(Icons.Outlined.ArrowBack, contentDescription = "返回")
+                    }
+                },
+                title = { Text("解压面板") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Text(
+                "按住 ≡ 拖动排序；点眼睛隐藏，隐藏的组件可在下方加回来。",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(12.dp))
+            order.filter { it !in hidden }.forEach { section ->
+                val offset = if (dragging == section) dragOffset else 0f
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        .offset { IntOffset(0, offset.roundToInt()) }
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "≡",
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .pointerInput(order) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = {
+                                        dragging = section
+                                        dragOffset = 0f
+                                    },
+                                    onDrag = { change, amount ->
+                                        change.consume()
+                                        dragOffset += amount.y
+                                    },
+                                    onDragEnd = {
+                                        val start = order.indexOf(section)
+                                        val shift = (dragOffset / rowHeightPx).roundToInt()
+                                        val target = (start + shift)
+                                            .coerceIn(0, order.lastIndex)
+                                        if (target != start) {
+                                            val updated = order.toMutableList().apply {
+                                                removeAt(start)
+                                                add(target, section)
+                                            }
+                                            onOrderChange(updated)
+                                        }
+                                        dragging = null
+                                        dragOffset = 0f
+                                    },
+                                    onDragCancel = {
+                                        dragging = null
+                                        dragOffset = 0f
+                                    }
+                                )
+                            },
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            section.label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            section.detail,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    IconButton(onClick = { onHiddenChange(hidden + section) }) {
+                        Icon(
+                            Icons.Outlined.VisibilityOff,
+                            contentDescription = "隐藏 ${section.label}"
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+            if (hidden.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "已隐藏",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(6.dp))
+                hidden.forEach { section ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                            )
+                            .padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            section.label,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        IconButton(onClick = { onHiddenChange(hidden - section) }) {
+                            Icon(
+                                Icons.Outlined.Add,
+                                contentDescription = "恢复 ${section.label}"
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
         }
     }
 }

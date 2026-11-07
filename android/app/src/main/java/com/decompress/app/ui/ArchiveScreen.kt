@@ -1141,7 +1141,7 @@ fun ExtractSheet(
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
             ) {
-                if (settings.showExtractPassword) {
+                val blockPassword: @Composable () -> Unit = {
                 Text(
                     "密码",
                     style = MaterialTheme.typography.labelMedium,
@@ -1233,7 +1233,7 @@ fun ExtractSheet(
                 }
                 }
 
-                if (canRenameArchive && settings.showExtractName) {
+                val blockName: @Composable () -> Unit = {
                     Spacer(Modifier.height(18.dp))
                     Text(
                         "压缩包名称",
@@ -1285,7 +1285,7 @@ fun ExtractSheet(
                     )
                 }
 
-                if (settings.showExtractDestination) {
+                val blockDestination: @Composable () -> Unit = {
                 Spacer(Modifier.height(18.dp))
                 Text(
                     "解压到",
@@ -1326,7 +1326,7 @@ fun ExtractSheet(
                 )
                 }
 
-                if (settings.showExtractConflict) {
+                val blockConflict: @Composable () -> Unit = {
                 Spacer(Modifier.height(18.dp))
                 Text(
                     "同名文件",
@@ -1346,7 +1346,7 @@ fun ExtractSheet(
 
                 }
 
-                if (settings.showExtractEncoding) {
+                val blockEncoding: @Composable () -> Unit = {
                 Spacer(Modifier.height(14.dp))
                 Text(
                     "文件名编码",
@@ -1365,6 +1365,23 @@ fun ExtractSheet(
                 }
 
                 }
+                val extractBlocks = mapOf(
+                    com.decompress.app.data.ExtractSection.PASSWORD to blockPassword,
+                    com.decompress.app.data.ExtractSection.NAME to blockName,
+                    com.decompress.app.data.ExtractSection.DESTINATION to blockDestination,
+                    com.decompress.app.data.ExtractSection.CONFLICT to blockConflict,
+                    com.decompress.app.data.ExtractSection.ENCODING to blockEncoding
+                )
+                settings.extractOrder
+                    .filter { section ->
+                        section !in settings.hiddenExtractSections &&
+                            (
+                                section != com.decompress.app.data.ExtractSection.NAME ||
+                                    canRenameArchive
+                                )
+                    }
+                    .forEach { section -> extractBlocks[section]?.invoke() }
+
                 if (archives.size > 1) {
                     Spacer(Modifier.height(14.dp))
                     Row(
