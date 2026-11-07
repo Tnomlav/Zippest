@@ -1907,7 +1907,7 @@ private fun FileBrowserScreen(
                         showRenameDialog = false
                         if (entry == null || !controller.beginRename(entry, name)) {
                             notify("重命名失败，名称无效或已存在")
-                            return@TextButton
+                            return@Button
                         }
                         scope.launch {
                             val renamed = controller.commitRename(entry, name)
