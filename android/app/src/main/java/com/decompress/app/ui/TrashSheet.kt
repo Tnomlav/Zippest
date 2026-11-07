@@ -84,6 +84,9 @@ fun TrashContent(
 ) {
     val context = LocalContext.current
     val repository = remember { TrashRepository(context.applicationContext) }
+    val settings = remember {
+        com.decompress.app.data.AppSettingsRepository(context.applicationContext).settings
+    }
     val scope = rememberCoroutineScope()
     var items by remember { mutableStateOf<List<TrashItem>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
@@ -123,9 +126,14 @@ fun TrashContent(
                     if (items.isEmpty()) {
                         "删除的文件会先放在这里"
                     } else {
+                        val quotaLabel = if (settings.trashQuota.bytes <= 0L) {
+                            "不限"
+                        } else {
+                            settings.trashQuota.label
+                        }
                         "${items.size} 项 · 已用 " +
                             Formatter.formatShortFileSize(context, usedBytes) +
-                            " / 2 GB"
+                            " / $quotaLabel"
                     },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -186,10 +194,14 @@ fun TrashContent(
                                 item = item,
                                 onRestore = {
                                     scope.launch {
-                                        val restoredName = repository.restore(item.id)
+                                        val policy = settings.restoreConflictPolicy
+                                        val restoredName = repository.restore(item.id, policy)
                                         refresh(
                                             when {
                                                 restoredName == null -> "恢复失败"
+                                                policy == com.decompress.app.data
+                                                    .RestoreConflictPolicy.OVERWRITE ->
+                                                    "已恢复 ${item.name}（覆盖了同名文件）"
                                                 restoredName == item.name ->
                                                     "已恢复 ${item.name}"
                                                 else ->

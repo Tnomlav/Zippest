@@ -74,6 +74,8 @@ import com.decompress.app.data.QuickLocation
 import com.decompress.app.data.QuickLocationRepository
 import com.decompress.app.data.ThemeMode
 import com.decompress.app.data.TrashRetention
+import com.decompress.app.data.TrashQuota
+import com.decompress.app.data.RestoreConflictPolicy
 import com.decompress.app.data.TrashRepository
 import com.decompress.app.service.ExtractionScheduler
 import com.decompress.app.service.CompressionScheduler
@@ -549,6 +551,43 @@ fun SettingsScreen(
                                 }
                             }
                         }
+                    )
+                    SettingsDivider()
+                    SettingsChoice(
+                        title = "回收站容量上限",
+                        options = TrashQuota.entries.map { it.label },
+                        selectedIndex = TrashQuota.entries.indexOf(settings.trashQuota),
+                        onSelected = { index ->
+                            repository.update {
+                                it.copy(trashQuota = TrashQuota.entries[index])
+                            }
+                        }
+                    )
+                    SettingsDivider()
+                    SettingsChoice(
+                        title = "恢复同名文件",
+                        options = RestoreConflictPolicy.entries.map { it.label },
+                        selectedIndex = RestoreConflictPolicy.entries.indexOf(
+                            settings.restoreConflictPolicy
+                        ),
+                        onSelected = { index ->
+                            repository.update {
+                                it.copy(
+                                    restoreConflictPolicy =
+                                        RestoreConflictPolicy.entries[index]
+                                )
+                            }
+                        }
+                    )
+                    SettingsDivider()
+                    SettingsAction(
+                        title = "只浏览某个文件夹…",
+                        detail = if (browserPath.isBlank()) {
+                            "当前：全部文件"
+                        } else {
+                            "当前：$browserPath"
+                        },
+                        onClick = onChooseBrowserFolder
                     )
                     SettingsDivider()
                     SettingsAction(

@@ -1507,14 +1507,6 @@ private fun FileBrowserScreen(
                         }
                     )
                     ZippestMenuItem(
-                        text = { Text("重新选择文件夹") },
-                        leadingIcon = { Icon(Icons.Outlined.FolderOpen, null) },
-                        onClick = {
-                            moreExpanded = false
-                            folderPicker.launch(null)
-                        }
-                    )
-                    ZippestMenuItem(
                         text = { Text("关于") },
                         leadingIcon = { Icon(Icons.Outlined.Info, null) },
                         onClick = {

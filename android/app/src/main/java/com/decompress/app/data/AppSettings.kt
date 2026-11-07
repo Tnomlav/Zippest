@@ -31,6 +31,19 @@ enum class TrashRetention(val label: String, val days: Int) {
     FOREVER("永久保留", 0)
 }
 
+enum class TrashQuota(val label: String, val bytes: Long) {
+    MB_500("500 MB", 500L * 1024 * 1024),
+    GB_1("1 GB", 1L * 1024 * 1024 * 1024),
+    GB_2("2 GB", 2L * 1024 * 1024 * 1024),
+    GB_5("5 GB", 5L * 1024 * 1024 * 1024),
+    UNLIMITED("不限", 0L)
+}
+
+enum class RestoreConflictPolicy(val label: String) {
+    RENAME("改名，全部留下"),
+    OVERWRITE("覆盖同名文件")
+}
+
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val showHiddenFiles: Boolean = false,
@@ -43,6 +56,8 @@ data class AppSettings(
     val defaultSortMode: BrowserSortMode = BrowserSortMode.NAME,
     val useTrash: Boolean = true,
     val trashRetention: TrashRetention = TrashRetention.DAYS_30,
+    val trashQuota: TrashQuota = TrashQuota.GB_2,
+    val restoreConflictPolicy: RestoreConflictPolicy = RestoreConflictPolicy.RENAME,
     val customDestinationTreeUri: String? = null,
     val customDestinationRootUri: String? = null,
     val customDestinationName: String? = null
@@ -72,6 +87,8 @@ class AppSettingsRepository(context: Context) {
             putString(KEY_DEFAULT_SORT, updated.defaultSortMode.name)
             putBoolean(KEY_USE_TRASH, updated.useTrash)
             putString(KEY_TRASH_RETENTION, updated.trashRetention.name)
+            putString(KEY_TRASH_QUOTA, updated.trashQuota.name)
+            putString(KEY_RESTORE_CONFLICT, updated.restoreConflictPolicy.name)
             putString(KEY_CUSTOM_TREE, updated.customDestinationTreeUri)
             putString(KEY_CUSTOM_ROOT, updated.customDestinationRootUri)
             putString(KEY_CUSTOM_NAME, updated.customDestinationName)
@@ -95,6 +112,8 @@ class AppSettingsRepository(context: Context) {
         private const val KEY_DEFAULT_SORT = "default_sort"
         private const val KEY_USE_TRASH = "use_trash"
         private const val KEY_TRASH_RETENTION = "trash_retention"
+        private const val KEY_TRASH_QUOTA = "trash_quota"
+        private const val KEY_RESTORE_CONFLICT = "restore_conflict"
         private const val KEY_CUSTOM_TREE = "custom_tree"
         private const val KEY_CUSTOM_ROOT = "custom_root"
         private const val KEY_CUSTOM_NAME = "custom_name"
@@ -137,6 +156,11 @@ class AppSettingsRepository(context: Context) {
             trashRetention = preferences.enumValue(
                 KEY_TRASH_RETENTION,
                 TrashRetention.DAYS_30
+            ),
+            trashQuota = preferences.enumValue(KEY_TRASH_QUOTA, TrashQuota.GB_2),
+            restoreConflictPolicy = preferences.enumValue(
+                KEY_RESTORE_CONFLICT,
+                RestoreConflictPolicy.RENAME
             ),
             customDestinationTreeUri = preferences.getString(KEY_CUSTOM_TREE, null),
             customDestinationRootUri = preferences.getString(KEY_CUSTOM_ROOT, null),

@@ -12,7 +12,7 @@ val releaseSigningProperties = Properties().apply {
     }
 }
 val hasReleaseSigning = releaseSigningProperties.isNotEmpty()
-// 本地模拟器（x86_64）联调用：-PzippestEmulator，只影响调试构建。
+// 鏈湴妯℃嫙鍣紙x86_64锛夎仈璋冪敤锛?PzippestEmulator锛屽彧褰卞搷璋冭瘯鏋勫缓銆?
 val emulatorBuild = providers.gradleProperty("zippestEmulator").isPresent
 
 android {
@@ -23,14 +23,14 @@ android {
         applicationId = "com.decompress.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 82
-        versionName = "1.11.2"
+        versionCode = 83
+        versionName = "1.11.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
-        // 依赖（JNA / libarchive）带的 mips、x86 等预编译库一律不打进包。
+        // 渚濊禆锛圝NA / libarchive锛夊甫鐨?mips銆亁86 绛夐缂栬瘧搴撲竴寰嬩笉鎵撹繘鍖呫€?
         ndk {
             abiFilters += if (emulatorBuild) {
                 listOf("x86_64")
@@ -69,9 +69,9 @@ android {
         }
     }
 
-    // 只保留 ARM 设备真正用到的两种 ABI；universal 包用于 GitHub 直发，
-    // arm64 单包用于绝大多数真机，体积从 13 MB 降到约 5 MB。
-    // AGP 不允许 ABI 拆分与 AAB 同时构建，所以打 AAB 时用 -PzippestBundle 关掉拆分。
+    // 鍙繚鐣?ARM 璁惧鐪熸鐢ㄥ埌鐨勪袱绉?ABI锛泆niversal 鍖呯敤浜?GitHub 鐩村彂锛?
+    // arm64 鍗曞寘鐢ㄤ簬缁濆ぇ澶氭暟鐪熸満锛屼綋绉粠 13 MB 闄嶅埌绾?5 MB銆?
+    // AGP 涓嶅厑璁?ABI 鎷嗗垎涓?AAB 鍚屾椂鏋勫缓锛屾墍浠ユ墦 AAB 鏃剁敤 -PzippestBundle 鍏虫帀鎷嗗垎銆?
     splits {
         abi {
             isEnable = !emulatorBuild &&

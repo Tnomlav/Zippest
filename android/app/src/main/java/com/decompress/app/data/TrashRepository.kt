@@ -54,15 +54,17 @@ class TrashRepository(private val context: Context) {
     }
 
     private fun enforceQuota() {
+        val quota = AppSettingsRepository.read(context).trashQuota.bytes
+        if (quota <= 0L) return
         var total = trashRoot.listFiles().orEmpty()
-            .sumOf { directory -> sizeOnDisk(directory, QUOTA_BYTES) }
-        if (total <= QUOTA_BYTES) return
+            .sumOf { directory -> sizeOnDisk(directory, quota) }
+        if (total <= quota) return
         val oldestFirst = trashRoot.listFiles().orEmpty()
             .mapNotNull { directory -> readItem(directory)?.let { it to directory } }
             .sortedBy { (item, _) -> item.deletedAt }
-        for ((item, directory) in oldestFirst) {
-            if (total <= QUOTA_BYTES) break
-            val size = sizeOnDisk(directory, QUOTA_BYTES)
+        for ((_, directory) in oldestFirst) {
+            if (total <= quota) break
+            val size = sizeOnDisk(directory, quota)
             if (directory.deleteRecursively()) total -= size
         }
     }
@@ -89,7 +91,10 @@ class TrashRepository(private val context: Context) {
     }
 
     /** 恢复成功时返回最终文件名（可能与原名不同，重名时自动加序号）。 */
-    suspend fun restore(id: String): String? = withContext(Dispatchers.IO) {
+    suspend fun restore(
+        id: String,
+        policy: RestoreConflictPolicy = RestoreConflictPolicy.RENAME
+    ): String? = withContext(Dispatchers.IO) {
         val itemDirectory = itemDirectory(id) ?: return@withContext null
         val item = readItem(itemDirectory) ?: return@withContext null
         val payload = File(itemDirectory, PAYLOAD_NAME)
@@ -97,7 +102,13 @@ class TrashRepository(private val context: Context) {
         val original = File(item.originalPath)
         val parent = original.parentFile ?: return@withContext null
         if (!parent.isDirectory && !parent.mkdirs()) return@withContext null
-        val target = uniqueFile(parent, original.name)
+        val target = if (policy == RestoreConflictPolicy.OVERWRITE) {
+            val direct = File(parent, original.name)
+            if (direct.exists()) direct.deleteRecursively()
+            direct
+        } else {
+            uniqueFile(parent, original.name)
+        }
         val restored = moveFile(payload, target)
         if (restored) itemDirectory.deleteRecursively()
         if (restored) target.name else null
