@@ -1657,7 +1657,7 @@ private fun FileBrowserScreen(
                     )
                     selectedEntries.singleOrNull()?.takeIf { !it.isDirectory }?.let { candidate ->
                         ZippestMenuItem(
-                            text = { Text("完整性") },
+                            text = { Text("检查完整性") },
                             leadingIcon = { Icon(Icons.Outlined.CheckCircle, null) },
                             onClick = {
                                 selectionMenuExpanded = false
@@ -1851,7 +1851,7 @@ private fun FileBrowserScreen(
         val entry = checksumTarget!!
         AlertDialog(
             onDismissRequest = { checksumTarget = null },
-            title = { Text("完整性（校验和）") },
+            title = { Text("校验和") },
             text = {
                 Column {
                     Text(
@@ -1904,7 +1904,7 @@ private fun FileBrowserScreen(
                             Text("复制 MD5")
                         }
                         Text(
-                            "算出来的值一样，就说明内容和对方完全一致；这项功能也叫「校验和」。全程在本机算，不联网。",
+                            "算出来的值一样，就说明内容和对方完全一致。全程在本机算，不联网。",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
