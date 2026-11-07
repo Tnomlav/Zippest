@@ -301,12 +301,22 @@ class MultiArchiveEngine(private val context: Context) {
             archiveParentUri
         )
         if (parts.isEmpty()) throw ArchiveException("找不到完整的分卷文件")
+        val totalBytes = parts.sumOf { part ->
+            fileSize(part.uri).takeIf { it > 0L }
+                ?: part.size.coerceAtLeast(0L)
+        }
+        val usableBytes = runCatching {
+            android.os.StatFs(context.cacheDir.absolutePath).availableBytes
+        }.getOrDefault(Long.MAX_VALUE)
+        val safetyMargin = 32L * 1024 * 1024
+        if (totalBytes + safetyMargin > usableBytes) {
+            throw ArchiveException(
+                "合并分卷需要约 ${formatBytes(totalBytes)} 临时空间，当前可用 " +
+                    "${formatBytes(usableBytes)}。请先清理缓存，或把分卷换到空间更大的位置再解压。"
+            )
+        }
         val temp = File.createTempFile("zippest-parts-", ".tmp", context.cacheDir)
         try {
-            val totalBytes = parts.sumOf { part ->
-                fileSize(part.uri).takeIf { it > 0L }
-                    ?: part.size.coerceAtLeast(0L)
-            }
             var copiedBytes = 0L
             withContext(Dispatchers.IO) {
                 temp.outputStream().buffered().use { output ->
@@ -446,8 +456,20 @@ class MultiArchiveEngine(private val context: Context) {
         val numbers = sorted.mapNotNull { entry ->
             pattern.matchEntire(entry.name)?.groupValues?.get(1)?.toIntOrNull()
         }
-        if (numbers.firstOrNull() != 1 || numbers != (1..numbers.size).toList()) {
-            throw ArchiveException("分卷编号不连续，请确保从 .001 开始且没有缺失")
+        if (numbers.isEmpty()) {
+            throw ArchiveException("找不到分卷文件。请从 .001 开始，或确认分卷在同一目录。")
+        }
+        if (numbers.firstOrNull() != 1) {
+            throw ArchiveException("缺少第一卷（.001）。请从 .001 开始解压，或把分卷补齐。")
+        }
+        val highest = numbers.maxOrNull() ?: 0
+        val missing = (1..highest).filter { it !in numbers }
+        if (missing.isNotEmpty()) {
+            val shown = missing.take(6).joinToString("、") { "%03d".format(it) }
+            val more = if (missing.size > 6) " 等 ${missing.size} 卷" else ""
+            throw ArchiveException(
+                "缺少第 $shown 卷$more。请把同一目录下的分卷补齐后再试。"
+            )
         }
         return sorted
     }
@@ -1514,7 +1536,13 @@ class MultiArchiveEngine(private val context: Context) {
     }
 
     companion object {
-        private const val PREPARATION_SHARE = 0.1f
+        private fun formatBytes(bytes: Long): String = when {
+    bytes >= 1L shl 30 -> "%.1f GB".format(bytes / (1L shl 30).toDouble())
+    bytes >= 1L shl 20 -> "%.0f MB".format(bytes / (1L shl 20).toDouble())
+    else -> "%.0f KB".format(bytes / 1024.0)
+}
+
+private const val PREPARATION_SHARE = 0.1f
 private const val LIST_BATCH_SIZE = 200
         private const val MAX_ENTRIES = 50_000
         private const val MAX_TOTAL_BYTES = 20L * 1024 * 1024 * 1024

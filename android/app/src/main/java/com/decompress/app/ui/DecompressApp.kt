@@ -617,6 +617,16 @@ private fun FileBrowserScreen(
         onNotify(message)
     }
 
+    LaunchedEffect(controller.treeUri) {
+        if (controller.treeUri == null) return@LaunchedEffect
+        val hints = context.getSharedPreferences("zippest-hints", Context.MODE_PRIVATE)
+        if (!hints.getBoolean("long_press_shown", false)) {
+            hints.edit().putBoolean("long_press_shown", true).apply()
+            delay(900)
+            notify("长按文件可以多选，点按直接打开")
+        }
+    }
+
     fun openHistoryLocation(entry: TaskHistoryEntry) {
         val uri = entry.locationUri?.let(Uri::parse) ?: return
         scope.launch {
@@ -1332,7 +1342,18 @@ private fun FileBrowserScreen(
                         item {
                             EmptyState(
                                 modifier = Modifier.fillParentMaxSize(),
-                                filtered = query.isNotBlank()
+                                filtered = query.isNotBlank(),
+                                onBrowseDownloads = {
+                                    scope.launch {
+                                        controller.openStorageRoot(
+                                            File(
+                                                Environment.getExternalStorageDirectory(),
+                                                "Download"
+                                            ),
+                                            "Download"
+                                        )
+                                    }
+                                }
                             )
                         }
                     }
@@ -3563,7 +3584,11 @@ private fun GlobalSearchRow(hit: GlobalSearchHit, onClick: () -> Unit) {
 }
 
 @Composable
-private fun EmptyState(modifier: Modifier, filtered: Boolean) {
+private fun EmptyState(
+    modifier: Modifier,
+    filtered: Boolean,
+    onBrowseDownloads: (() -> Unit)? = null
+) {
     Column(
         modifier = modifier.padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -3586,6 +3611,12 @@ private fun EmptyState(modifier: Modifier, filtered: Boolean) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (!filtered && onBrowseDownloads != null) {
+            Spacer(Modifier.height(14.dp))
+            androidx.compose.material3.OutlinedButton(onClick = onBrowseDownloads) {
+                Text("去下载目录看看")
+            }
+        }
     }
 }
 
