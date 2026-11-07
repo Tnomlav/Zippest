@@ -194,7 +194,11 @@ internal fun Throwable.archiveMessage(): String {
         "enospc" in lower ||
             "no space" in lower ||
             "space" in lower && "insufficient" in lower ->
-            "存储空间不足。清理一些文件，或换到空间更大的位置再解压。"
+            "存储空间不足。清理一些文件，或换到空间更大的位置（比如 SD 卡）再解压。"
+        "volume" in lower && ("missing" in lower || "not found" in lower) ||
+            "part" in lower && ("missing" in lower || "cannot" in lower) ||
+            "分卷" in lower ->
+            "缺少分卷。把同一目录下的其他分卷（.001 / .z01 / .part2.rar 等）补齐后再试。"
         "enoent" in lower ||
             "no such file" in lower ||
             "not found" in lower ->

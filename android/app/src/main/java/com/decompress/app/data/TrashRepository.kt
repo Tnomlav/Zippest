@@ -45,7 +45,41 @@ class TrashRepository(private val context: Context) {
             itemDirectory.deleteRecursively()
             return@withContext false
         }
+        enforceQuota()
         true
+    }
+
+    suspend fun usedBytes(): Long = withContext(Dispatchers.IO) {
+        trashRoot.listFiles().orEmpty().sumOf { directory -> sizeOnDisk(directory, QUOTA_BYTES) }
+    }
+
+    private fun enforceQuota() {
+        var total = trashRoot.listFiles().orEmpty()
+            .sumOf { directory -> sizeOnDisk(directory, QUOTA_BYTES) }
+        if (total <= QUOTA_BYTES) return
+        val oldestFirst = trashRoot.listFiles().orEmpty()
+            .mapNotNull { directory -> readItem(directory)?.let { it to directory } }
+            .sortedBy { (item, _) -> item.deletedAt }
+        for ((item, directory) in oldestFirst) {
+            if (total <= QUOTA_BYTES) break
+            val size = sizeOnDisk(directory, QUOTA_BYTES)
+            if (directory.deleteRecursively()) total -= size
+        }
+    }
+
+    private fun sizeOnDisk(file: File, limit: Long): Long {
+        if (!file.exists()) return 0L
+        if (file.isFile) return file.length()
+        var total = 0L
+        val stack = ArrayDeque<File>()
+        stack.addLast(file)
+        while (stack.isNotEmpty() && total < limit) {
+            val current = stack.removeLast()
+            current.listFiles().orEmpty().forEach { child ->
+                if (child.isDirectory) stack.addLast(child) else total += child.length()
+            }
+        }
+        return total
     }
 
     suspend fun list(): List<TrashItem> = withContext(Dispatchers.IO) {
@@ -54,18 +88,19 @@ class TrashRepository(private val context: Context) {
             .sortedByDescending { it.deletedAt }
     }
 
-    suspend fun restore(id: String): Boolean = withContext(Dispatchers.IO) {
-        val itemDirectory = itemDirectory(id) ?: return@withContext false
-        val item = readItem(itemDirectory) ?: return@withContext false
+    /** 恢复成功时返回最终文件名（可能与原名不同，重名时自动加序号）。 */
+    suspend fun restore(id: String): String? = withContext(Dispatchers.IO) {
+        val itemDirectory = itemDirectory(id) ?: return@withContext null
+        val item = readItem(itemDirectory) ?: return@withContext null
         val payload = File(itemDirectory, PAYLOAD_NAME)
-        if (!payload.exists()) return@withContext false
+        if (!payload.exists()) return@withContext null
         val original = File(item.originalPath)
-        val parent = original.parentFile ?: return@withContext false
-        if (!parent.isDirectory && !parent.mkdirs()) return@withContext false
+        val parent = original.parentFile ?: return@withContext null
+        if (!parent.isDirectory && !parent.mkdirs()) return@withContext null
         val target = uniqueFile(parent, original.name)
         val restored = moveFile(payload, target)
         if (restored) itemDirectory.deleteRecursively()
-        restored
+        if (restored) target.name else null
     }
 
     suspend fun deleteForever(id: String): Boolean = withContext(Dispatchers.IO) {
@@ -170,5 +205,6 @@ class TrashRepository(private val context: Context) {
         private const val METADATA_NAME = "metadata.json"
         private const val PAYLOAD_NAME = "payload"
         private const val DAY_MILLIS = 24L * 60L * 60L * 1000L
+        const val QUOTA_BYTES = 2L * 1024 * 1024 * 1024
     }
 }

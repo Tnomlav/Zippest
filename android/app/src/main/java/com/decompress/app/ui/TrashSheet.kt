@@ -87,6 +87,7 @@ fun TrashContent(
     val scope = rememberCoroutineScope()
     var items by remember { mutableStateOf<List<TrashItem>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+    var usedBytes by remember { mutableStateOf(0L) }
     var refreshVersion by remember { mutableIntStateOf(0) }
     var confirmEmpty by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<TrashItem?>(null) }
@@ -94,6 +95,7 @@ fun TrashContent(
     LaunchedEffect(refreshVersion) {
         loading = true
         items = repository.list()
+        usedBytes = repository.usedBytes()
         loading = false
     }
 
@@ -118,7 +120,13 @@ fun TrashContent(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    if (items.isEmpty()) "删除的文件会先放在这里" else "${items.size} 项",
+                    if (items.isEmpty()) {
+                        "删除的文件会先放在这里"
+                    } else {
+                        "${items.size} 项 · 已用 " +
+                            Formatter.formatShortFileSize(context, usedBytes) +
+                            " / 2 GB"
+                    },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -178,9 +186,15 @@ fun TrashContent(
                                 item = item,
                                 onRestore = {
                                     scope.launch {
-                                        val restored = repository.restore(item.id)
+                                        val restoredName = repository.restore(item.id)
                                         refresh(
-                                            if (restored) "已恢复 ${item.name}" else "恢复失败"
+                                            when {
+                                                restoredName == null -> "恢复失败"
+                                                restoredName == item.name ->
+                                                    "已恢复 ${item.name}"
+                                                else ->
+                                                    "原位置有同名文件，已恢复为 $restoredName"
+                                            }
                                         )
                                     }
                                 },
