@@ -555,6 +555,10 @@ private fun FileBrowserScreen(
 
     var searchMode by rememberSaveable { mutableStateOf(false) }
     var onboardingDenied by rememberSaveable { mutableStateOf(false) }
+    var entryPageSize by remember { mutableStateOf(300) }
+    LaunchedEffect(controller.currentUri) {
+        entryPageSize = 300
+    }
     var query by rememberSaveable { mutableStateOf("") }
     var globalSearch by rememberSaveable { mutableStateOf(false) }
     var globalHits by remember { mutableStateOf<List<GlobalSearchHit>>(emptyList()) }
@@ -1387,7 +1391,28 @@ private fun FileBrowserScreen(
                                 )
                             }
                         }
-                        items(visibleEntries, key = { it.uri.toString() }) { entry ->
+                        if (visibleEntries.size > entryPageSize) {
+                            item {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    androidx.compose.material3.TextButton(
+                                        onClick = { entryPageSize += 300 }
+                                    ) {
+                                        Text(
+                                            "再显示 300 项（剩余 ${
+                                                visibleEntries.size - entryPageSize
+                                            }）"
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        val shownEntries = visibleEntries.take(entryPageSize)
+                        items(shownEntries, key = { it.uri.toString() }) { entry ->
                             EntryRow(
                                 entry = entry,
                                 selectionMode = controller.selectionMode,
