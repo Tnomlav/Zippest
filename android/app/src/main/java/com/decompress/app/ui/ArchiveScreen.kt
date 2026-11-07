@@ -792,7 +792,7 @@ private fun ArchiveBottomBar(
                     onExtractSelected
                 )
             } else {
-                ArchiveAction(Icons.Outlined.Unarchive, "全部解压", true, onExtractAll)
+                ArchiveAction(Icons.Outlined.Archive, "全部解压", true, onExtractAll)
                 ArchiveAction(
                     Icons.Outlined.CheckCircle,
                     if (testing) "测试中" else "测试",

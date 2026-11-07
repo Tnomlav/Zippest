@@ -1458,7 +1458,7 @@ private fun FileBrowserScreen(
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
                     Icon(
-                        Icons.Outlined.Unarchive,
+                        Icons.Outlined.Archive,
                         contentDescription = "解压",
                         modifier = Modifier.size(28.dp)
                     )
@@ -1610,7 +1610,7 @@ private fun FileBrowserScreen(
                 ) {
                     ZippestMenuItem(
                         text = { Text("压缩") },
-                        leadingIcon = { Icon(Icons.Outlined.Archive, null) },
+                        leadingIcon = { Icon(Icons.Outlined.Unarchive, null) },
                         onClick = {
                             selectionMenuExpanded = false
                             compressSelected()
@@ -1666,6 +1666,29 @@ private fun FileBrowserScreen(
             title = { Text("批量重命名 ${selectedEntries.size} 项") },
             text = {
                 Column {
+                    OutlinedTextField(
+                        value = batchPattern,
+                        onValueChange = { batchPattern = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("命名模板") }
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "预览：",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    previews.forEach { line ->
+                        Text(
+                            line,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
                     Text(
                         "怎么填：",
                         style = MaterialTheme.typography.labelMedium,
@@ -1699,29 +1722,6 @@ private fun FileBrowserScreen(
                         TextButton(onClick = { batchPattern = "{name} ({n})" }) {
                             Text("{name} ({n})", maxLines = 1)
                         }
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = batchPattern,
-                        onValueChange = { batchPattern = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        label = { Text("命名模板") }
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "预览：",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    previews.forEach { line ->
-                        Text(
-                            line,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
                     }
                 }
             },
@@ -2799,7 +2799,7 @@ private fun EntryRow(
         } else if (onExtractFile != null) {
             IconButton(onClick = onExtractFile) {
                 Icon(
-                    Icons.Outlined.Unarchive,
+                    Icons.Outlined.Archive,
                     contentDescription = "解压 ${entry.name}",
                     tint = MaterialTheme.colorScheme.primary
                 )
