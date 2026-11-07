@@ -2925,14 +2925,32 @@ private fun EntryLeading(entry: BrowserEntry, showThumbnail: Boolean) {
     }
 }
 
+private object ThumbnailCache {
+    private val cache = object : android.util.LruCache<String, android.graphics.Bitmap>(
+        (Runtime.getRuntime().maxMemory() / 8).toInt()
+    ) {
+        override fun sizeOf(key: String, value: android.graphics.Bitmap): Int = value.byteCount
+    }
+
+    fun get(key: String): android.graphics.Bitmap? = cache.get(key)
+
+    fun put(key: String, bitmap: android.graphics.Bitmap) {
+        cache.put(key, bitmap)
+    }
+}
+
 @Composable
 private fun MediaThumbnail(entry: BrowserEntry) {
     val context = LocalContext.current
-    var bitmap by remember(entry.uri) { mutableStateOf<ImageBitmap?>(null) }
+    val cacheKey = entry.uri.toString()
+    var bitmap by remember(entry.uri) {
+        mutableStateOf(ThumbnailCache.get(cacheKey)?.asImageBitmap())
+    }
 
     LaunchedEffect(entry.uri) {
+        if (bitmap != null) return@LaunchedEffect
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            bitmap = withContext(Dispatchers.IO) {
+            val loaded = withContext(Dispatchers.IO) {
                 runCatching {
                     if (entry.uri.scheme == "file") {
                         val file = File(entry.uri.path ?: return@runCatching null)
@@ -2957,7 +2975,11 @@ private fun MediaThumbnail(entry: BrowserEntry) {
                         )
                     }
                 }.getOrNull()
-            }?.asImageBitmap()
+            }
+            if (loaded != null) {
+                ThumbnailCache.put(cacheKey, loaded)
+                bitmap = loaded.asImageBitmap()
+            }
         }
     }
 
