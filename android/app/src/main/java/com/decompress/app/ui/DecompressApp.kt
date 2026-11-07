@@ -1535,7 +1535,11 @@ private fun FileBrowserScreen(
                                     if (it.defaultSortMode == mode) {
                                         it.copy(sortAscending = !it.sortAscending)
                                     } else {
-                                        it.copy(defaultSortMode = mode, sortAscending = true)
+                                        it.copy(
+                                            defaultSortMode = mode,
+                                            sortAscending = mode == BrowserSortMode.NAME ||
+                                                mode == BrowserSortMode.TYPE
+                                        )
                                     }
                                 }
                                 sortExpanded = false

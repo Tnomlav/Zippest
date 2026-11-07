@@ -428,8 +428,13 @@ fun SettingsScreen(
                         selectedIndex =
                             BrowserSortMode.entries.indexOf(settings.defaultSortMode),
                         onSelected = { index ->
+                            val mode = BrowserSortMode.entries[index]
                             repository.update {
-                                it.copy(defaultSortMode = BrowserSortMode.entries[index])
+                                it.copy(
+                                    defaultSortMode = mode,
+                                    sortAscending = mode == BrowserSortMode.NAME ||
+                                        mode == BrowserSortMode.TYPE
+                                )
                             }
                         }
                     )

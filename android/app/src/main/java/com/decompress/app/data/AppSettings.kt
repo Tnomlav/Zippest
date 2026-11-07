@@ -103,6 +103,17 @@ class AppSettingsRepository(context: Context) {
     var settings by mutableStateOf(readPreferences(preferences))
         private set
 
+    init {
+        if (!preferences.getBoolean(KEY_SORT_MIGRATED, false)) {
+            val expected = settings.defaultSortMode == BrowserSortMode.NAME ||
+                settings.defaultSortMode == BrowserSortMode.TYPE
+            if (settings.sortAscending != expected) {
+                update { it.copy(sortAscending = expected) }
+            }
+            preferences.edit { putBoolean(KEY_SORT_MIGRATED, true) }
+        }
+    }
+
     fun update(transform: (AppSettings) -> AppSettings) {
         val updated = transform(settings)
         settings = updated
@@ -154,6 +165,7 @@ class AppSettingsRepository(context: Context) {
         private const val KEY_DEFAULT_ENCODING = "default_encoding"
         private const val KEY_DEFAULT_SORT = "default_sort"
         private const val KEY_SORT_ASCENDING = "sort_ascending"
+        private const val KEY_SORT_MIGRATED = "sort_direction_migrated"
         private const val KEY_USE_TRASH = "use_trash"
         private const val KEY_TRASH_RETENTION = "trash_retention"
         private const val KEY_TRASH_QUOTA = "trash_quota"
