@@ -61,6 +61,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -572,6 +573,9 @@ private fun FileBrowserScreen(
     var showBatchRename by remember { mutableStateOf(false) }
     var batchPattern by rememberSaveable { mutableStateOf("{name}_{001}") }
     var batchRenaming by remember { mutableStateOf(false) }
+    var checksumTarget by remember { mutableStateOf<BrowserEntry?>(null) }
+    var checksumResult by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var checksumBusy by remember { mutableStateOf(false) }
     var renameValue by remember { mutableStateOf(TextFieldValue()) }
     var showCustomSuffixDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
@@ -1625,6 +1629,23 @@ private fun FileBrowserScreen(
                             showTrash = true
                         }
                     )
+                    selectedEntries.singleOrNull()?.takeIf { !it.isDirectory }?.let { candidate ->
+                        ZippestMenuItem(
+                            text = { Text("校验和") },
+                            leadingIcon = { Icon(Icons.Outlined.CheckCircle, null) },
+                            onClick = {
+                                selectionMenuExpanded = false
+                                checksumTarget = candidate
+                                checksumResult = null
+                                checksumBusy = true
+                                scope.launch {
+                                    checksumResult = com.decompress.app.data.Checksums
+                                        .compute(context, candidate.uri)
+                                    checksumBusy = false
+                                }
+                            }
+                        )
+                    }
                     val canOpenWith = selectedEntries.singleOrNull()?.let {
                         !it.isDirectory && !it.isArchive
                     } == true
@@ -1749,6 +1770,76 @@ private fun FileBrowserScreen(
             },
             dismissButton = {
                 TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { showBatchRename = false }) { Text("取消") }
+            }
+        )
+    }
+
+    if (checksumTarget != null) {
+        val entry = checksumTarget!!
+        AlertDialog(
+            onDismissRequest = { checksumTarget = null },
+            title = { Text("校验和") },
+            text = {
+                Column {
+                    Text(
+                        entry.name,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    if (checksumBusy) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("正在计算…", style = MaterialTheme.typography.labelMedium)
+                        }
+                    } else if (checksumResult == null) {
+                        Text("计算失败：文件不可读", style = MaterialTheme.typography.labelMedium)
+                    } else {
+                        val (sha, md5) = checksumResult!!
+                        Text("SHA-256", style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            sha,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = {
+                            val clipboard = context.getSystemService(
+                                android.content.ClipboardManager::class.java
+                            )
+                            clipboard?.setPrimaryClip(ClipData.newPlainText("SHA-256", sha))
+                            notify("已复制 SHA-256")
+                        }) {
+                            Text("复制 SHA-256")
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Text("MD5", style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            md5,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = {
+                            val clipboard = context.getSystemService(
+                                android.content.ClipboardManager::class.java
+                            )
+                            clipboard?.setPrimaryClip(ClipData.newPlainText("MD5", md5))
+                            notify("已复制 MD5")
+                        }) {
+                            Text("复制 MD5")
+                        }
+                        Text(
+                            "全部在本机计算，不联网。",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = { checksumTarget = null }) { Text("关闭") }
             }
         )
     }
