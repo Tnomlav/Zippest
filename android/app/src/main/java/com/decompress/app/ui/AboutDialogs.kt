@@ -44,8 +44,8 @@ internal fun AboutInfoDialog(
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        "支持文件管理、批量密码解压、后缀快捷重命名、分卷、回收站、" +
-                            "后台任务和本地压缩格式处理。",
+                        "压缩包工具：批量密码解压、后缀快捷重命名、分卷、回收站、" +
+                            "后台任务和本地压缩格式处理；文件浏览与管理是顺带能做的事。",
                         modifier = Modifier.padding(top = 12.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

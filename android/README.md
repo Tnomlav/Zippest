@@ -1,8 +1,8 @@
 # Zippest for Android
 
-An Android file manager and archive utility for opening, extracting, and
-creating common archive formats. The product UI follows the finalized prototype in
-`C:\Decompress\design`.
+An Android archive tool for opening, extracting, and creating common archive
+formats. File browsing and cleanup are secondary capabilities. The product UI
+follows the finalized prototype in `C:\Decompress\design`.
 
 ## Current build
 

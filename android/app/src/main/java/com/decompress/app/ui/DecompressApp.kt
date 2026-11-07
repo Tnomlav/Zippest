@@ -160,6 +160,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.decompress.app.IncomingArchive
 import com.decompress.app.OpenLocationRequest
+import com.decompress.app.MainActivity
 import com.decompress.app.data.AppSettingsRepository
 import com.decompress.app.data.BrowserSortMode
 import com.decompress.app.data.BrowserEntry
@@ -616,6 +617,20 @@ private fun FileBrowserScreen(
         onNotify(message)
     }
 
+    fun openHistoryLocation(entry: TaskHistoryEntry) {
+        entry.locationUri?.let { uri ->
+            val intent = Intent(context, MainActivity::class.java).apply {
+                action = TaskNavigation.ACTION_OPEN_LOCATION
+                putExtra(TaskNavigation.EXTRA_LOCATION_URI, uri)
+                putExtra(TaskNavigation.EXTRA_LOCATION_NAME, entry.locationName)
+                putExtra(TaskNavigation.EXTRA_LOCATION_TREE_URI, entry.treeUri)
+                putExtra(TaskNavigation.EXTRA_LOCATION_PATH, entry.path)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        }
+    }
+
     fun refreshFromPull() {
         if (pullRefreshing) return
         pullRefreshing = true
@@ -732,18 +747,33 @@ private fun FileBrowserScreen(
     }
 
     val appSettings = settingsRepository.settings
+    val sortComparator = when (appSettings.defaultSortMode) {
+        BrowserSortMode.NAME -> compareBy<BrowserEntry> { it.name.lowercase() }
+        BrowserSortMode.SIZE -> compareBy { it.size }
+        BrowserSortMode.DATE -> compareBy { it.lastModified }
+        BrowserSortMode.TYPE -> compareBy<BrowserEntry> {
+            it.extension.ifBlank { "\uFFFF" }
+        }.thenBy { it.name.lowercase() }
+    }
     val visibleEntries = controller.entries
         .filter { appSettings.showHiddenFiles || !it.name.startsWith(".") }
         .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
         .sortedWith(
             compareByDescending<BrowserEntry> { it.isDirectory }.then(
-                when (appSettings.defaultSortMode) {
-                    BrowserSortMode.NAME -> compareBy { it.name.lowercase() }
-                    BrowserSortMode.SIZE -> compareByDescending { it.size }
-                    BrowserSortMode.DATE -> compareByDescending { it.lastModified }
-                }
+                if (appSettings.sortAscending) sortComparator else sortComparator.reversed()
             )
         )
+    var recentExtracts by remember { mutableStateOf<List<TaskHistoryEntry>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            recentExtracts = runCatching {
+                TaskHistoryStore(context.applicationContext).list()
+                    .filter { it.kind == "extract" && it.success && it.locationUri != null }
+                    .take(3)
+            }.getOrDefault(emptyList())
+            delay(5_000)
+        }
+    }
     val allSelected = visibleEntries.isNotEmpty() &&
         visibleEntries.all { it.uri in controller.selected }
 
@@ -1304,6 +1334,17 @@ private fun FileBrowserScreen(
                             bottom = if (selectedCount > 0) 82.dp else 8.dp
                         )
                     ) {
+                        if (!searchMode &&
+                            controller.path.size <= 1 &&
+                            recentExtracts.isNotEmpty()
+                        ) {
+                            item {
+                                RecentExtractionStrip(
+                                    entries = recentExtracts,
+                                    onOpen = { entry -> openHistoryLocation(entry) }
+                                )
+                            }
+                        }
                         items(visibleEntries, key = { it.uri.toString() }) { entry ->
                             EntryRow(
                                 entry = entry,
@@ -1449,17 +1490,30 @@ private fun FileBrowserScreen(
                     onDismissRequest = { sortExpanded = false }
                 ) {
                     BrowserSortMode.entries.forEach { mode ->
+                        val active = appSettings.defaultSortMode == mode
                         ZippestMenuItem(
-                            text = { Text(mode.label) },
+                            text = {
+                                Text(
+                                    mode.label + if (active) {
+                                        if (appSettings.sortAscending) " ↑" else " ↓"
+                                    } else {
+                                        ""
+                                    }
+                                )
+                            },
                             onClick = {
                                 settingsRepository.update {
-                                    it.copy(defaultSortMode = mode)
+                                    if (it.defaultSortMode == mode) {
+                                        it.copy(sortAscending = !it.sortAscending)
+                                    } else {
+                                        it.copy(defaultSortMode = mode, sortAscending = true)
+                                    }
                                 }
                                 sortExpanded = false
                             },
-                            selected = appSettings.defaultSortMode == mode,
+                            selected = active,
                             trailingIcon = {
-                                if (appSettings.defaultSortMode == mode) {
+                                if (active) {
                                     Icon(Icons.Outlined.Check, contentDescription = null)
                                 }
                             }
@@ -2116,6 +2170,53 @@ internal fun TaskCenterContent(
                     }
                 ) {
                     Text("取消全部", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentExtractionStrip(
+    entries: List<TaskHistoryEntry>,
+    onOpen: (TaskHistoryEntry) -> Unit
+) {
+    Column(modifier = Modifier.padding(bottom = 10.dp)) {
+        Text(
+            "最近解压",
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.SemiBold
+        )
+        androidx.compose.foundation.lazy.LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(entries, key = { it.id }) { entry ->
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier
+                        .width(190.dp)
+                        .clickable { onOpen(entry) }
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(
+                            entry.title,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            entry.locationName.ifBlank { "结果文件夹" },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }

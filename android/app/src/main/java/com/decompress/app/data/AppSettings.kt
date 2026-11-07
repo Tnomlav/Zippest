@@ -21,7 +21,8 @@ enum class DefaultDestinationMode(val label: String) {
 enum class BrowserSortMode(val label: String) {
     NAME("名称"),
     SIZE("大小"),
-    DATE("日期")
+    DATE("日期"),
+    TYPE("类型")
 }
 
 enum class TrashRetention(val label: String, val days: Int) {
@@ -54,6 +55,7 @@ data class AppSettings(
     val defaultConflictPolicy: ConflictPolicy = ConflictPolicy.RENAME,
     val defaultEncoding: FileNameEncoding = FileNameEncoding.AUTO,
     val defaultSortMode: BrowserSortMode = BrowserSortMode.NAME,
+    val sortAscending: Boolean = true,
     val useTrash: Boolean = true,
     val trashRetention: TrashRetention = TrashRetention.DAYS_30,
     val trashQuota: TrashQuota = TrashQuota.GB_2,
@@ -85,6 +87,7 @@ class AppSettingsRepository(context: Context) {
             putString(KEY_DEFAULT_CONFLICT, updated.defaultConflictPolicy.name)
             putString(KEY_DEFAULT_ENCODING, updated.defaultEncoding.name)
             putString(KEY_DEFAULT_SORT, updated.defaultSortMode.name)
+            putBoolean(KEY_SORT_ASCENDING, updated.sortAscending)
             putBoolean(KEY_USE_TRASH, updated.useTrash)
             putString(KEY_TRASH_RETENTION, updated.trashRetention.name)
             putString(KEY_TRASH_QUOTA, updated.trashQuota.name)
@@ -110,6 +113,7 @@ class AppSettingsRepository(context: Context) {
         private const val KEY_DEFAULT_CONFLICT = "default_conflict"
         private const val KEY_DEFAULT_ENCODING = "default_encoding"
         private const val KEY_DEFAULT_SORT = "default_sort"
+        private const val KEY_SORT_ASCENDING = "sort_ascending"
         private const val KEY_USE_TRASH = "use_trash"
         private const val KEY_TRASH_RETENTION = "trash_retention"
         private const val KEY_TRASH_QUOTA = "trash_quota"
@@ -152,6 +156,7 @@ class AppSettingsRepository(context: Context) {
                 KEY_DEFAULT_SORT,
                 BrowserSortMode.NAME
             ),
+            sortAscending = preferences.getBoolean(KEY_SORT_ASCENDING, true),
             useTrash = preferences.getBoolean(KEY_USE_TRASH, true),
             trashRetention = preferences.enumValue(
                 KEY_TRASH_RETENTION,
