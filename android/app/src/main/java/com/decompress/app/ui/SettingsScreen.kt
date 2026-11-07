@@ -137,7 +137,9 @@ fun SettingsScreen(
     var activePopup by remember { mutableStateOf<SettingsPopup?>(null) }
     var activeCategory by remember { mutableStateOf<SettingsCategory?>(null) }
 
-    BackHandler(enabled = activeCategory != null) { activeCategory = null }
+    BackHandler {
+        if (activeCategory != null) activeCategory = null else onBack()
+    }
     var editingQuickLocation by remember { mutableStateOf<QuickLocation?>(null) }
     var deletingQuickLocation by remember { mutableStateOf<QuickLocation?>(null) }
 

@@ -430,7 +430,6 @@ fun ZippestApp(
                                 scope.launch { snackbarHostState.showSnackbar(message) }
                             }
                         )
-                        EdgeSwipeBackZones(onBack = { showSettings = false })
                     }
                 } else if (currentArchive != null) {
                     ArchiveScreen(
