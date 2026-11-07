@@ -320,29 +320,36 @@ fun SettingsScreen(
                         }
                     )
                     if (
-                        Build.MANUFACTURER.equals("vivo", ignoreCase = true) ||
-                        Build.MANUFACTURER.equals("iqoo", ignoreCase = true)
+                        listOf(
+                            "vivo", "iqoo", "xiaomi", "redmi", "oppo", "realme",
+                            "huawei", "honor", "samsung", "oneplus", "meizu"
+                        ).any { Build.MANUFACTURER.equals(it, ignoreCase = true) }
                     ) {
                         SettingsDivider()
                         SettingsStatus(
-                            title = "Vivo 后台运行权限",
-                            detail = "在“自启动/后台启动”中允许 Zippest，避免熄屏后任务被系统冻结",
+                            title = "后台运行权限",
+                            detail = "在系统的自启动 / 后台运行设置里允许 Zippest，避免熄屏后任务被冻结",
                             action = "打开",
                             enabled = true,
                             onClick = {
-                                val vendorIntent = Intent(
-                                    "com.iqoo.secure.BGSTARTUPMANAGER"
-                                ).addCategory(Intent.CATEGORY_DEFAULT)
-                                if (vendorIntent.resolveActivity(context.packageManager) != null) {
-                                    batterySettingsLauncher.launch(vendorIntent)
-                                } else {
-                                    batterySettingsLauncher.launch(
-                                        Intent(
-                                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                            Uri.parse("package:${context.packageName}")
-                                        )
+                                val vendorIntents = listOf(
+                                    "com.iqoo.secure.BGSTARTUPMANAGER",
+                                    "com.vivo.permissionmanager",
+                                    "com.miui.securitycenter",
+                                    "com.coloros.safecenter",
+                                    "com.huawei.systemmanager"
+                                )
+                                val vendorIntent = vendorIntents
+                                    .map { Intent(it).addCategory(Intent.CATEGORY_DEFAULT) }
+                                    .firstOrNull {
+                                        it.resolveActivity(context.packageManager) != null
+                                    }
+                                batterySettingsLauncher.launch(
+                                    vendorIntent ?: Intent(
+                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                        Uri.parse("package:${context.packageName}")
                                     )
-                                }
+                                )
                             }
                         )
                     }
@@ -354,6 +361,17 @@ fun SettingsScreen(
                         onCheckedChange = {
                             repository.update { current ->
                                 current.copy(showThumbnails = it)
+                            }
+                        }
+                    )
+                    SettingsDivider()
+                    SettingsSwitch(
+                        title = "显示最近解压",
+                        detail = "在文件页顶部显示最近解压的压缩包，点按跳回结果目录",
+                        checked = settings.showRecentExtractions,
+                        onCheckedChange = {
+                            repository.update { current ->
+                                current.copy(showRecentExtractions = it)
                             }
                         }
                     )

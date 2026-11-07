@@ -764,7 +764,11 @@ private fun FileBrowserScreen(
             )
         )
     var recentExtracts by remember { mutableStateOf<List<TaskHistoryEntry>>(emptyList()) }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(appSettings.showRecentExtractions) {
+        if (!appSettings.showRecentExtractions) {
+            recentExtracts = emptyList()
+            return@LaunchedEffect
+        }
         while (true) {
             recentExtracts = runCatching {
                 TaskHistoryStore(context.applicationContext).list()
@@ -1335,6 +1339,7 @@ private fun FileBrowserScreen(
                         )
                     ) {
                         if (!searchMode &&
+                            appSettings.showRecentExtractions &&
                             controller.path.size <= 1 &&
                             recentExtracts.isNotEmpty()
                         ) {

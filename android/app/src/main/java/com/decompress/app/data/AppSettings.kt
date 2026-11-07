@@ -49,6 +49,7 @@ data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val showHiddenFiles: Boolean = false,
     val showThumbnails: Boolean = true,
+    val showRecentExtractions: Boolean = true,
     val fillPasswordFromClipboard: Boolean = false,
     val notifyOnComplete: Boolean = true,
     val defaultDestinationMode: DefaultDestinationMode = DefaultDestinationMode.NEW_FOLDER,
@@ -81,6 +82,7 @@ class AppSettingsRepository(context: Context) {
             putString(KEY_THEME, updated.themeMode.name)
             putBoolean(KEY_SHOW_HIDDEN, updated.showHiddenFiles)
             putBoolean(KEY_SHOW_THUMBNAILS, updated.showThumbnails)
+            putBoolean(KEY_SHOW_RECENT, updated.showRecentExtractions)
             putBoolean(KEY_FILL_CLIPBOARD_PASSWORD, updated.fillPasswordFromClipboard)
             putBoolean(KEY_NOTIFY_ON_COMPLETE, updated.notifyOnComplete)
             putString(KEY_DEFAULT_DESTINATION, updated.defaultDestinationMode.name)
@@ -107,6 +109,7 @@ class AppSettingsRepository(context: Context) {
         private const val KEY_THEME = "theme"
         private const val KEY_SHOW_HIDDEN = "show_hidden"
         private const val KEY_SHOW_THUMBNAILS = "show_thumbnails"
+        private const val KEY_SHOW_RECENT = "show_recent_extractions"
         private const val KEY_FILL_CLIPBOARD_PASSWORD = "fill_clipboard_password"
         private const val KEY_NOTIFY_ON_COMPLETE = "notify_on_complete"
         private const val KEY_DEFAULT_DESTINATION = "default_destination"
@@ -135,6 +138,7 @@ class AppSettingsRepository(context: Context) {
             themeMode = preferences.enumValue(KEY_THEME, ThemeMode.SYSTEM),
             showHiddenFiles = preferences.getBoolean(KEY_SHOW_HIDDEN, false),
             showThumbnails = preferences.getBoolean(KEY_SHOW_THUMBNAILS, true),
+            showRecentExtractions = preferences.getBoolean(KEY_SHOW_RECENT, true),
             fillPasswordFromClipboard = preferences.getBoolean(
                 KEY_FILL_CLIPBOARD_PASSWORD,
                 false
