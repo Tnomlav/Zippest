@@ -227,6 +227,13 @@ private const val MAX_ARCHIVE_UNPACKED_BYTES = 20L * 1024 * 1024 * 1024
 private const val SAFE_RATIO_BYTES = 1024L * 1024 * 1024
 private const val MAX_ARCHIVE_RATIO = 1_000L
 private const val DEFAULT_ARCHIVE_BUFFER_SIZE = 64 * 1024
+private fun looksGarbled(name: String): Boolean =
+    name.contains('\uFFFD') ||
+        name.contains("锟斤拷") ||
+        name.contains("Ã") ||
+        name.contains("Ð") ||
+        name.contains("â€")
+
 private const val LIST_BATCH_SIZE = 200
 
 class ZipArchiveEngine(private val context: Context) {
@@ -276,6 +283,15 @@ class ZipArchiveEngine(private val context: Context) {
                         }
                         zip.closeEntry()
                         entry = zip.nextEntry
+                    }
+                    if (charset == null && emitted == 0 && onBatch != null &&
+                        result.take(50).any { looksGarbled(it.path) }
+                    ) {
+                        return@withContext list(
+                            archiveUri,
+                            FileNameEncoding.GBK,
+                            onBatch
+                        )
                     }
                     onBatch?.invoke(result.subList(emitted, result.size).toList(), true)
                     result
