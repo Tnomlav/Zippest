@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.decompress.app.data.AppAccent
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF0F6B4F),
@@ -54,10 +55,23 @@ private val AppTypography = Typography(
 @Composable
 fun ZippestTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    accent: AppAccent = AppAccent.GREEN,
     content: @Composable () -> Unit
 ) {
+    val light = LightColors.copy(
+        primary = Color(accent.lightPrimary),
+        onPrimary = Color.White,
+        primaryContainer = Color(accent.lightContainer),
+        onPrimaryContainer = Color(accent.lightOnContainer)
+    )
+    val dark = DarkColors.copy(
+        primary = Color(accent.darkPrimary),
+        onPrimary = Color(0xFF0B1512),
+        primaryContainer = Color(accent.darkContainer),
+        onPrimaryContainer = Color(accent.darkOnContainer)
+    )
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
+        colorScheme = if (darkTheme) dark else light,
         typography = AppTypography,
         content = content
     )

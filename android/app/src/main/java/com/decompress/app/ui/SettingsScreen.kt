@@ -89,6 +89,7 @@ import com.decompress.app.data.ThemeMode
 import com.decompress.app.data.TrashRetention
 import com.decompress.app.data.UpdateChecker
 import com.decompress.app.data.TrashQuota
+import com.decompress.app.data.AppAccent
 import com.decompress.app.data.RestoreConflictPolicy
 import com.decompress.app.data.TrashRepository
 import com.decompress.app.service.ExtractionScheduler
@@ -276,6 +277,17 @@ fun SettingsScreen(
                         onSelected = { index ->
                             repository.update {
                                 it.copy(themeMode = ThemeMode.entries[index])
+                            }
+                        }
+                    )
+                    SettingsDivider()
+                    SettingsChoice(
+                        title = "主题色",
+                        options = AppAccent.entries.map { it.label },
+                        selectedIndex = AppAccent.entries.indexOf(settings.accentColor),
+                        onSelected = { index ->
+                            repository.update {
+                                it.copy(accentColor = AppAccent.entries[index])
                             }
                         }
                     )
@@ -515,6 +527,61 @@ fun SettingsScreen(
                         onCheckedChange = {
                             repository.update { current ->
                                 current.copy(fillPasswordFromClipboard = it)
+                            }
+                        }
+                    )
+                    SettingsDivider()
+                    SettingsSwitch(
+                        title = "解压面板：密码",
+                        detail = "隐藏后不再显示密码输入框",
+                        checked = settings.showExtractPassword,
+                        onCheckedChange = {
+                            repository.update { current ->
+                                current.copy(showExtractPassword = it)
+                            }
+                        }
+                    )
+                    SettingsDivider()
+                    SettingsSwitch(
+                        title = "解压面板：文件名",
+                        detail = "隐藏后不改包名，直接解压",
+                        checked = settings.showExtractName,
+                        onCheckedChange = {
+                            repository.update { current ->
+                                current.copy(showExtractName = it)
+                            }
+                        }
+                    )
+                    SettingsDivider()
+                    SettingsSwitch(
+                        title = "解压面板：解压位置",
+                        detail = "隐藏后使用默认位置",
+                        checked = settings.showExtractDestination,
+                        onCheckedChange = {
+                            repository.update { current ->
+                                current.copy(showExtractDestination = it)
+                            }
+                        }
+                    )
+                    SettingsDivider()
+                    SettingsSwitch(
+                        title = "解压面板：同名文件",
+                        detail = "隐藏后使用默认的同名处理方式",
+                        checked = settings.showExtractConflict,
+                        onCheckedChange = {
+                            repository.update { current ->
+                                current.copy(showExtractConflict = it)
+                            }
+                        }
+                    )
+                    SettingsDivider()
+                    SettingsSwitch(
+                        title = "解压面板：文件名编码",
+                        detail = "隐藏后使用默认编码",
+                        checked = settings.showExtractEncoding,
+                        onCheckedChange = {
+                            repository.update { current ->
+                                current.copy(showExtractEncoding = it)
                             }
                         }
                     )

@@ -1141,6 +1141,7 @@ fun ExtractSheet(
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
             ) {
+                if (settings.showExtractPassword) {
                 Text(
                     "密码",
                     style = MaterialTheme.typography.labelMedium,
@@ -1230,8 +1231,9 @@ fun ExtractSheet(
                         }
                     }
                 }
+                }
 
-                if (canRenameArchive) {
+                if (canRenameArchive && settings.showExtractName) {
                     Spacer(Modifier.height(18.dp))
                     Text(
                         "压缩包名称",
@@ -1283,6 +1285,7 @@ fun ExtractSheet(
                     )
                 }
 
+                if (settings.showExtractDestination) {
                 Spacer(Modifier.height(18.dp))
                 Text(
                     "解压到",
@@ -1321,7 +1324,9 @@ fun ExtractSheet(
                     selected = destinationMode == DestinationMode.CUSTOM && customTreeUri != null,
                     onClick = { customPicker.launch(null) }
                 )
+                }
 
+                if (settings.showExtractConflict) {
                 Spacer(Modifier.height(18.dp))
                 Text(
                     "同名文件",
@@ -1339,6 +1344,9 @@ fun ExtractSheet(
                     }
                 }
 
+                }
+
+                if (settings.showExtractEncoding) {
                 Spacer(Modifier.height(14.dp))
                 Text(
                     "文件名编码",
@@ -1356,6 +1364,7 @@ fun ExtractSheet(
                     }
                 }
 
+                }
                 if (archives.size > 1) {
                     Spacer(Modifier.height(14.dp))
                     Row(

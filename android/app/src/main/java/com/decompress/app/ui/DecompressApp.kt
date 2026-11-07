@@ -406,7 +406,7 @@ fun ZippestApp(
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
-    ZippestTheme(darkTheme = darkTheme) {
+    ZippestTheme(darkTheme = darkTheme, accent = settingsRepository.settings.accentColor) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (!restored) {
                 Box(

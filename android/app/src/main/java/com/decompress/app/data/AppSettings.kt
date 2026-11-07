@@ -18,6 +18,23 @@ enum class DefaultDestinationMode(val label: String) {
     CUSTOM("固定位置")
 }
 
+enum class AppAccent(
+    val label: String,
+    val lightPrimary: Long,
+    val lightContainer: Long,
+    val lightOnContainer: Long,
+    val darkPrimary: Long,
+    val darkContainer: Long,
+    val darkOnContainer: Long
+) {
+    GREEN("森林绿", 0xFF0F6B4F, 0xFFD9F2E7, 0xFF083B2B, 0xFF7FD6B6, 0xFF1D4B3A, 0xFFC8F4E2),
+    BLUE("海蓝", 0xFF1E5FA8, 0xFFDCE9F8, 0xFF0B2E52, 0xFF8FC2FF, 0xFF1B3A5C, 0xFFD6E9FF),
+    PURPLE("紫罗兰", 0xFF6A4C93, 0xFFEDE4F7, 0xFF2F1F4A, 0xFFC9AEF0, 0xFF3A2B52, 0xFFEDE2FF),
+    AMBER("琥珀", 0xFFA8561C, 0xFFF7E5D6, 0xFF4A2208, 0xFFF0B183, 0xFF4A2C16, 0xFFFFE3CC),
+    ROSE("玫瑰", 0xFFA8365A, 0xFFF8DFE6, 0xFF4A0F22, 0xFFF2A6BC, 0xFF4C2030, 0xFFFFDDE7),
+    GRAPHITE("石墨", 0xFF3F4A45, 0xFFE2E7E4, 0xFF1B211E, 0xFFC2CFC8, 0xFF2B342F, 0xFFE6EDE9)
+}
+
 enum class BrowserSortMode(val label: String) {
     NAME("名称"),
     SIZE("大小"),
@@ -47,6 +64,12 @@ enum class RestoreConflictPolicy(val label: String) {
 
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val accentColor: AppAccent = AppAccent.GREEN,
+    val showExtractPassword: Boolean = true,
+    val showExtractName: Boolean = true,
+    val showExtractDestination: Boolean = true,
+    val showExtractConflict: Boolean = true,
+    val showExtractEncoding: Boolean = true,
     val showHiddenFiles: Boolean = false,
     val showThumbnails: Boolean = true,
     val showRecentExtractions: Boolean = true,
@@ -80,6 +103,12 @@ class AppSettingsRepository(context: Context) {
         settings = updated
         preferences.edit {
             putString(KEY_THEME, updated.themeMode.name)
+            putString(KEY_ACCENT, updated.accentColor.name)
+            putBoolean(KEY_EXTRACT_PASSWORD, updated.showExtractPassword)
+            putBoolean(KEY_EXTRACT_NAME, updated.showExtractName)
+            putBoolean(KEY_EXTRACT_DESTINATION, updated.showExtractDestination)
+            putBoolean(KEY_EXTRACT_CONFLICT, updated.showExtractConflict)
+            putBoolean(KEY_EXTRACT_ENCODING, updated.showExtractEncoding)
             putBoolean(KEY_SHOW_HIDDEN, updated.showHiddenFiles)
             putBoolean(KEY_SHOW_THUMBNAILS, updated.showThumbnails)
             putBoolean(KEY_SHOW_RECENT, updated.showRecentExtractions)
@@ -107,6 +136,12 @@ class AppSettingsRepository(context: Context) {
     companion object {
         private const val PREFERENCES = "zippest-settings"
         private const val KEY_THEME = "theme"
+        private const val KEY_ACCENT = "accent"
+        private const val KEY_EXTRACT_PASSWORD = "extract_password"
+        private const val KEY_EXTRACT_NAME = "extract_name"
+        private const val KEY_EXTRACT_DESTINATION = "extract_destination"
+        private const val KEY_EXTRACT_CONFLICT = "extract_conflict"
+        private const val KEY_EXTRACT_ENCODING = "extract_encoding"
         private const val KEY_SHOW_HIDDEN = "show_hidden"
         private const val KEY_SHOW_THUMBNAILS = "show_thumbnails"
         private const val KEY_SHOW_RECENT = "show_recent_extractions"
@@ -136,6 +171,12 @@ class AppSettingsRepository(context: Context) {
             preferences: android.content.SharedPreferences
         ): AppSettings = AppSettings(
             themeMode = preferences.enumValue(KEY_THEME, ThemeMode.SYSTEM),
+            accentColor = preferences.enumValue(KEY_ACCENT, AppAccent.GREEN),
+            showExtractPassword = preferences.getBoolean(KEY_EXTRACT_PASSWORD, true),
+            showExtractName = preferences.getBoolean(KEY_EXTRACT_NAME, true),
+            showExtractDestination = preferences.getBoolean(KEY_EXTRACT_DESTINATION, true),
+            showExtractConflict = preferences.getBoolean(KEY_EXTRACT_CONFLICT, true),
+            showExtractEncoding = preferences.getBoolean(KEY_EXTRACT_ENCODING, true),
             showHiddenFiles = preferences.getBoolean(KEY_SHOW_HIDDEN, false),
             showThumbnails = preferences.getBoolean(KEY_SHOW_THUMBNAILS, true),
             showRecentExtractions = preferences.getBoolean(KEY_SHOW_RECENT, true),
