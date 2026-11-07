@@ -93,6 +93,16 @@ private enum class SettingsPopup {
     OPEN_SOURCE_LICENSES
 }
 
+private enum class SettingsCategory(val title: String) {
+    APPEARANCE("外观"),
+    BROWSING("文件浏览"),
+    QUICK_ACCESS("快速访问"),
+    EXTRACT_DEFAULTS("默认解压设置"),
+    PERMISSIONS("通知与权限"),
+    FILES_TASKS("文件与任务"),
+    ABOUT("关于")
+}
+
 @Composable
 fun SettingsScreen(
     repository: AppSettingsRepository,
@@ -113,6 +123,9 @@ fun SettingsScreen(
         mutableStateOf(context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName))
     }
     var activePopup by remember { mutableStateOf<SettingsPopup?>(null) }
+    var activeCategory by remember { mutableStateOf<SettingsCategory?>(null) }
+
+    BackHandler(enabled = activeCategory != null) { activeCategory = null }
     var editingQuickLocation by remember { mutableStateOf<QuickLocation?>(null) }
     var deletingQuickLocation by remember { mutableStateOf<QuickLocation?>(null) }
 
@@ -196,11 +209,13 @@ fun SettingsScreen(
         topBar = {
             TopAppBar(
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = {
+                        if (activeCategory != null) activeCategory = null else onBack()
+                    }) {
                         Icon(Icons.Outlined.ArrowBack, contentDescription = "返回")
                     }
                 },
-                title = { Text("设置") },
+                title = { Text(activeCategory?.title ?: "设置") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -217,6 +232,26 @@ fun SettingsScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            if (activeCategory == null) {
+                item {
+                    SettingsSection("分类") {
+                        SettingsAction(title = "外观", detail = "主题、隐藏文件、缩略图") { activeCategory = SettingsCategory.APPEARANCE }
+                        SettingsDivider()
+                        SettingsAction(title = "文件浏览", detail = "排序、显示、打开方式") { activeCategory = SettingsCategory.BROWSING }
+                        SettingsDivider()
+                        SettingsAction(title = "快速访问", detail = "侧边栏的固定位置") { activeCategory = SettingsCategory.QUICK_ACCESS }
+                        SettingsDivider()
+                        SettingsAction(title = "默认解压设置", detail = "位置、同名文件、文件名编码") { activeCategory = SettingsCategory.EXTRACT_DEFAULTS }
+                        SettingsDivider()
+                        SettingsAction(title = "通知与权限", detail = "所有文件访问、通知、电池") { activeCategory = SettingsCategory.PERMISSIONS }
+                        SettingsDivider()
+                        SettingsAction(title = "文件与任务", detail = "回收站、清理与容量") { activeCategory = SettingsCategory.FILES_TASKS }
+                        SettingsDivider()
+                        SettingsAction(title = "关于", detail = "版本、隐私与许可") { activeCategory = SettingsCategory.ABOUT }
+                    }
+                }
+            }
+            if (activeCategory == SettingsCategory.APPEARANCE) {
             item {
                 SettingsSection("外观") {
                     SettingsChoice(
@@ -231,6 +266,8 @@ fun SettingsScreen(
                     )
                 }
             }
+            }
+            if (activeCategory == SettingsCategory.BROWSING) {
             item {
                 SettingsSection("文件浏览") {
                     SettingsSwitch(
@@ -326,6 +363,8 @@ fun SettingsScreen(
                     )
                 }
             }
+            }
+            if (activeCategory == SettingsCategory.QUICK_ACCESS) {
             item {
                 SettingsSection("快速访问") {
                     Row(
@@ -380,6 +419,8 @@ fun SettingsScreen(
                     )
                 }
             }
+            }
+            if (activeCategory == SettingsCategory.EXTRACT_DEFAULTS) {
             item {
                 SettingsSection("默认解压设置") {
                     SettingsChoice(
@@ -446,6 +487,8 @@ fun SettingsScreen(
                     )
                 }
             }
+            }
+            if (activeCategory == SettingsCategory.PERMISSIONS) {
             item {
                 SettingsSection("通知与权限") {
                     SettingsStatus(
@@ -517,6 +560,8 @@ fun SettingsScreen(
                     )
                 }
             }
+            }
+            if (activeCategory == SettingsCategory.FILES_TASKS) {
             item {
                 SettingsSection("文件与任务") {
                     SettingsSwitch(
@@ -665,6 +710,8 @@ fun SettingsScreen(
                     )
                 }
             }
+            }
+            if (activeCategory == SettingsCategory.ABOUT) {
             item {
                 SettingsSection("关于") {
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
@@ -705,6 +752,7 @@ fun SettingsScreen(
                         onClick = { openExternalLink(ZIPPEST_GITHUB_URL) }
                     )
                 }
+            }
             }
             item { Spacer(Modifier.height(10.dp).navigationBarsPadding()) }
         }
@@ -847,6 +895,7 @@ private fun SettingsSection(
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun SettingsChoice(
     title: String,
@@ -861,12 +910,21 @@ private fun SettingsChoice(
             fontWeight = FontWeight.Medium
         )
         Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        androidx.compose.foundation.layout.FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             options.forEachIndexed { index, option ->
                 FilterChip(
                     selected = selectedIndex == index,
                     onClick = { onSelected(index) },
-                    label = { Text(option) }
+                    label = {
+                        Text(
+                            option,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
                 )
             }
         }
@@ -931,7 +989,9 @@ private fun SettingsAction(
             Text(
                 detail,
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
         }
         Icon(

@@ -12,7 +12,7 @@ val releaseSigningProperties = Properties().apply {
     }
 }
 val hasReleaseSigning = releaseSigningProperties.isNotEmpty()
-// 鏈湴妯℃嫙鍣紙x86_64锛夎仈璋冪敤锛?PzippestEmulator锛屽彧褰卞搷璋冭瘯鏋勫缓銆?
+// 闁哄牜鍓欏﹢鏉懳熼埄鍐ㄧ彲闁革綆鐓夌槐妾?6_64闁挎稑顦虫禒鍫㈡嫬閸愵亝鏆忛柨?PzippestEmulator闁挎稑鑻ぐ褑銇愰崡鐐存儥閻犲鍟抽惁顖炲几閸曨偆绱﹂柕?
 val emulatorBuild = providers.gradleProperty("zippestEmulator").isPresent
 
 android {
@@ -23,14 +23,14 @@ android {
         applicationId = "com.decompress.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 83
-        versionName = "1.11.3"
+        versionCode = 85
+        versionName = "1.11.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
-        // 渚濊禆锛圝NA / libarchive锛夊甫鐨?mips銆亁86 绛夐缂栬瘧搴撲竴寰嬩笉鎵撹繘鍖呫€?
+        // 濞撴碍绻嗙粋鍡涙晬閸︽紑A / libarchive闁挎稑顦悽顐︽儍?mips闁靛棔绨?6 缂佹稑顦甸。鈺冪磽閺嶎剛妲幖瀛樻尫缁旀潙顕ョ€ｂ晝鐟濋柟鍨崄缁绘﹢宕犻崨顐熷亾?
         ndk {
             abiFilters += if (emulatorBuild) {
                 listOf("x86_64")
@@ -69,9 +69,9 @@ android {
         }
     }
 
-    // 鍙繚鐣?ARM 璁惧鐪熸鐢ㄥ埌鐨勪袱绉?ABI锛泆niversal 鍖呯敤浜?GitHub 鐩村彂锛?
-    // arm64 鍗曞寘鐢ㄤ簬缁濆ぇ澶氭暟鐪熸満锛屼綋绉粠 13 MB 闄嶅埌绾?5 MB銆?
-    // AGP 涓嶅厑璁?ABI 鎷嗗垎涓?AAB 鍚屾椂鏋勫缓锛屾墍浠ユ墦 AAB 鏃剁敤 -PzippestBundle 鍏虫帀鎷嗗垎銆?
+    // 闁告瑯浜欑换姘舵偩?ARM 閻犱焦鍎抽ˇ顒勬儑閻斿壊鍔€闁活潿鍔岄崺宀勬儍閸曨亣鈷堢紒?ABI闁挎稒纭iversal 闁告牕鎳愰弫銈嗙?GitHub 闁烩晜娼欒ぐ鍌炴晬?
+    // arm64 闁告娲栫€垫﹢鎮介妸銈囪壘缂備焦绻傞妵鍥ㄥ緞濮橆厽娈堕柣顏嗗枑濠р偓闁挎稑濂旂紞瀣矓椤栨瑧鐭?13 MB 闂傚嫬绉撮崺宀€鐥?5 MB闁?
+    // AGP 濞戞挸绉撮崢鎴犳媼?ABI 闁瑰嘲妫楅崹搴㈢▔?AAB 闁告艾鏈鍌炲几閸曨偆绱﹂柨娑樻湰婢у秵绂掗妷锕€鈪?AAB 闁哄啫澧庨弫?-PzippestBundle 闁稿繗娅曠敮鈧柟宄版閸ㄥ酣濡?
     splits {
         abi {
             isEnable = !emulatorBuild &&
