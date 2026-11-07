@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,6 +48,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -898,7 +900,6 @@ private fun SettingsSection(
     }
 }
 
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun SettingsChoice(
     title: String,
@@ -906,31 +907,71 @@ private fun SettingsChoice(
     selectedIndex: Int,
     onSelected: (Int) -> Unit
 ) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+    var dialogOpen by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { dialogOpen = true }
+            .padding(horizontal = 16.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(
             title,
+            modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
-        Spacer(Modifier.height(8.dp))
-        androidx.compose.foundation.layout.FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            options.forEachIndexed { index, option ->
-                FilterChip(
-                    selected = selectedIndex == index,
-                    onClick = { onSelected(index) },
-                    label = {
-                        Text(
-                            option,
-                            maxLines = 1,
-                            softWrap = false
-                        )
+        Text(
+            options.getOrElse(selectedIndex) { "" },
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
+        Spacer(Modifier.width(4.dp))
+        Icon(
+            Icons.Outlined.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    if (dialogOpen) {
+        AlertDialog(
+            onDismissRequest = { dialogOpen = false },
+            title = { Text(title) },
+            text = {
+                Column {
+                    options.forEachIndexed { index, option ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onSelected(index)
+                                    dialogOpen = false
+                                }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedIndex == index,
+                                onClick = {
+                                    onSelected(index)
+                                    dialogOpen = false
+                                }
+                            )
+                            Text(
+                                option,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
                     }
-                )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { dialogOpen = false }) {
+                    Text("取消")
+                }
             }
-        }
+        )
     }
 }
 
