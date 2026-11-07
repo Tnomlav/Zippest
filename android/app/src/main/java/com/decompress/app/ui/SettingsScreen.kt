@@ -253,7 +253,7 @@ fun SettingsScreen(
             }
             if (activeCategory == SettingsCategory.APPEARANCE) {
             item {
-                SettingsSection("外观") {
+                SettingsSection("外观", showHeader = false) {
                     SettingsChoice(
                         title = "主题",
                         options = ThemeMode.entries.map { it.label },
@@ -269,7 +269,7 @@ fun SettingsScreen(
             }
             if (activeCategory == SettingsCategory.BROWSING) {
             item {
-                SettingsSection("文件浏览") {
+                SettingsSection("文件浏览", showHeader = false) {
                     SettingsSwitch(
                         title = "显示隐藏文件",
                         detail = "显示名称以点号开头的文件和文件夹",
@@ -366,7 +366,7 @@ fun SettingsScreen(
             }
             if (activeCategory == SettingsCategory.QUICK_ACCESS) {
             item {
-                SettingsSection("快速访问") {
+                SettingsSection("快速访问", showHeader = false) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -422,7 +422,7 @@ fun SettingsScreen(
             }
             if (activeCategory == SettingsCategory.EXTRACT_DEFAULTS) {
             item {
-                SettingsSection("默认解压设置") {
+                SettingsSection("默认解压设置", showHeader = false) {
                     SettingsChoice(
                         title = "默认位置",
                         options = DefaultDestinationMode.entries.map { it.label },
@@ -490,7 +490,7 @@ fun SettingsScreen(
             }
             if (activeCategory == SettingsCategory.PERMISSIONS) {
             item {
-                SettingsSection("通知与权限") {
+                SettingsSection("通知与权限", showHeader = false) {
                     SettingsStatus(
                         title = "所有文件访问",
                         detail = if (storageGranted) "已授权" else "未授权",
@@ -563,7 +563,7 @@ fun SettingsScreen(
             }
             if (activeCategory == SettingsCategory.FILES_TASKS) {
             item {
-                SettingsSection("文件与任务") {
+                SettingsSection("文件与任务", showHeader = false) {
                     SettingsSwitch(
                         title = "删除时移入回收站",
                         detail = "关闭后删除会直接永久移除文件",
@@ -713,7 +713,7 @@ fun SettingsScreen(
             }
             if (activeCategory == SettingsCategory.ABOUT) {
             item {
-                SettingsSection("关于") {
+                SettingsSection("关于", showHeader = false) {
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
                         Text(
                             "Zippest $versionName",
@@ -875,16 +875,19 @@ private fun QuickLocationSettingsRow(
 @Composable
 private fun SettingsSection(
     title: String,
+    showHeader: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column {
-        Text(
-            title,
-            modifier = Modifier.padding(start = 4.dp, bottom = 7.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold
-        )
+        if (showHeader) {
+            Text(
+                title,
+                modifier = Modifier.padding(start = 4.dp, bottom = 7.dp),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
         Surface(
             shape = RoundedCornerShape(18.dp),
             color = MaterialTheme.colorScheme.surface,
