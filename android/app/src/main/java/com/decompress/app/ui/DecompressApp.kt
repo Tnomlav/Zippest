@@ -2504,8 +2504,8 @@ private fun ActiveArchiveTaskBar(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                if (isCompression) Icons.Outlined.Archive
-                                else Icons.Outlined.Unarchive,
+                                if (isCompression) Icons.Outlined.Unarchive
+                                else Icons.Outlined.Archive,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.size(19.dp)

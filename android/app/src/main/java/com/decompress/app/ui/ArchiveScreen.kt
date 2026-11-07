@@ -786,7 +786,7 @@ private fun ArchiveBottomBar(
             if (selectionCount > 0) {
                 ArchiveAction(Icons.Outlined.Close, "取消", false, onClearSelection)
                 ArchiveAction(
-                    Icons.Outlined.Unarchive,
+                    Icons.Outlined.Archive,
                     "解压所选 $selectionCount",
                     true,
                     onExtractSelected
