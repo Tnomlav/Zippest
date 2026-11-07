@@ -948,11 +948,13 @@ private fun SettingsChoice(
             onDismissRequest = { dialogOpen = false },
             title = { Text(title, style = MaterialTheme.typography.titleMedium) },
             text = {
-                WheelPicker(
-                    options = options,
-                    initialIndex = selectedIndex,
-                    onCentered = { pendingIndex = it }
-                )
+                Box(modifier = Modifier.width(260.dp)) {
+                    WheelPicker(
+                        options = options,
+                        initialIndex = selectedIndex,
+                        onCentered = { pendingIndex = it }
+                    )
+                }
             },
             confirmButton = {
                 TextButton(
