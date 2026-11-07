@@ -1475,6 +1475,24 @@ fun ExtractSheet(
                 }
 
                 }
+                val totalBytes = target.archives.sumOf { it.size }
+                if (totalBytes > 2L * 1024 * 1024 * 1024) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 10.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                    ) {
+                        Text(
+                            "压缩包约 %.1f GB，解压时建议保持应用在前台；系统会限制后台运行时长，超时后任务可能被暂停。"
+                                .format(totalBytes / 1073741824.0),
+                            modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
                 val extractBlocks = mapOf(
                     com.decompress.app.data.ExtractSection.PASSWORD to blockPassword,
                     com.decompress.app.data.ExtractSection.NAME to blockName,
