@@ -55,8 +55,16 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.pager.VerticalPager
+import androidx.compose.foundation.pager.PageSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.background
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -908,6 +916,7 @@ private fun SettingsChoice(
     onSelected: (Int) -> Unit
 ) {
     var dialogOpen by remember { mutableStateOf(false) }
+    var pendingIndex by remember(selectedIndex) { mutableIntStateOf(selectedIndex) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -937,41 +946,96 @@ private fun SettingsChoice(
     if (dialogOpen) {
         AlertDialog(
             onDismissRequest = { dialogOpen = false },
-            title = { Text(title) },
+            title = { Text(title, style = MaterialTheme.typography.titleMedium) },
             text = {
-                Column {
-                    options.forEachIndexed { index, option ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onSelected(index)
-                                    dialogOpen = false
-                                }
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = selectedIndex == index,
-                                onClick = {
-                                    onSelected(index)
-                                    dialogOpen = false
-                                }
-                            )
-                            Text(
-                                option,
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                        }
-                    }
-                }
+                WheelPicker(
+                    options = options,
+                    initialIndex = selectedIndex,
+                    onCentered = { pendingIndex = it }
+                )
             },
             confirmButton = {
+                TextButton(
+                    onClick = {
+                        onSelected(pendingIndex)
+                        dialogOpen = false
+                    }
+                ) {
+                    Text("确定")
+                }
+            },
+            dismissButton = {
                 TextButton(onClick = { dialogOpen = false }) {
                     Text("取消")
                 }
             }
         )
+    }
+}
+
+/** 滚轮选择：停在哪一项就选中哪一项，点某一行会吸附并居中。 */
+@Composable
+private fun WheelPicker(
+    options: List<String>,
+    initialIndex: Int,
+    onCentered: (Int) -> Unit
+) {
+    if (options.isEmpty()) return
+    val itemHeight = 44.dp
+    val visibleCount = 5
+    val pickerHeight = itemHeight * visibleCount
+    val state = rememberPagerState(
+        initialPage = initialIndex.coerceIn(0, options.lastIndex)
+    ) { options.size }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(state.currentPage) { onCentered(state.currentPage) }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(pickerHeight),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(itemHeight)
+                .background(
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                    RoundedCornerShape(10.dp)
+                )
+        )
+        VerticalPager(
+            state = state,
+            modifier = Modifier.fillMaxSize(),
+            pageSize = PageSize.Fixed(itemHeight),
+            contentPadding = PaddingValues(vertical = (pickerHeight - itemHeight) / 2)
+        ) { page ->
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(itemHeight)
+                    .clickable {
+                        scope.launch { state.animateScrollToPage(page) }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    options[page],
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = if (page == state.currentPage) {
+                        FontWeight.SemiBold
+                    } else {
+                        FontWeight.Normal
+                    },
+                    color = if (page == state.currentPage) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    maxLines = 1
+                )
+            }
+        }
     }
 }
 
