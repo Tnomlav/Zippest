@@ -1483,7 +1483,27 @@ class MultiArchiveEngine(private val context: Context) {
             return directory
         }
 
+        private val usedNames = mutableMapOf<String, MutableSet<String>>()
+
         fun createFile(
+            parentUri: Uri,
+            name: String,
+            conflictPolicy: ConflictPolicy
+        ): Uri? {
+            val used = usedNames.getOrPut(parentUri.toString()) { mutableSetOf() }
+            var resolved = name
+            if (!used.add(resolved.lowercase())) {
+                val dot = name.lastIndexOf('.')
+                val base = if (dot > 0) name.substring(0, dot) else name
+                val ext = if (dot > 0) name.substring(dot) else ""
+                var index = 2
+                while (!used.add("$base ($index)$ext".lowercase())) index++
+                resolved = "$base ($index)$ext"
+            }
+            return createFileInternal(parentUri, resolved, conflictPolicy)
+        }
+
+        private fun createFileInternal(
             parentUri: Uri,
             name: String,
             conflictPolicy: ConflictPolicy
