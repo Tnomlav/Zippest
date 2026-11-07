@@ -580,6 +580,7 @@ private fun FileBrowserScreen(
     var checksumTarget by remember { mutableStateOf<BrowserEntry?>(null) }
     var checksumResult by remember { mutableStateOf<Pair<String, String>?>(null) }
     var checksumBusy by remember { mutableStateOf(false) }
+    var repairMessage by remember { mutableStateOf<String?>(null) }
     var renameValue by remember { mutableStateOf(TextFieldValue()) }
     var showCustomSuffixDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
@@ -1671,6 +1672,42 @@ private fun FileBrowserScreen(
                             }
                         )
                     }
+                    val repairCandidate = selectedEntries.singleOrNull()?.takeIf {
+                        it.uri.scheme == "file" &&
+                            (it.name.endsWith(".zip", true) || it.name.endsWith(".apk", true))
+                    }
+                    if (repairCandidate != null) {
+                        ZippestMenuItem(
+                            text = { Text("修复压缩包") },
+                            leadingIcon = { Icon(Icons.Outlined.Archive, null) },
+                            onClick = {
+                                selectionMenuExpanded = false
+                                val source = repairCandidate.uri.path?.let(::File)
+                                if (source == null || !source.exists()) {
+                                    notify("无法访问该文件")
+                                } else {
+                                    notify("正在修复，完成后会提示")
+                                    scope.launch {
+                                        val result = withContext(Dispatchers.IO) {
+                                            val output = File(
+                                                source.parentFile,
+                                                source.nameWithoutExtension + ".repaired.zip"
+                                            )
+                                            com.decompress.app.data.ZipRepair.repair(source, output)
+                                        }
+                                        repairMessage = when {
+                                            result == null -> "修复失败：没有找到可恢复的条目"
+                                            result.skipped > 0 ->
+                                                "已恢复 ${result.entries} 个条目，跳过 ${result.skipped} 段；保存为 ${result.file.name}"
+                                            else ->
+                                                "已恢复 ${result.entries} 个条目；保存为 ${result.file.name}"
+                                        }
+                                        controller.refresh()
+                                    }
+                                }
+                            }
+                        )
+                    }
                     val canOpenWith = selectedEntries.singleOrNull()?.let {
                         !it.isDirectory && !it.isArchive
                     } == true
@@ -1795,6 +1832,17 @@ private fun FileBrowserScreen(
             },
             dismissButton = {
                 TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { showBatchRename = false }) { Text("取消") }
+            }
+        )
+    }
+
+    if (repairMessage != null) {
+        AlertDialog(
+            onDismissRequest = { repairMessage = null },
+            title = { Text("压缩包修复") },
+            text = { Text(repairMessage!!) },
+            confirmButton = {
+                Button(onClick = { repairMessage = null }) { Text("知道了") }
             }
         )
     }
