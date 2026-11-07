@@ -1674,15 +1674,32 @@ private fun FileBrowserScreen(
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        "{name} 原名  ·  {001} 001/002…  ·  {num} 1/2…",
+                        "{name} 原名 · {n} 1/2 · {001} 补零 · {ext} 后缀 · {date} 年月日 · {time} 时分秒",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        "扩展名自动保留，不受模板影响。",
+                        "常用写法",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = { batchPattern = "{name}_{001}" }) {
+                            Text("{name}_{001}", maxLines = 1)
+                        }
+                        TextButton(onClick = { batchPattern = "{name}-{n}" }) {
+                            Text("{name}-{n}", maxLines = 1)
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = { batchPattern = "{date}_{name}" }) {
+                            Text("{date}_{name}", maxLines = 1)
+                        }
+                        TextButton(onClick = { batchPattern = "{name} ({n})" }) {
+                            Text("{name} ({n})", maxLines = 1)
+                        }
+                    }
                     Spacer(Modifier.height(10.dp))
                     OutlinedTextField(
                         value = batchPattern,
@@ -3677,10 +3694,24 @@ private fun batchNameFor(entry: BrowserEntry, index: Int, pattern: String): Stri
     val dot = name.lastIndexOf('.')
     val base = if (dot > 0) name.substring(0, dot) else name
     val extension = if (dot > 0) name.substring(dot) else ""
-    return pattern
-        .replace("{name}", base)
-        .replace("{001}", "%03d".format(index))
-        .replace("{num}", index.toString()) + extension
+    val extOnly = extension.removePrefix(".")
+    val now = java.util.Date(System.currentTimeMillis())
+    val locale = java.util.Locale.US
+    var usedExtensionToken = false
+    val result = Regex("\\{(name|ext|n|num|date|time|0+)\\}").replace(pattern) { match ->
+        when (val token = match.groupValues[1]) {
+            "name" -> base
+            "ext" -> {
+                usedExtensionToken = true
+                extOnly
+            }
+            "n", "num" -> index.toString()
+            "date" -> java.text.SimpleDateFormat("yyyyMMdd", locale).format(now)
+            "time" -> java.text.SimpleDateFormat("HHmmss", locale).format(now)
+            else -> "%0${token.length}d".format(index)
+        }
+    }
+    return if (usedExtensionToken || extension.isEmpty()) result else result + extension
 }
 
 @Composable
