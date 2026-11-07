@@ -618,16 +618,19 @@ private fun FileBrowserScreen(
     }
 
     fun openHistoryLocation(entry: TaskHistoryEntry) {
-        entry.locationUri?.let { uri ->
-            val intent = Intent(context, MainActivity::class.java).apply {
-                action = TaskNavigation.ACTION_OPEN_LOCATION
-                putExtra(TaskNavigation.EXTRA_LOCATION_URI, uri)
-                putExtra(TaskNavigation.EXTRA_LOCATION_NAME, entry.locationName)
-                putExtra(TaskNavigation.EXTRA_LOCATION_TREE_URI, entry.treeUri)
-                putExtra(TaskNavigation.EXTRA_LOCATION_PATH, entry.path)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val uri = entry.locationUri?.let(Uri::parse) ?: return
+        scope.launch {
+            val opened = runCatching {
+                controller.openLocation(
+                    location = uri,
+                    name = entry.locationName,
+                    treeUri = entry.treeUri?.let(Uri::parse),
+                    pathHint = entry.path
+                )
+            }.getOrDefault(false)
+            if (!opened) {
+                notify("文件夹已不存在，可能已被删除或移动")
             }
-            context.startActivity(intent)
         }
     }
 
@@ -1497,15 +1500,7 @@ private fun FileBrowserScreen(
                     BrowserSortMode.entries.forEach { mode ->
                         val active = appSettings.defaultSortMode == mode
                         ZippestMenuItem(
-                            text = {
-                                Text(
-                                    mode.label + if (active) {
-                                        if (appSettings.sortAscending) " ↑" else " ↓"
-                                    } else {
-                                        ""
-                                    }
-                                )
-                            },
+                            text = { Text(mode.label) },
                             onClick = {
                                 settingsRepository.update {
                                     if (it.defaultSortMode == mode) {
@@ -1519,7 +1514,11 @@ private fun FileBrowserScreen(
                             selected = active,
                             trailingIcon = {
                                 if (active) {
-                                    Icon(Icons.Outlined.Check, contentDescription = null)
+                                    Text(
+                                        if (appSettings.sortAscending) "↑" else "↓",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                             }
                         )
