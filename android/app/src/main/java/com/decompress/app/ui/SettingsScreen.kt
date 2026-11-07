@@ -70,6 +70,7 @@ import androidx.compose.foundation.background
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -1140,10 +1141,15 @@ private fun SettingsSwitch(
             Text(
                 detail,
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Spacer(Modifier.width(18.dp))
+        Box(modifier = Modifier.scale(0.82f)) {
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
+        }
     }
 }
 
