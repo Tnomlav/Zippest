@@ -1,0 +1,466 @@
+package com.decompress.app.ui
+
+import android.content.Context
+import android.net.Uri
+import android.text.format.Formatter
+import android.os.Build
+import android.os.Environment
+import android.os.storage.StorageManager
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import com.decompress.app.data.QuickLocation
+import com.decompress.app.data.QuickLocationIcon
+import java.io.File
+
+@Composable
+internal fun QuickAccessTopTitle(
+    directStorage: Boolean,
+    folderName: String,
+    expanded: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .clickable(enabled = directStorage, onClick = onClick)
+            .padding(end = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            if (directStorage) "快速访问" else folderName.ifBlank { "文件" },
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        if (directStorage) {
+            Spacer(Modifier.size(2.dp))
+            Icon(
+                Icons.Outlined.KeyboardArrowDown,
+                contentDescription = if (expanded) {
+                    "收起固定位置"
+                } else {
+                    "展开固定位置"
+                },
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(21.dp)
+            )
+        }
+    }
+}
+
+@Composable
+internal fun StorageQuickLocationPanel(
+    topInset: Dp,
+    currentUri: Uri?,
+    locations: List<QuickLocation>,
+    externalStorages: List<ExternalStorageLocation>,
+    onDismiss: () -> Unit,
+    onAdd: () -> Unit,
+    onOpen: (QuickLocation) -> Unit,
+    onOpenExternal: (ExternalStorageLocation) -> Unit
+) {
+    val root = Environment.getExternalStorageDirectory()
+
+    fun isCurrent(location: QuickLocation): Boolean {
+        val expected = File(root, location.path)
+        return currentUri == Uri.fromFile(expected)
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = topInset)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.38f))
+                .clickable(onClick = onDismiss)
+        )
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp),
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 14.dp,
+            tonalElevation = 0.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(
+                    start = 12.dp,
+                    top = 12.dp,
+                    end = 12.dp,
+                    bottom = 14.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (locations.isEmpty()) {
+                    Text(
+                        "暂无快捷位置，可在设置中新建",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 14.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                locations.chunked(2).forEach { rowLocations ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        rowLocations.forEach { location ->
+                            StorageQuickLocation(
+                                location = location,
+                                selected = isCurrent(location),
+                                modifier = Modifier.weight(1f),
+                                onClick = { onOpen(location) }
+                            )
+                        }
+                        if (rowLocations.size == 1) {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+                externalStorages.forEach { storage ->
+                    StorageExternalQuickLocation(
+                        storage = storage,
+                        selected = currentUri == Uri.fromFile(File(storage.path)),
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onOpenExternal(storage) }
+                    )
+                }
+                StorageQuickLocationAdd(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onAdd
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun StorageExternalQuickLocation(
+    storage: ExternalStorageLocation,
+    selected: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(
+            alpha = if (selected) 0.9f else 0.55f
+        ),
+        border = if (selected) {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+        } else {
+            null
+        }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 52.dp)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Outlined.Storage,
+                contentDescription = null,
+                tint = if (selected) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+                modifier = Modifier.size(21.dp)
+            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 8.dp)
+            ) {
+                Text(
+                    storage.label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    storage.path,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.MiddleEllipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun StorageQuickLocationAdd(
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Outlined.Add,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(21.dp)
+            )
+            Text(
+                "新增",
+                modifier = Modifier.padding(start = 8.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+internal fun StorageQuickLocation(
+    location: QuickLocation,
+    selected: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    val icon = when (location.icon) {
+        QuickLocationIcon.HOME -> Icons.Outlined.Home
+        QuickLocationIcon.DOWNLOAD -> Icons.Outlined.Download
+        QuickLocationIcon.PICTURES -> Icons.Outlined.PhotoLibrary
+        QuickLocationIcon.CAMERA -> Icons.Outlined.PhotoCamera
+        QuickLocationIcon.MOVIES -> Icons.Outlined.Movie
+        QuickLocationIcon.MUSIC -> Icons.Outlined.MusicNote
+        QuickLocationIcon.DOCUMENTS -> Icons.Outlined.Description
+        QuickLocationIcon.FOLDER -> Icons.Outlined.Folder
+    }
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = if (selected) {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+        },
+        border = if (selected) {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+        } else {
+            null
+        }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = if (selected) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+                modifier = Modifier.size(21.dp)
+            )
+            Text(
+                location.label,
+                modifier = Modifier.padding(start = 8.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+internal fun discoverExternalStorageLocations(
+    context: Context
+): List<ExternalStorageLocation> {
+    val internalRoot = runCatching {
+        Environment.getExternalStorageDirectory().canonicalPath
+    }.getOrDefault(Environment.getExternalStorageDirectory().absolutePath)
+    val roots = linkedMapOf<String, String>()
+    val usedLabels = mutableSetOf<String>()
+
+    fun addRoot(path: String?, label: String) {
+        val directory = path?.let(::File) ?: return
+        if (!directory.isDirectory) return
+        val canonical = runCatching { directory.canonicalPath }
+            .getOrDefault(directory.absolutePath)
+        if (canonical == internalRoot || roots.containsKey(canonical)) return
+        val baseLabel = label.ifBlank { "外部存储" }
+        var uniqueLabel = baseLabel
+        var index = 2
+        while (!usedLabels.add(uniqueLabel)) {
+            uniqueLabel = "$baseLabel $index"
+            index++
+        }
+        roots[canonical] = uniqueLabel
+    }
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        val storageManager = context.getSystemService(StorageManager::class.java)
+        storageManager?.storageVolumes.orEmpty()
+            .filter { volume ->
+                !volume.isPrimary &&
+                    (
+                        volume.state == Environment.MEDIA_MOUNTED ||
+                            volume.state == Environment.MEDIA_MOUNTED_READ_ONLY
+                        )
+            }
+            .forEach { volume ->
+                addRoot(
+                    volume.directory?.absolutePath,
+                    volume.getDescription(context)
+                )
+            }
+    }
+
+    context.getExternalFilesDirs(null).forEachIndexed { index, appDirectory ->
+        val appPath = appDirectory?.absolutePath ?: return@forEachIndexed
+        val androidMarker = appPath.indexOf("/Android/")
+        if (androidMarker <= 0) return@forEachIndexed
+        addRoot(
+            appPath.substring(0, androidMarker),
+            if (index == 0) "外部存储" else "外部存储 $index"
+        )
+    }
+    return roots.entries
+        .map { (path, label) -> ExternalStorageLocation(label, path) }
+        .sortedBy { it.label.lowercase() }
+}
+
+@Composable
+internal fun StorageBar(
+    context: Context,
+    hasFullAccess: Boolean,
+    onSwipeUpHome: () -> Unit
+) {
+    val (used, total) = remember { readStorageStats() }
+    val fraction = if (total > 0L) used.toFloat() / total.toFloat() else 0f
+
+    val swipeThreshold = with(LocalDensity.current) { 40.dp.toPx() }
+    var swipeDistance = 0f
+    Surface(
+        modifier = Modifier.pointerInput(onSwipeUpHome) {
+            detectVerticalDragGestures(
+                onDragStart = { swipeDistance = 0f },
+                onDragEnd = {
+                    if (swipeDistance < -swipeThreshold) {
+                        onSwipeUpHome()
+                    }
+                },
+                onVerticalDrag = { change, amount ->
+                    swipeDistance += amount
+                    if (swipeDistance < -12f) change.consume()
+                }
+            )
+        },
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "本机存储 · 已用 ${Formatter.formatShortFileSize(context, used)} / " +
+                        Formatter.formatShortFileSize(context, total),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    if (hasFullAccess) "所有文件访问已授权" else "只访问已授权目录",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            LinearProgressIndicator(
+                progress = { fraction.coerceIn(0f, 1f) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(999.dp)),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        }
+    }
+}
+
