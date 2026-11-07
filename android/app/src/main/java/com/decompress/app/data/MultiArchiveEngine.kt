@@ -1152,6 +1152,12 @@ class MultiArchiveEngine(private val context: Context) {
                     throw ArchiveException("压缩包条目过多，已停止解压")
                 }
                 onEntry(entry.name)
+                if (entry is org.apache.commons.compress.archivers.tar.TarArchiveEntry &&
+                    (entry.isSymbolicLink || entry.isLink)
+                ) {
+                    entry = archive.nextEntry
+                    continue
+                }
                 writtenBytes += writeEntry(
                     output = output,
                     destination = destination,
