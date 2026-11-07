@@ -1205,7 +1205,8 @@ private fun FileBrowserScreen(
                         dismissFileDialogs()
                         val entry = selectedEntries.singleOrNull()
                         if (entry == null) {
-                            notify("请只选择一个项目")
+                            batchPattern = "{name}_{001}"
+                            showBatchRename = true
                         } else {
                             renameValue = fileNameWithSuffixSelected(entry.name)
                             showRenameDialog = true
@@ -1607,17 +1608,6 @@ private fun FileBrowserScreen(
                     ),
                     onDismissRequest = { selectionMenuExpanded = false }
                 ) {
-                    if (selectedCount > 1) {
-                        ZippestMenuItem(
-                            text = { Text("批量重命名") },
-                            leadingIcon = { Icon(Icons.Outlined.Edit, null) },
-                            onClick = {
-                                selectionMenuExpanded = false
-                                batchPattern = "{name}_{001}"
-                                showBatchRename = true
-                            }
-                        )
-                    }
                     ZippestMenuItem(
                         text = { Text("压缩") },
                         leadingIcon = { Icon(Icons.Outlined.Archive, null) },
@@ -1666,20 +1656,34 @@ private fun FileBrowserScreen(
     }
 
     if (showBatchRename) {
-        val preview = selectedEntries.sortedBy { it.name }.firstOrNull()?.let {
-            batchNameFor(it, 1, batchPattern)
-        }.orEmpty()
+        val previews = selectedEntries.sortedBy { it.name }
+            .take(2)
+            .mapIndexed { index, entry ->
+                entry.name + " → " + batchNameFor(entry, index + 1, batchPattern)
+            }
         AlertDialog(
             onDismissRequest = { showBatchRename = false },
-            title = { Text("批量重命名") },
+            title = { Text("批量重命名 ${selectedEntries.size} 项") },
             text = {
                 Column {
                     Text(
-                        "用 {name} 表示原名，{001} 表示从 001 开始的序号；扩展名保持不变。",
+                        "怎么填：",
                         style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        "{name} 原名  ·  {001} 001/002…  ·  {num} 1/2…",
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "扩展名自动保留，不受模板影响。",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(10.dp))
                     OutlinedTextField(
                         value = batchPattern,
                         onValueChange = { batchPattern = it },
@@ -1687,12 +1691,21 @@ private fun FileBrowserScreen(
                         singleLine = true,
                         label = { Text("命名模板") }
                     )
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        "示例：$preview",
+                        "预览：",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    previews.forEach { line ->
+                        Text(
+                            line,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             },
             confirmButton = {
