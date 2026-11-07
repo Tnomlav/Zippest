@@ -37,6 +37,8 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.window.Dialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -944,34 +946,49 @@ private fun SettingsChoice(
         )
     }
     if (dialogOpen) {
-        AlertDialog(
-            onDismissRequest = { dialogOpen = false },
-            title = { Text(title, style = MaterialTheme.typography.titleMedium) },
-            text = {
-                Box(modifier = Modifier.width(260.dp)) {
+        Dialog(onDismissRequest = { dialogOpen = false }) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 4.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .width(280.dp)
+                        .padding(horizontal = 18.dp, vertical = 14.dp)
+                ) {
+                    Text(title, style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
                     WheelPicker(
                         options = options,
                         initialIndex = selectedIndex,
                         onCentered = { pendingIndex = it }
                     )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onSelected(pendingIndex)
-                        dialogOpen = false
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = { dialogOpen = false }) {
+                            Text(
+                                "取消",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(Modifier.width(6.dp))
+                        Button(
+                            onClick = {
+                                onSelected(pendingIndex)
+                                dialogOpen = false
+                            }
+                        ) {
+                            Text("确定")
+                        }
                     }
-                ) {
-                    Text("确定")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { dialogOpen = false }) {
-                    Text("取消")
                 }
             }
-        )
+        }
     }
 }
 
