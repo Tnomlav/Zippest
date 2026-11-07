@@ -51,9 +51,9 @@ internal fun AboutInfoDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        "网络权限：无\n" +
-                            "Zippest 没有申请 INTERNET 权限，文件、密码和文件名都不会离开本机。" +
-                            "可在 系统设置 → 应用 → Zippest → 权限 里核实。",
+                        "网络权限：仅检查更新\n" +
+                            "Zippest 平时不联网；只有你点按版本号检查更新时，才会访问 GitHub Releases API 查询版本并下载安装包。" +
+                            "文件、密码和文件名仍只在本机处理。可在 系统设置 → 应用 → Zippest → 权限 里看到网络权限。",
                         modifier = Modifier.padding(top = 12.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary

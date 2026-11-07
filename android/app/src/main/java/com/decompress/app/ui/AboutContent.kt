@@ -19,7 +19,7 @@ internal data class OpenSourceLicense(
 internal val zippestPrivacySections = listOf(
     PrivacySection(
         "数据收集与网络",
-        "Zippest 不要求注册账号，不包含广告、用户追踪或统计分析功能，应用本身也未申请 INTERNET 权限。除你主动选择调用系统浏览器打开项目或许可证链接外，Zippest 不会向服务器上传文件、文件名、密码或其他使用信息。"
+        "Zippest 不要求注册账号，不包含广告、用户追踪或统计分析功能。应用持有网络权限，但只在两种情况下使用：你点按版本号检查更新（访问 GitHub Releases API），以及你主动用系统浏览器打开项目或许可证链接。除此之外，Zippest 不会向服务器上传文件、文件名、密码或其他使用信息。"
     ),
     PrivacySection(
         "本地文件处理",

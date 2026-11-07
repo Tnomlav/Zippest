@@ -1505,14 +1505,6 @@ private fun FileBrowserScreen(
                             showTrash = true
                         }
                     )
-                    ZippestMenuItem(
-                        text = { Text("关于") },
-                        leadingIcon = { Icon(Icons.Outlined.Info, null) },
-                        onClick = {
-                            moreExpanded = false
-                            notify("Zippest 1.6.1 · 文件浏览与压缩")
-                        }
-                    )
                 }
             }
             if (selectionMenuExpanded) {

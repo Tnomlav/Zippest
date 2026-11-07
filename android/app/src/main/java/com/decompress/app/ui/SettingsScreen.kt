@@ -86,6 +86,7 @@ import com.decompress.app.data.QuickLocation
 import com.decompress.app.data.QuickLocationRepository
 import com.decompress.app.data.ThemeMode
 import com.decompress.app.data.TrashRetention
+import com.decompress.app.data.UpdateChecker
 import com.decompress.app.data.TrashQuota
 import com.decompress.app.data.RestoreConflictPolicy
 import com.decompress.app.data.TrashRepository
@@ -136,6 +137,7 @@ fun SettingsScreen(
     }
     var activePopup by remember { mutableStateOf<SettingsPopup?>(null) }
     var activeCategory by remember { mutableStateOf<SettingsCategory?>(null) }
+    var checkingUpdate by remember { mutableStateOf(false) }
 
     BackHandler {
         if (activeCategory != null) activeCategory = null else onBack()
@@ -246,7 +248,7 @@ fun SettingsScreen(
         ) {
             if (activeCategory == null) {
                 item {
-                    SettingsSection("分类") {
+                    SettingsSection("分类", showHeader = false) {
                         SettingsAction(title = "外观", detail = "主题、隐藏文件、缩略图") { activeCategory = SettingsCategory.APPEARANCE }
                         SettingsDivider()
                         SettingsAction(title = "文件浏览", detail = "排序、显示、打开方式") { activeCategory = SettingsCategory.BROWSING }
@@ -726,7 +728,40 @@ fun SettingsScreen(
             if (activeCategory == SettingsCategory.ABOUT) {
             item {
                 SettingsSection("关于", showHeader = false) {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                if (checkingUpdate) return@clickable
+                                checkingUpdate = true
+                                scope.launch {
+                                    onNotify("正在检查更新…")
+                                    UpdateChecker.check(versionName)
+                                        .onSuccess { info ->
+                                            if (info == null) {
+                                                onNotify("已是最新版本 $versionName")
+                                            } else {
+                                                onNotify("发现 ${info.version}，正在下载…")
+                                                runCatching {
+                                                    UpdateChecker.download(context, info)
+                                                }.onSuccess { file ->
+                                                    onNotify("下载完成，正在打开安装器")
+                                                    UpdateChecker.install(context, file)
+                                                }.onFailure {
+                                                    onNotify(
+                                                        "下载失败：${it.message ?: "网络异常"}"
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        .onFailure {
+                                            onNotify("检查失败：${it.message ?: "网络不可用"}")
+                                        }
+                                    checkingUpdate = false
+                                }
+                            }
+                            .padding(horizontal = 16.dp, vertical = 16.dp)
+                    ) {
                         Text(
                             "Zippest $versionName",
                             style = MaterialTheme.typography.titleMedium,
@@ -734,7 +769,7 @@ fun SettingsScreen(
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "Android 文件管理与压缩工具",
+                            "点按检查 GitHub 上的最新版本",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -923,7 +958,7 @@ private fun SettingsChoice(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { dialogOpen = true }
-            .padding(horizontal = 16.dp, vertical = 13.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -954,7 +989,7 @@ private fun SettingsChoice(
             ) {
                 Column(
                     modifier = Modifier
-                        .width(280.dp)
+                        .width(300.dp)
                         .padding(horizontal = 18.dp, vertical = 14.dp)
                 ) {
                     Text(title, style = MaterialTheme.typography.titleMedium)
@@ -1099,7 +1134,7 @@ private fun SettingsAction(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 13.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
