@@ -216,8 +216,6 @@ fun SettingsScreen(
         }.getOrNull() ?: "1.6.1"
     }
 
-    BackHandler(onBack = onBack)
-
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
