@@ -20,6 +20,8 @@ private val ARCHIVE_SUFFIXES = listOf(
     ".txz",
     ".zip",
     ".jar",
+    ".apk",
+    ".iso",
     ".7z",
     ".rar",
     ".tar",

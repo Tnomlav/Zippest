@@ -52,8 +52,11 @@ class MultiArchiveEngine(private val context: Context) {
     ) { uri, name ->
         val lower = name.lowercase()
         when {
-            lower.endsWith(".zip") || lower.endsWith(".jar") ->
+            lower.endsWith(".zip") || lower.endsWith(".jar") || lower.endsWith(".apk") ->
                 zipEngine.list(uri, encoding, onBatch)
+            lower.endsWith(".iso") -> listNative(uri, password).also {
+                onBatch?.invoke(it, true)
+            }
             lower.endsWith(".7z") -> listSevenZ(uri, password).also {
                 onBatch?.invoke(it, true)
             }
@@ -90,7 +93,7 @@ class MultiArchiveEngine(private val context: Context) {
         }
         val lower = name.lowercase()
         when {
-            lower.endsWith(".zip") || lower.endsWith(".jar") ->
+            lower.endsWith(".zip") || lower.endsWith(".jar") || lower.endsWith(".apk") ->
                 zipEngine.extract(
                     uri,
                     name,
@@ -99,6 +102,8 @@ class MultiArchiveEngine(private val context: Context) {
                     reportExtraction,
                     onEntry
                 )
+            lower.endsWith(".iso") ->
+                extractIso(uri, name, settings, onProgress, reportExtraction)
             lower.endsWith(".7z") ->
                 extractSevenZ(uri, name, settings, onProgress, reportExtraction)
             lower.endsWith(".rar") ->
@@ -492,6 +497,29 @@ class MultiArchiveEngine(private val context: Context) {
             .map { repository.directEntry(it) }
     }
 
+    private suspend fun extractIso(
+        uri: Uri,
+        archiveName: String,
+        settings: ExtractSettings,
+        onProgress: (Int, Int) -> Unit,
+        onFractionProgress: (Float) -> Unit
+    ) {
+        val handled = withArchiveFile(uri) { file ->
+            val entries = runCatching {
+                scanNative(file, archiveName, "", "UTF-8")
+            }.getOrNull() ?: return@withArchiveFile false
+            extractNative(
+                file = file,
+                archiveName = archiveName,
+                settings = settings,
+                entries = entries,
+                onProgress = onProgress,
+                onFractionProgress = onFractionProgress
+            )
+            true
+        }
+        if (!handled) throw ArchiveException("无法读取 ISO 镜像")
+    }
     private suspend fun listNative(uri: Uri, password: String): List<ArchiveItem> =
         withArchiveFile(uri) { file ->
             val entries = scanNative(file, file.name, password, "UTF-8")
