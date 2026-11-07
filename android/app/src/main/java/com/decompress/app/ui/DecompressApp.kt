@@ -776,6 +776,11 @@ private fun FileBrowserScreen(
             recentExtracts = runCatching {
                 TaskHistoryStore(context.applicationContext).list()
                     .filter { it.kind == "extract" && it.success && it.locationUri != null }
+                    .filter { entry ->
+                        val uri = entry.locationUri?.let(Uri::parse)
+                        uri == null || uri.scheme != "file" ||
+                            File(uri.path.orEmpty()).isDirectory
+                    }
                     .take(3)
             }.getOrDefault(emptyList())
             delay(5_000)
