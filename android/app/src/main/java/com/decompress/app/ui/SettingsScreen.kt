@@ -726,6 +726,15 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsAction(
+                        title = "清空密码库",
+                        detail = "删除已保存的压缩包密码（Keystore 加密保存）",
+                        onClick = {
+                            com.decompress.app.data.PasswordVault.clear(context)
+                            onNotify("已清空密码库")
+                        }
+                    )
+                    SettingsDivider()
+                    SettingsAction(
                         title = "清除打开方式偏好",
                         detail = "下次打开文件时重新选择应用",
                         onClick = {

@@ -55,6 +55,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.ArrowBack
@@ -161,6 +162,8 @@ fun ArchiveScreen(
     var openingEntry by remember { mutableStateOf(false) }
     var encoding by rememberSaveable { mutableStateOf(FileNameEncoding.AUTO) }
     var showEncodingDialog by remember { mutableStateOf(false) }
+    var archiveQuery by rememberSaveable { mutableStateOf("") }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(target.archive.uri, archivePassword, encoding) {
         loading = true
@@ -299,6 +302,23 @@ fun ArchiveScreen(
     val nodes = remember(items, currentPath) {
         archiveChildren(items, currentPath)
     }
+    val searchResults = remember(items, archiveQuery) {
+        val keyword = archiveQuery.trim()
+        if (keyword.isBlank()) {
+            emptyList()
+        } else {
+            items.filter { it.path.contains(keyword, ignoreCase = true) }
+                .take(500)
+                .map { item ->
+                    ArchiveNode(
+                        name = item.path.trimStart('/'),
+                        path = item.path.trimStart('/'),
+                        isDirectory = item.isDirectory,
+                        size = item.size
+                    )
+                }
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -350,6 +370,9 @@ fun ArchiveScreen(
                     IconButton(onClick = { showEncodingDialog = true }) {
                         Icon(Icons.Outlined.MoreVert, contentDescription = "更多")
                     }
+                    IconButton(onClick = { searchOpen = !searchOpen }) {
+                        Icon(Icons.Outlined.Search, contentDescription = "搜索压缩包内容")
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
@@ -390,6 +413,56 @@ fun ArchiveScreen(
                 .padding(padding)
         ) {
             when {
+                searchOpen -> Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = archiveQuery,
+                        onValueChange = { archiveQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        placeholder = { Text("搜索包内文件") },
+                        trailingIcon = {
+                            if (archiveQuery.isNotEmpty()) {
+                                IconButton(onClick = { archiveQuery = "" }) {
+                                    Icon(Icons.Outlined.Close, contentDescription = "清空")
+                                }
+                            }
+                        }
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    when {
+                        archiveQuery.isBlank() -> Text(
+                            "输入关键字，搜索整个压缩包",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        searchResults.isEmpty() -> Text(
+                            "没有匹配的文件",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        else -> LazyColumn {
+                            items(searchResults, key = { it.path }) { node ->
+                                ArchiveRow(
+                                    node = node,
+                                    selected = false,
+                                    onClick = {
+                                        if (!node.isDirectory) openEntry(node)
+                                    },
+                                    onLongClick = {}
+                                )
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outline.copy(
+                                        alpha = 0.32f
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
                 loading && items.isEmpty() -> ArchiveSkeleton()
                 error != null -> Column(
                     modifier = Modifier
@@ -887,7 +960,20 @@ fun ExtractSheet(
         )
     }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
+    var savePassword by remember { mutableStateOf(false) }
     var clipboardText by remember { mutableStateOf(readClipboard(clipboardManager, context)) }
+    LaunchedEffect(target.archives) {
+        val single = target.archives.singleOrNull() ?: return@LaunchedEffect
+        if (password.isEmpty()) {
+            val saved = com.decompress.app.data.PasswordVault
+                .load(context, single.name)
+                .orEmpty()
+            if (saved.isNotEmpty()) {
+                password = saved
+                savePassword = true
+            }
+        }
+    }
     var clipboardExpanded by remember { mutableStateOf(false) }
 
     DisposableEffect(clipboardManager) {
@@ -1075,6 +1161,11 @@ fun ExtractSheet(
             return
         }
         error = null
+        if (savePassword && password.isNotEmpty()) {
+            selectedArchives.forEach { archive ->
+                com.decompress.app.data.PasswordVault.save(context, archive.name, password)
+            }
+        }
         if (selectedArchives.size > 1 && !samePassword) {
             if (perArchivePasswords.size != selectedArchives.size) {
                 perArchivePasswords = List(selectedArchives.size) { "" }
@@ -1173,6 +1264,25 @@ fun ExtractSheet(
                         }
                     }
                 )
+
+                if (archives.size == 1 && password.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { savePassword = !savePassword },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = savePassword,
+                            onCheckedChange = { savePassword = it }
+                        )
+                        Text(
+                            "保存密码到本机（Keystore 加密）",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
 
                 Spacer(Modifier.height(8.dp))
                 Box {

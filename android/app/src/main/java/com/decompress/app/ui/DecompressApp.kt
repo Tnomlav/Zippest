@@ -569,6 +569,9 @@ private fun FileBrowserScreen(
     var showNewFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
     var showRenameDialog by remember { mutableStateOf(false) }
+    var showBatchRename by remember { mutableStateOf(false) }
+    var batchPattern by rememberSaveable { mutableStateOf("{name}_{001}") }
+    var batchRenaming by remember { mutableStateOf(false) }
     var renameValue by remember { mutableStateOf(TextFieldValue()) }
     var showCustomSuffixDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
@@ -1600,6 +1603,17 @@ private fun FileBrowserScreen(
                     ),
                     onDismissRequest = { selectionMenuExpanded = false }
                 ) {
+                    if (selectedCount > 1) {
+                        ZippestMenuItem(
+                            text = { Text("批量重命名") },
+                            leadingIcon = { Icon(Icons.Outlined.Edit, null) },
+                            onClick = {
+                                selectionMenuExpanded = false
+                                batchPattern = "{name}_{001}"
+                                showBatchRename = true
+                            }
+                        )
+                    }
                     ZippestMenuItem(
                         text = { Text("压缩") },
                         leadingIcon = { Icon(Icons.Outlined.Archive, null) },
@@ -1645,6 +1659,64 @@ private fun FileBrowserScreen(
                 }
             }
         }
+    }
+
+    if (showBatchRename) {
+        val preview = selectedEntries.sortedBy { it.name }.firstOrNull()?.let {
+            batchNameFor(it, 1, batchPattern)
+        }.orEmpty()
+        AlertDialog(
+            onDismissRequest = { showBatchRename = false },
+            title = { Text("批量重命名") },
+            text = {
+                Column {
+                    Text(
+                        "用 {name} 表示原名，{001} 表示从 001 开始的序号；扩展名保持不变。",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = batchPattern,
+                        onValueChange = { batchPattern = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("命名模板") }
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "示例：$preview",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !batchRenaming && batchPattern.isNotBlank(),
+                    onClick = {
+                        showBatchRename = false
+                        val targets = selectedEntries.sortedBy { it.name }
+                        scope.launch {
+                            batchRenaming = true
+                            var renamed = 0
+                            targets.forEachIndexed { index, entry ->
+                                val candidate = batchNameFor(entry, index + 1, batchPattern)
+                                if (controller.renameEntry(entry, candidate) != null) renamed++
+                            }
+                            batchRenaming = false
+                            controller.clearSelection()
+                            notify("已重命名 $renamed/${targets.size} 项")
+                        }
+                    }
+                ) {
+                    Text("重命名")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBatchRename = false }) { Text("取消") }
+            }
+        )
     }
 
     if (showDeleteConfirmation) {
@@ -3581,6 +3653,17 @@ private fun GlobalSearchRow(hit: GlobalSearchHit, onClick: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
+}
+
+private fun batchNameFor(entry: BrowserEntry, index: Int, pattern: String): String {
+    val name = entry.name
+    val dot = name.lastIndexOf('.')
+    val base = if (dot > 0) name.substring(0, dot) else name
+    val extension = if (dot > 0) name.substring(dot) else ""
+    return pattern
+        .replace("{name}", base)
+        .replace("{001}", "%03d".format(index))
+        .replace("{num}", index.toString()) + extension
 }
 
 @Composable
