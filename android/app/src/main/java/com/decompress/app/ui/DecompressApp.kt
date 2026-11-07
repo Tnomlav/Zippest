@@ -1657,7 +1657,7 @@ private fun FileBrowserScreen(
                     )
                     selectedEntries.singleOrNull()?.takeIf { !it.isDirectory }?.let { candidate ->
                         ZippestMenuItem(
-                            text = { Text("校验和") },
+                            text = { Text("文件指纹") },
                             leadingIcon = { Icon(Icons.Outlined.CheckCircle, null) },
                             onClick = {
                                 selectionMenuExpanded = false
@@ -1851,7 +1851,7 @@ private fun FileBrowserScreen(
         val entry = checksumTarget!!
         AlertDialog(
             onDismissRequest = { checksumTarget = null },
-            title = { Text("校验和") },
+            title = { Text("文件指纹（校验和）") },
             text = {
                 Column {
                     Text(
@@ -1869,10 +1869,10 @@ private fun FileBrowserScreen(
                             Text("正在计算…", style = MaterialTheme.typography.labelMedium)
                         }
                     } else if (checksumResult == null) {
-                        Text("计算失败：文件不可读", style = MaterialTheme.typography.labelMedium)
+                        Text("算不出来：文件读不了", style = MaterialTheme.typography.labelMedium)
                     } else {
                         val (sha, md5) = checksumResult!!
-                        Text("SHA-256", style = MaterialTheme.typography.labelSmall)
+                        Text("SHA-256（更保险）", style = MaterialTheme.typography.labelSmall)
                         Text(
                             sha,
                             style = MaterialTheme.typography.labelSmall,
@@ -1888,7 +1888,7 @@ private fun FileBrowserScreen(
                             Text("复制 SHA-256")
                         }
                         Spacer(Modifier.height(6.dp))
-                        Text("MD5", style = MaterialTheme.typography.labelSmall)
+                        Text("MD5（更快）", style = MaterialTheme.typography.labelSmall)
                         Text(
                             md5,
                             style = MaterialTheme.typography.labelSmall,
@@ -1904,7 +1904,7 @@ private fun FileBrowserScreen(
                             Text("复制 MD5")
                         }
                         Text(
-                            "全部在本机计算，不联网。",
+                            "两个文件指纹一样，内容就是同一份；也就是常说的「校验和」。全程在本机算，不联网。",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
