@@ -935,7 +935,7 @@ fun SettingsScreen(
                 )
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         deletingQuickLocation?.let {
                             quickLocationRepository.delete(it.id)
@@ -949,7 +949,7 @@ fun SettingsScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { activePopup = null }) {
+                TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { activePopup = null }) {
                     Text("取消")
                 }
             }

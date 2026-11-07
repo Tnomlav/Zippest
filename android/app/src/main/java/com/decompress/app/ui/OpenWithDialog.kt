@@ -27,6 +27,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -503,12 +504,12 @@ internal fun OpenWithDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onLaunch(selected, rememberChoice) }) {
+            Button(onClick = { onLaunch(selected, rememberChoice) }) {
                 Text("打开")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = onDismiss) { Text("取消") }
         }
     )
 }

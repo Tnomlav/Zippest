@@ -1726,7 +1726,7 @@ private fun FileBrowserScreen(
                 }
             },
             confirmButton = {
-                TextButton(
+                Button(
                     enabled = !batchRenaming && batchPattern.isNotBlank(),
                     onClick = {
                         showBatchRename = false
@@ -1748,7 +1748,7 @@ private fun FileBrowserScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showBatchRename = false }) { Text("取消") }
+                TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { showBatchRename = false }) { Text("取消") }
             }
         )
     }
@@ -1824,7 +1824,7 @@ private fun FileBrowserScreen(
                 )
             },
             confirmButton = {
-                TextButton(
+                Button(
                     enabled = newFolderName.isNotBlank(),
                     onClick = {
                         scope.launch {
@@ -1838,7 +1838,7 @@ private fun FileBrowserScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showNewFolderDialog = false }) {
+                TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { showNewFolderDialog = false }) {
                     Text("取消")
                 }
             }
@@ -1899,7 +1899,7 @@ private fun FileBrowserScreen(
                 }
             },
             confirmButton = {
-                TextButton(
+                Button(
                     enabled = renameValue.text.isNotBlank(),
                     onClick = {
                         val entry = selectedEntries.singleOrNull()
@@ -1921,7 +1921,7 @@ private fun FileBrowserScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) {
+                TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { showRenameDialog = false }) {
                     Text("取消")
                 }
             }
@@ -1942,7 +1942,7 @@ private fun FileBrowserScreen(
                 )
             },
             confirmButton = {
-                TextButton(
+                Button(
                     enabled = sanitizeFileSuffix(customSuffix).isNotEmpty(),
                     onClick = {
                         renameValue = replaceSelectedFileSuffix(
@@ -1956,7 +1956,7 @@ private fun FileBrowserScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showCustomSuffixDialog = false }) {
+                TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { showCustomSuffixDialog = false }) {
                     Text("取消")
                 }
             }
@@ -2094,7 +2094,7 @@ internal fun TaskQueueDialog(onDismiss: () -> Unit) {
         },
         confirmButton = {
             if (hasActiveTasks) {
-                TextButton(
+                Button(
                     onClick = {
                         WorkManager.getInstance(context.applicationContext).apply {
                             cancelUniqueWork(ExtractionScheduler.QUEUE_NAME)
@@ -2107,7 +2107,7 @@ internal fun TaskQueueDialog(onDismiss: () -> Unit) {
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("关闭") }
+            TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = onDismiss) { Text("关闭") }
         }
     )
 }
@@ -3698,7 +3698,7 @@ private fun batchNameFor(entry: BrowserEntry, index: Int, pattern: String): Stri
     val now = java.util.Date(System.currentTimeMillis())
     val locale = java.util.Locale.US
     var usedExtensionToken = false
-    val result = Regex("\\{(name|ext|n|num|date|time|0+)\\}").replace(pattern) { match ->
+    val result = Regex("\\{(name|ext|n|num|date|time|\\d+)\\}").replace(pattern) { match ->
         when (val token = match.groupValues[1]) {
             "name" -> base
             "ext" -> {

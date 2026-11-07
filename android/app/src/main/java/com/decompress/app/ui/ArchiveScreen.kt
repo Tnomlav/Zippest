@@ -626,7 +626,7 @@ fun ArchiveScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showEncodingDialog = false }) {
+                Button(onClick = { showEncodingDialog = false }) {
                     Text("关闭")
                 }
             }
@@ -674,7 +674,7 @@ fun ArchiveScreen(
                 }
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         archivePassword = passwordInput
                         showPasswordDialog = false
@@ -684,7 +684,7 @@ fun ArchiveScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showPasswordDialog = false }) {
+                TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { showPasswordDialog = false }) {
                     Text("取消")
                 }
             }
@@ -1604,7 +1604,7 @@ fun ExtractSheet(
                 }
             },
             confirmButton = {
-                TextButton(
+                Button(
                     enabled = clipboardText != null,
                     onClick = {
                         password = clipboardText.orEmpty()
@@ -1615,7 +1615,7 @@ fun ExtractSheet(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { clipboardExpanded = false }) {
+                TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { clipboardExpanded = false }) {
                     Text("关闭")
                 }
             }
@@ -1636,7 +1636,7 @@ fun ExtractSheet(
                 )
             },
             confirmButton = {
-                TextButton(
+                Button(
                     enabled = sanitizeFileSuffix(customSuffix).isNotEmpty(),
                     onClick = {
                         archiveNameValue = replaceSelectedFileSuffix(
@@ -1650,7 +1650,7 @@ fun ExtractSheet(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showCustomSuffixDialog = false }) {
+                TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { showCustomSuffixDialog = false }) {
                     Text("取消")
                 }
             }
@@ -1694,7 +1694,7 @@ fun ExtractSheet(
                     }
                 },
                 confirmButton = {
-                    TextButton(
+                    Button(
                         onClick = {
                             val updated = perArchivePasswords.toMutableList().also {
                                 it[index] = passwordDialogValue
@@ -1714,7 +1714,7 @@ fun ExtractSheet(
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { passwordDialogIndex = null }) {
+                    TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { passwordDialogIndex = null }) {
                         Text("取消")
                     }
                 }

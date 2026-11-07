@@ -238,7 +238,7 @@ fun TrashContent(
             title = { Text("清空回收站") },
             text = { Text("确定永久删除回收站中的 ${items.size} 项吗？删除后无法恢复。") },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         confirmEmpty = false
                         scope.launch {
@@ -251,7 +251,7 @@ fun TrashContent(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmEmpty = false }) {
+                TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { confirmEmpty = false }) {
                     Text("取消")
                 }
             }
@@ -264,7 +264,7 @@ fun TrashContent(
             title = { Text("永久删除") },
             text = { Text("确定永久删除“${target.name}”吗？此操作无法恢复。") },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         deleteTarget = null
                         scope.launch {
@@ -283,7 +283,7 @@ fun TrashContent(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { deleteTarget = null }) {
+                TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { deleteTarget = null }) {
                     Text("取消")
                 }
             }
