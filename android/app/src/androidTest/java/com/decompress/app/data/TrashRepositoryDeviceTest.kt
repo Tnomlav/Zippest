@@ -8,6 +8,7 @@ import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -48,7 +49,7 @@ class TrashRepositoryDeviceTest {
         assertEquals(original.absolutePath, item.originalPath)
 
         original.writeText("new file")
-        assertTrue(repository.restore(item.id))
+        assertNotNull(repository.restore(item.id))
         assertEquals("new file", original.readText())
         assertEquals("before delete", File(root, "notes (1).txt").readText())
         assertTrue(repository.list().isEmpty())

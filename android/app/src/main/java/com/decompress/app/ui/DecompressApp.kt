@@ -241,6 +241,10 @@ fun ZippestApp(
     var archiveTasks by remember { mutableStateOf<List<WorkInfo>>(emptyList()) }
     var showGlobalTaskQueue by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    var crashReport by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        crashReport = com.decompress.app.data.CrashLog.read(context)
+    }
 
     val settingsFolderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -408,6 +412,59 @@ fun ZippestApp(
         ThemeMode.DARK -> true
     }
     ZippestTheme(darkTheme = darkTheme, accent = settingsRepository.settings.accentColor) {
+        if (crashReport != null) {
+            AlertDialog(
+                onDismissRequest = {
+                    com.decompress.app.data.CrashLog.clear(context)
+                    crashReport = null
+                },
+                title = { Text("上次运行异常退出") },
+                text = {
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = 320.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        Text(
+                            "崩溃信息只保存在本机，不会上传。可以复制给开发者排查。",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            crashReport!!,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        val clipboard = context.getSystemService(
+                            android.content.ClipboardManager::class.java
+                        )
+                        clipboard?.setPrimaryClip(
+                            ClipData.newPlainText("崩溃信息", crashReport!!)
+                        )
+                        com.decompress.app.data.CrashLog.clear(context)
+                        crashReport = null
+                        scope.launch { snackbarHostState.showSnackbar("已复制崩溃信息") }
+                    }) {
+                        Text("复制详情")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        com.decompress.app.data.CrashLog.clear(context)
+                        crashReport = null
+                    }) {
+                        Text(
+                            "关闭",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            )
+        }
         Box(modifier = Modifier.fillMaxSize()) {
             if (!restored) {
                 Box(
@@ -3268,98 +3325,6 @@ private fun TransferToolbar(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SelectionToolbar(
-    onCopy: () -> Unit,
-    onMove: () -> Unit,
-    onRename: () -> Unit,
-    onDelete: () -> Unit,
-    menuExpanded: Boolean,
-    onMenuExpandedChange: (Boolean) -> Unit
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .height(64.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            SelectionAction(Icons.Outlined.ContentCopy, "复制", onCopy)
-            SelectionAction(Icons.Outlined.DriveFileMove, "移动", onMove)
-            SelectionAction(Icons.Outlined.Edit, "重命名", onRename)
-            SelectionAction(Icons.Outlined.Delete, "删除", onDelete)
-            SelectionMenu(
-                expanded = menuExpanded,
-                onClick = { onMenuExpandedChange(true) }
-            )
-        }
-    }
-}
-
-@Composable
-private fun androidx.compose.foundation.layout.RowScope.SelectionMenu(
-    expanded: Boolean,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier.weight(1f),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .combinedClickable(onClick = onClick)
-                .padding(vertical = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                Icons.Outlined.MoreVert,
-                contentDescription = "菜单",
-                tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(23.dp)
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                "菜单",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-    }
-}
-
-@Composable
-private fun androidx.compose.foundation.layout.RowScope.SelectionAction(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .weight(1f)
-            .combinedClickable(onClick = onClick)
-            .padding(vertical = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            icon,
-            contentDescription = label,
-            tint = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.size(23.dp)
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
     }
 }
 

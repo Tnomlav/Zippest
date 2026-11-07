@@ -70,7 +70,7 @@ class FileOperationsDeviceTest {
         assertFalse(renamed.exists())
         val trashed = trash.list().single()
         assertEquals("renamed", trashed.name)
-        assertTrue(trash.restore(trashed.id))
+        assertNotNull(trash.restore(trashed.id))
         assertTrue(renamed.isDirectory)
     }
 

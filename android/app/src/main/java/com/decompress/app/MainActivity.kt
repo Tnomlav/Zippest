@@ -19,6 +19,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.decompress.app.data.CrashLog.install(applicationContext)
         Thread { com.decompress.app.data.TempFiles.cleanStale(applicationContext) }.start()
         incomingArchive.value = readIncomingArchive(intent)
         openLocation.value = readOpenLocation(intent)
