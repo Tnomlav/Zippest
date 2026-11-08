@@ -698,7 +698,11 @@ internal fun FileBrowserScreen(
                     onOpenArchive = { entry -> onOpenArchive(entry) },
                     onOpenWithFile = { entry -> openWithFile(entry) },
                     onGlobalHitOpen = { entry ->
-                        openWithFile(entry)
+                        if (entry.isArchive) {
+                            onOpenArchive(entry)
+                        } else {
+                            openWithFile(entry)
+                        }
                         searchMode = false
                         query = ""
                     },

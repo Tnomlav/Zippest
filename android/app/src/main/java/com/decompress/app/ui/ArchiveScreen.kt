@@ -989,6 +989,7 @@ fun ExtractSheet(
         mutableStateOf(
             when {
                 target.requiresCustomDestination -> DestinationMode.CUSTOM
+                target.entryPaths.isNotEmpty() -> DestinationMode.CURRENT_FOLDER
                 settings.defaultDestinationMode == DefaultDestinationMode.CURRENT_FOLDER ->
                     DestinationMode.CURRENT_FOLDER
                 settings.defaultDestinationMode == DefaultDestinationMode.CUSTOM ->

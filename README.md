@@ -63,6 +63,8 @@
 
 ## 隐私
 
+「所有文件访问权限」的用途、降级路径与商店文案见 [docs/play-store-all-files-access.md](docs/play-store-all-files-access.md)。
+
 - 应用平时不联网；只有你点按「版本号」检查更新时才访问 GitHub Releases API，不含广告、追踪或统计 SDK
 - 文件、文件名和密码都只在本机处理
 - 可在「系统设置 → 应用 → Zippest → 权限」里查看网络权限的使用
