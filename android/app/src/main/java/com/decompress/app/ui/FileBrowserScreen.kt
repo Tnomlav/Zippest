@@ -658,182 +658,67 @@ internal fun FileBrowserScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            when {
-                controller.selectionMode -> {
-                    TopAppBar(
-                        navigationIcon = {
-                            IconButton(onClick = controller::clearSelection) {
-                                Icon(Icons.Outlined.Close, contentDescription = "退出多选")
-                            }
-                        },
-                        title = {
-                            Column {
-                                Text(
-                                    "已选 $selectedCount 项",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Text(
-                                    if (selectedCount == 0) "取消选择以返回" else "点击项目继续选择",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        },
-                        actions = {
-                            Checkbox(
-                                checked = allSelected,
-                                onCheckedChange = {
-                                    if (allSelected) {
-                                        controller.deselectAll()
-                                    } else {
-                                        controller.setSelection(visibleEntries.map { it.uri }.toSet())
-                                    }
-                                },
-                                modifier = Modifier.size(48.dp),
-                                colors = CheckboxDefaults.colors(
-                                    checkedColor = MaterialTheme.colorScheme.primary,
-                                    uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            )
-                        }
-                    )
-                }
-                searchMode -> {
-                    TopAppBar(
-                        navigationIcon = {
-                            IconButton(onClick = {
-                                searchMode = false
-                                query = ""
-                            }) {
-                                Icon(Icons.Outlined.ArrowBack, contentDescription = "退出搜索")
-                            }
-                        },
-                        title = {
-                            TextField(
-                                value = query,
-                                onValueChange = { query = it },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(searchFocus),
-                                singleLine = true,
-                                placeholder = {
-                                    Text(if (globalSearch) "搜索全部存储" else "搜索当前文件夹")
-                                },
-                                colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent
-                                )
-                            )
-                        },
-                        actions = {
-                            TextButton(
-                                onClick = {
-                                    if (!directStorage) {
-                                        notify("全局搜索需要「所有文件访问」权限")
-                                    } else {
-                                        globalSearch = !globalSearch
-                                    }
-                                }
-                            ) {
-                                Text(if (globalSearch) "全部" else "当前")
-                            }
-                            if (query.isNotEmpty()) {
-                                IconButton(onClick = { query = "" }) {
-                                    Icon(Icons.Outlined.Close, contentDescription = "清除搜索")
-                                }
-                            }
-                        }
-                    )
-                }
-                else -> {
-                    TopAppBar(
-                        navigationIcon = {
-                            IconButton(
-                                onClick = {
-                                    scope.launch {
-                                        if (!controller.goUp()) activity?.finish()
-                                    }
-                                },
-                                enabled = controller.canGoUp
-                            ) {
-                                Icon(Icons.Outlined.ArrowBack, contentDescription = "返回上一级")
-                            }
-                        },
-                        title = {
-                            if (transferSession != null) {
-                                QuickAccessTopTitle(
-                                    directStorage = directStorage,
-                                    folderName = controller.folderName,
-                                    expanded = storageExpanded,
-                                    onClick = ::toggleQuickAccess
-                                )
-                            } else if (controller.treeUri == null) {
-                                Text("Zippest", style = MaterialTheme.typography.titleLarge)
-                            } else {
-                                QuickAccessTopTitle(
-                                    directStorage = directStorage,
-                                    folderName = controller.folderName,
-                                    expanded = storageExpanded,
-                                    onClick = ::toggleQuickAccess
-                                )
-                            }
-                        },
-                        actions = {
-                            if (transferSession != null) {
-                                IconButton(
-                                    onClick = ::cancelTransfer,
-                                    enabled = !transferBusy
-                                ) {
-                                    Icon(
-                                        Icons.Outlined.Close,
-                                        contentDescription = "取消复制或移动"
-                                    )
-                                }
-                            } else if (controller.treeUri != null) {
-                                IconButton(onClick = {
-                                    closePanelPopups()
-                                    searchMode = true
-                                }) {
-                                    Icon(Icons.Outlined.Search, contentDescription = "搜索")
-                                }
-                                Box {
-                                    IconButton(onClick = {
-                                        closePanelPopups()
-                                        sortExpanded = true
-                                    }) {
-                                        Icon(Icons.Outlined.Sort, contentDescription = "排序")
-                                    }
-                                }
-                                IconButton(onClick = {
-                                    closePanelPopups()
-                                    dismissFileDialogs()
-                                    newFolderName = ""
-                                    showNewFolderDialog = true
-                                }) {
-                                    Icon(Icons.Outlined.Add, contentDescription = "新建文件夹")
-                                }
-                                Box {
-                                    IconButton(onClick = {
-                                        closePanelPopups()
-                                        moreExpanded = true
-                                    }) {
-                                        Icon(Icons.Outlined.MoreVert, contentDescription = "更多")
-                                    }
-                                }
-                            } else {
-                                IconButton(onClick = onOpenSettings) {
-                                    Icon(Icons.Outlined.Tune, contentDescription = "设置")
-                                }
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.background
-                        )
-                    )
-                }
-            }
+            FileBrowserTopBar(
+                selectionMode = controller.selectionMode,
+                searchMode = searchMode,
+                transferActive = transferSession != null,
+                directStorage = directStorage,
+                hasTree = controller.treeUri != null,
+                folderName = controller.folderName,
+                storageExpanded = storageExpanded,
+                query = query,
+                globalSearch = globalSearch,
+                selectedCount = selectedCount,
+                allSelected = allSelected,
+                canGoUp = controller.canGoUp,
+                searchFocus = searchFocus,
+                onClearSelection = controller::clearSelection,
+                onSelectAll = { checked ->
+                    if (checked) {
+                        controller.setSelection(visibleEntries.map { it.uri }.toSet())
+                    } else {
+                        controller.deselectAll()
+                    }
+                },
+                onExitSearch = {
+                    searchMode = false
+                    query = ""
+                },
+                onQueryChange = { query = it },
+                onToggleGlobalSearch = {
+                    if (!directStorage) {
+                        notify("全局搜索需要「所有文件访问」权限")
+                    } else {
+                        globalSearch = !globalSearch
+                    }
+                },
+                onGoUp = {
+                    scope.launch {
+                        if (!controller.goUp()) activity?.finish()
+                    }
+                },
+                onToggleQuickAccess = ::toggleQuickAccess,
+                onCancelTransfer = ::cancelTransfer,
+                onSearch = {
+                    closePanelPopups()
+                    searchMode = true
+                },
+                onSort = {
+                    closePanelPopups()
+                    sortExpanded = true
+                },
+                onNewFolder = {
+                    closePanelPopups()
+                    dismissFileDialogs()
+                    newFolderName = ""
+                    showNewFolderDialog = true
+                },
+                onMore = {
+                    closePanelPopups()
+                    moreExpanded = true
+                },
+                onOpenSettings = onOpenSettings
+            )
         },
         bottomBar = {
             Column {
