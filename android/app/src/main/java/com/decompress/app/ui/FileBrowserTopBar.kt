@@ -9,7 +9,6 @@ import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Sort
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -55,7 +54,6 @@ internal fun FileBrowserTopBar(
     onToggleQuickAccess: () -> Unit,
     onCancelTransfer: () -> Unit,
     onSearch: () -> Unit,
-    onSort: () -> Unit,
     onNewFolder: () -> Unit,
     onMore: () -> Unit,
     onOpenSettings: () -> Unit
@@ -159,9 +157,6 @@ internal fun FileBrowserTopBar(
                     } else if (hasTree) {
                         IconButton(onClick = onSearch) {
                             Icon(Icons.Outlined.Search, contentDescription = "搜索")
-                        }
-                        IconButton(onClick = onSort) {
-                            Icon(Icons.Outlined.Sort, contentDescription = "排序")
                         }
                         IconButton(onClick = onNewFolder) {
                             Icon(Icons.Outlined.Add, contentDescription = "新建文件夹")

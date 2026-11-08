@@ -578,10 +578,6 @@ internal fun FileBrowserScreen(
                     closePanelPopups()
                     searchMode = true
                 },
-                onSort = {
-                    closePanelPopups()
-                    sortExpanded = true
-                },
                 onNewFolder = {
                     closePanelPopups()
                     dismissFileDialogs()

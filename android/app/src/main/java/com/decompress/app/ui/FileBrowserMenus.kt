@@ -8,6 +8,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Sort
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Unarchive
@@ -98,6 +99,14 @@ internal fun FileBrowserMenus(
             ),
             onDismissRequest = { state.moreExpanded = false }
         ) {
+            ZippestMenuItem(
+                text = { Text("排序") },
+                leadingIcon = { Icon(Icons.Outlined.Sort, null) },
+                onClick = {
+                    state.moreExpanded = false
+                    state.sortExpanded = true
+                }
+            )
             ZippestMenuItem(
                 text = { Text("设置") },
                 leadingIcon = { Icon(Icons.Outlined.Tune, null) },
