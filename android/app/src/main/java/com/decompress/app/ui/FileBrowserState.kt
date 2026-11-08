@@ -32,6 +32,8 @@ internal class FileBrowserState {
     var newFolderName by _newFolderName
     val _showRenameDialog = mutableStateOf(false)
     var showRenameDialog by _showRenameDialog
+    val _batchPattern = mutableStateOf("{name}_{001}")
+    var batchPattern by _batchPattern
     val _showBatchRename = mutableStateOf(false)
     var showBatchRename by _showBatchRename
     val _batchRenaming = mutableStateOf(false)
