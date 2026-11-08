@@ -9,7 +9,7 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * 本地崩溃记录：只写应用私有目录，不上传、不申请网络权限。
+ * 本地崩溃记录：只写应用私有目录，不上传、不发起网络请求。
  * 启动时读取并提示，用户可复制或关闭。
  */
 object CrashLog {
