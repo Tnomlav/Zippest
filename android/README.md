@@ -7,12 +7,14 @@ follows the finalized prototype in `C:\Decompress\design`.
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.8.0`
+- Version: `1.21.2`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct
   internal storage on supported releases
-- APK: `app/build/outputs/apk/release/app-release.apk`
+- APK: `app/build/outputs/apk/release/app-arm64-v8a-release.apk`（另有
+  `app-armeabi-v7a-release.apk`、`app-universal-release.apk`）
+- Network: `INTERNET` 权限仅用于「检查更新」，其余功能全部离线
 
 ## Features
 

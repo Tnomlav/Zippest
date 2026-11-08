@@ -20,6 +20,9 @@ secrets.properties
 .env
 .env.*
 
+# Local DSH client plugin prototype (not part of Zippest)
+/tools/dsh-think-expand/
+
 # Generated test artifacts
 /tools/window*.xml
 /tools/decompress-screen.png

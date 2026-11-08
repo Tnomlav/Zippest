@@ -16,7 +16,7 @@ Zippest 是压缩包工具，用户的核心操作是：打开手机上任意位
 
 ## 数据与隐私
 
-- 应用不申请 `INTERNET` 权限，所有文件处理在本机完成；
+- 应用申请了 `INTERNET` 权限，仅用于用户点按版本号时的检查更新（访问 GitHub Releases API），所有文件处理都在本机完成，不上传任何文件；
 - 没有账号、没有广告、没有统计 SDK；
 - 权限可随时在系统设置 → 应用 → Zippest → 权限 中撤销。
 
@@ -24,18 +24,18 @@ Zippest 是压缩包工具，用户的核心操作是：打开手机上任意位
 
 **中文（简短版）**
 
-> Zippest 需要「所有文件访问权限」才能打开任意位置的压缩包并解压到您选择的位置。所有处理都在本机完成，应用不联网、不上传文件。您也可以只授权一个文件夹，功能会相应受限。
+> Zippest 需要「所有文件访问权限」才能打开任意位置的压缩包并解压到您选择的位置。所有文件处理都在本机完成，应用平时不联网，只在您点按版本号检查更新时访问 GitHub；不会上传文件。您也可以只授权一个文件夹，功能会相应受限。
 
 **English (short)**
 
-> Zippest needs All files access to open archives from any folder and extract them where you choose. Everything is processed on-device; the app has no network permission and never uploads files. You can also grant a single folder instead, with reduced functionality.
+> Zippest needs All files access to open archives from any folder and extract them where you choose. All file processing happens on-device; the app stays offline and only contacts GitHub when you tap the version row to check for updates. It never uploads files. You can also grant a single folder instead, with reduced functionality.
 
 ## 提审截图建议
 
 1. 首启权限说明页（说明用途 + 「只选一个文件夹」备选）；
 2. 文件列表 → 打开一个压缩包；
 3. 解压面板（选择目标目录）；
-4. 关于页的「网络权限：无」与「开源许可：Apache-2.0」。
+4. 关于页的「网络权限：仅检查更新」与「开源许可：Apache-2.0」。
 
 ## 国内商店补充
 

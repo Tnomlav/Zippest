@@ -65,7 +65,7 @@ internal fun Onboarding(
         )
         Spacer(Modifier.height(18.dp))
         OnboardingBenefit("打开所有文件夹，不用每次选目录")
-        OnboardingBenefit("只在本机读写，不联网、不上传")
+        OnboardingBenefit("文件只在本机读写，不上传任何内容")
         OnboardingBenefit("随时可以在系统设置里撤销")
         Spacer(Modifier.height(24.dp))
         Button(
@@ -93,7 +93,7 @@ internal fun Onboarding(
         }
         Spacer(Modifier.height(10.dp))
         Text(
-            "Zippest 不申请网络权限，可在 系统设置 → 应用 → Zippest → 权限 里核实。",
+            "Zippest 只在点按版本号检查更新时联网（访问 GitHub Releases API），文件始终只在本机处理；可在 系统设置 → 应用 → Zippest → 权限 里查看。",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
