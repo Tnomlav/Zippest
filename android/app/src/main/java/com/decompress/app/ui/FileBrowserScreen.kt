@@ -206,43 +206,42 @@ internal fun FileBrowserScreen(
 
     var searchMode by rememberSaveable { mutableStateOf(false) }
     var onboardingDenied by rememberSaveable { mutableStateOf(false) }
-    var entryPageSize by remember { mutableStateOf(300) }
+    val state = remember { FileBrowserState() }
+    var entryPageSize by state._entryPageSize
     LaunchedEffect(controller.currentUri) {
         entryPageSize = 300
     }
     var query by rememberSaveable { mutableStateOf("") }
     var globalSearch by rememberSaveable { mutableStateOf(false) }
-    var globalHits by remember { mutableStateOf<List<GlobalSearchHit>>(emptyList()) }
-    var globalSearching by remember { mutableStateOf(false) }
-    var pullRefreshing by remember { mutableStateOf(false) }
-    var externalStorages by remember {
-        mutableStateOf<List<ExternalStorageLocation>>(emptyList())
-    }
-    var storageExpanded by remember { mutableStateOf(false) }
-    var sortExpanded by remember { mutableStateOf(false) }
-    var moreExpanded by remember { mutableStateOf(false) }
-    var selectionMenuExpanded by remember { mutableStateOf(false) }
-    var showNewFolderDialog by remember { mutableStateOf(false) }
-    var newFolderName by remember { mutableStateOf("") }
-    var showRenameDialog by remember { mutableStateOf(false) }
-    var showBatchRename by remember { mutableStateOf(false) }
+    var globalHits by state._globalHits
+    var globalSearching by state._globalSearching
+    var pullRefreshing by state._pullRefreshing
+    var externalStorages by state._externalStorages
+    var storageExpanded by state._storageExpanded
+    var sortExpanded by state._sortExpanded
+    var moreExpanded by state._moreExpanded
+    var selectionMenuExpanded by state._selectionMenuExpanded
+    var showNewFolderDialog by state._showNewFolderDialog
+    var newFolderName by state._newFolderName
+    var showRenameDialog by state._showRenameDialog
+    var showBatchRename by state._showBatchRename
     var batchPattern by rememberSaveable { mutableStateOf("{name}_{001}") }
-    var batchRenaming by remember { mutableStateOf(false) }
-    var checksumTarget by remember { mutableStateOf<BrowserEntry?>(null) }
-    var checksumResult by remember { mutableStateOf<Pair<String, String>?>(null) }
-    var checksumBusy by remember { mutableStateOf(false) }
-    var repairMessage by remember { mutableStateOf<String?>(null) }
-    var renameValue by remember { mutableStateOf(TextFieldValue()) }
-    var showCustomSuffixDialog by remember { mutableStateOf(false) }
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
-    var showTrash by remember { mutableStateOf(false) }
-    var showQuickLocationEditor by remember { mutableStateOf(false) }
-    var customSuffix by remember { mutableStateOf("") }
-    var showTaskQueue by remember { mutableStateOf(false) }
-    var transferSession by remember { mutableStateOf<TransferSession?>(null) }
-    var transferBusy by remember { mutableStateOf(false) }
-    var compressTarget by remember { mutableStateOf<CompressTarget?>(null) }
-    var openWithRequest by remember { mutableStateOf<OpenWithRequest?>(null) }
+    var batchRenaming by state._batchRenaming
+    var checksumTarget by state._checksumTarget
+    var checksumResult by state._checksumResult
+    var checksumBusy by state._checksumBusy
+    var repairMessage by state._repairMessage
+    var renameValue by state._renameValue
+    var showCustomSuffixDialog by state._showCustomSuffixDialog
+    var showDeleteConfirmation by state._showDeleteConfirmation
+    var showTrash by state._showTrash
+    var showQuickLocationEditor by state._showQuickLocationEditor
+    var customSuffix by state._customSuffix
+    var showTaskQueue by state._showTaskQueue
+    var transferSession by state._transferSession
+    var transferBusy by state._transferBusy
+    var compressTarget by state._compressTarget
+    var openWithRequest by state._openWithRequest
 
     val folderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -721,63 +720,37 @@ internal fun FileBrowserScreen(
             )
         },
         bottomBar = {
-            Column {
-                when {
-                    transferSession != null -> TransferToolbar(
-                        move = transferSession?.move == true,
-                        itemCount = transferSession?.sources?.size ?: 0,
-                        path = controller.path.joinToString(" / "),
-                        busy = transferBusy,
-                        canConfirm = controller.currentUri != null &&
-                            controller.treeUri != null &&
-                            (
-                                transferSession?.move != true ||
-                                    controller.currentUri !=
-                                        transferSession?.sourceLocation?.currentUri
-                                ),
-                        onCancel = ::cancelTransfer,
-                        onConfirm = ::confirmTransfer
-                    )
-                    selectedCount > 0 -> SelectionToolbar(
-                    onCopy = {
-                        startTransfer(move = false)
-                    },
-                    onMove = {
-                        startTransfer(move = true)
-                    },
-                    onRename = {
-                        closePanelPopups()
-                        dismissFileDialogs()
-                        val entry = selectedEntries.singleOrNull()
-                        if (entry == null) {
-                            batchPattern = "{name}_{001}"
-                            showBatchRename = true
-                        } else {
-                            renameValue = fileNameWithSuffixSelected(entry.name)
-                            showRenameDialog = true
-                        }
-                    },
-                    onDelete = {
-                        closePanelPopups()
-                        showDeleteConfirmation = true
-                    },
-                    menuExpanded = selectionMenuExpanded,
-                    onMenuExpandedChange = { expanded ->
-                        closePanelPopups()
-                        selectionMenuExpanded = expanded
+            FileBrowserBottomBar(
+                state = state,
+                controller = controller,
+                selectedCount = selectedCount,
+                archiveTaskActive = archiveTaskActive,
+                scope = scope,
+                onStartTransfer = { move -> startTransfer(move = move) },
+                onCancelTransfer = ::cancelTransfer,
+                onConfirmTransfer = ::confirmTransfer,
+                onRename = {
+                    closePanelPopups()
+                    dismissFileDialogs()
+                    val entry = selectedEntries.singleOrNull()
+                    if (entry == null) {
+                        batchPattern = "{name}_{001}"
+                        showBatchRename = true
+                    } else {
+                        renameValue = fileNameWithSuffixSelected(entry.name)
+                        showRenameDialog = true
                     }
-                )
-                    !archiveTaskActive && controller.treeUri != null -> StorageBar(
-                        context = context,
-                        hasFullAccess =
-                            controller.storageMode == FileBrowserController.StorageMode.DIRECT,
-                        onSwipeUpHome = {
-                            scope.launch { controller.openInternalStorage() }
-                        }
-                    )
+                },
+                onDelete = {
+                    closePanelPopups()
+                    showDeleteConfirmation = true
+                },
+                onMenuExpandedChange = { expanded ->
+                    closePanelPopups()
+                    selectionMenuExpanded = expanded
                 }
-            }
-        }
+            )
+        },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
             when {
