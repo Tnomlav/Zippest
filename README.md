@@ -58,7 +58,7 @@
 到 [Releases](https://github.com/Tnomlav/Zippest/releases) 下载最新的 `arm64-v8a` 安装包；不确定机型就下 `universal`。
 
 - 系统要求：Android 8.0（API 26）及以上
-- 安装包约 4.6 MB（arm64 单包）
+- 安装包约 4.7 MB（arm64 单包）
 - 发布包签名一致，可以直接覆盖升级
 
 ## 隐私
