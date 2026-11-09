@@ -1,3 +1,4 @@
+// Windows-only: the paths below are hard-coded to C:\..., so run this with the Windows node, not in WSL.
 const Database = require("C:\\Open Design\\resources\\app\\node_modules\\better-sqlite3");
 
 const [dbPath, projectId] = process.argv.slice(2);

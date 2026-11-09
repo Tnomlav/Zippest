@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Windows-only: the paths below are hard-coded to C:\..., so run this with the Windows node, not in WSL.
 // Small stdio MCP bridge to the locally running Open Design app.
 // Usage:
 //   node tools/od-mcp.mjs call <tool> ['<json-args>']

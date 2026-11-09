@@ -1,3 +1,4 @@
+// Windows-only: the paths below are hard-coded to C:\..., so run this with the Windows node, not in WSL.
 // Read-only inspection of the local Open Design SQLite database.
 const Database = require("C:\\Open Design\\resources\\app\\node_modules\\better-sqlite3");
 

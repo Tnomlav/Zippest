@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Windows-only: the paths below are hard-coded to C:\..., so run this with the Windows node, not in WSL.
 // Capture phone-sized screenshots of the app prototype.
 import { spawn } from "node:child_process";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";

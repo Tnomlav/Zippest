@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Windows-only: the paths below are hard-coded to C:\..., so run this with the Windows node, not in WSL.
 // Headless interaction test for the ZArchiver-style file browser prototype.
 import { spawn } from "node:child_process";
 import { mkdtemp } from "node:fs/promises";

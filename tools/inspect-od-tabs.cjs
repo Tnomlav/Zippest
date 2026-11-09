@@ -1,3 +1,4 @@
+// Windows-only: the paths below are hard-coded to C:\..., so run this with the Windows node, not in WSL.
 const Database = require("C:\\Open Design\\resources\\app\\node_modules\\better-sqlite3");
 const db = new Database(process.argv[2], { readonly: true, fileMustExist: true });
 for (const table of ["tabs", "tabs_state"]) {
