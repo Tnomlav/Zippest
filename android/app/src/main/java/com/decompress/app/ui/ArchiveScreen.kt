@@ -450,6 +450,7 @@ fun ArchiveScreen(
                         else -> LazyColumn {
                             items(searchResults, key = { it.path }) { node ->
                                 ArchiveRow(
+                                    modifier = Modifier.animateItem(),
                                     node = node,
                                     selected = false,
                                     onClick = {
@@ -525,6 +526,7 @@ fun ArchiveScreen(
                     }
                     items(nodes, key = { it.path }) { node ->
                         ArchiveRow(
+                            modifier = Modifier.animateItem(),
                             node = node,
                             selected = node.path in selectedPaths,
                             onClick = {
@@ -852,11 +854,12 @@ private fun ArchiveRow(
     node: ArchiveNode,
     selected: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 60.dp)
             .background(

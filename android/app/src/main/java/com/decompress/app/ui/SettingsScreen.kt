@@ -118,7 +118,8 @@ private enum class SettingsPopup {
     QUICK_LOCATION_DELETE,
     ABOUT_INFO,
     PRIVACY_POLICY,
-    OPEN_SOURCE_LICENSES
+    OPEN_SOURCE_LICENSES,
+    FEEDBACK
 }
 
 private enum class SettingsCategory(val title: String) {
@@ -232,6 +233,17 @@ fun SettingsScreen(
         runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
         }.getOrNull() ?: "1.6.1"
+    }
+    val versionCode = remember {
+        runCatching {
+            val info = context.packageManager.getPackageInfo(context.packageName, 0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                info.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                info.versionCode.toLong()
+            }
+        }.getOrNull() ?: 0L
     }
 
     Scaffold(
@@ -884,6 +896,12 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsAction(
+                        title = "反馈问题",
+                        detail = "带上版本与机型复制，提到 GitHub Issue",
+                        onClick = { activePopup = SettingsPopup.FEEDBACK }
+                    )
+                    SettingsDivider()
+                    SettingsAction(
                         title = "GitHub 项目",
                         detail = ZIPPEST_GITHUB_URL,
                         onClick = { openExternalLink(ZIPPEST_GITHUB_URL) }
@@ -913,6 +931,12 @@ fun SettingsScreen(
             onDismiss = { activePopup = null }
         )
         SettingsPopup.OPEN_SOURCE_LICENSES -> OpenSourceLicensesDialog(
+            onOpenLink = ::openExternalLink,
+            onDismiss = { activePopup = null }
+        )
+        SettingsPopup.FEEDBACK -> FeedbackDialog(
+            versionName = versionName,
+            versionCode = versionCode,
             onOpenLink = ::openExternalLink,
             onDismiss = { activePopup = null }
         )

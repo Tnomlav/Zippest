@@ -47,11 +47,12 @@ internal fun EntryRow(
     onPreviewArchive: () -> Unit,
     onExtractFile: (() -> Unit)?,
     onLongClick: () -> Unit,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 64.dp)
             .background(
