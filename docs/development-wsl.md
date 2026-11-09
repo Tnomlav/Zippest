@@ -76,6 +76,33 @@ git config --global url."git@github.com:".insteadOf "https://github.com/"
 最后一行只影响 WSL（`~/.gitconfig`），Windows 侧继续用 https + 凭据管理器；仓库里的
 `origin` 保持 https 不变。撤销：`git config --global --unset url."git@github.com:".insteadOf`。
 
+## 真机调试
+
+WSL 看不到手机的 USB 设备（没有 `/dev/bus/usb`），USB 调试在 Windows 侧，WSL 里的 adb 用不到。两条路：
+
+**无线调试（推荐）**——手机开「无线调试」就够了，不用每次给端口：mDNS 会发现设备，`adb devices` 自动出现 `adb-XXXX._adb-tls-connect._tcp device`。端口每次重开都会变，所以别硬编码；上次配过对就不用再配对。
+
+```bash
+adb mdns services                                  # 看当前服务与端口
+adb devices                                         # 自动连上的设备直接可用
+adb -s adb-XXXX._adb-tls-connect._tcp shell ...     # 多个设备时用 serial
+```
+
+注意：手机「无线调试」页显示的 IP 可能是 VPN/热点网段（例如 `172.19.0.1`），WSL 要连的是 mDNS 报出来的局域网地址（例如 `192.168.3.99`）。
+
+**USB 经 Windows adb 转发**——维持 USB 调试不动，Windows 把 adb 服务开给局域网，WSL 连过去：
+
+```powershell
+adb -a -P 5037 nodaemon server
+```
+
+```bash
+export ADB_SERVER_SOCKET=tcp:<Windows 局域网 IP>:5037
+adb devices
+```
+
+Windows 那边的 adb 一直连着手机时，`ADB_SERVER_SOCKET` 指向它、然后 `adb connect <手机>:<端口>` 即可。前提是 Windows 侧的 adb 与手机仍是 USB 连接。
+
 ## 已知限制
 
 - **性能**：仓库在 `/mnt/c`（drvfs）上，全量构建明显慢于 Windows 本机或 ext4。长期在 WSL 构建建议把仓库放到 `~/projects/`。
