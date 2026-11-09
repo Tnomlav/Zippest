@@ -3,6 +3,7 @@
 package com.decompress.app.ui
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -625,6 +626,32 @@ internal fun FileBrowserScreen(
         },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                if (rememberZippestWindowSize() != ZippestWindowSize.COMPACT &&
+                    controller.treeUri != null &&
+                    controller.error == null &&
+                    !searchMode
+                ) {
+                    BrowserNavPane(
+                        path = controller.path,
+                        folders = visibleEntries.filter { it.isDirectory },
+                        onJumpTo = { index ->
+                            scope.launch {
+                                var steps = controller.path.lastIndex - index
+                                while (steps > 0) {
+                                    if (!controller.goUp()) break
+                                    steps -= 1
+                                }
+                            }
+                        },
+                        onOpenFolder = { entry -> scope.launch { controller.open(entry) } },
+                        modifier = Modifier
+                            .width(240.dp)
+                            .fillMaxHeight()
+                            .padding(padding)
+                    )
+                }
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
             when {
             controller.treeUri == null -> Onboarding(
                 modifier = Modifier
@@ -717,6 +744,8 @@ internal fun FileBrowserScreen(
                     onOpenHistoryLocation = { entry -> openHistoryLocation(entry) }
                 )
             }
+            }
+                }
             }
             FileBrowserOverlays(
                 state = state,
