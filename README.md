@@ -73,6 +73,8 @@
 
 ## 从源码构建
 
+Windows（PowerShell）：
+
 ```powershell
 cd android
 $env:JAVA_HOME='C:\Android Studio\jbr'
@@ -81,6 +83,19 @@ $env:JAVA_HOME='C:\Android Studio\jbr'
 .\gradlew.bat -PzippestBundle bundleRelease     # AAB
 .\gradlew.bat -PzippestEmulator assembleDebug   # 模拟器用 x86_64 调试包
 ```
+
+WSL / Linux（与 GitHub Actions 同一条路径，CI 用 JDK 17 已验证）：
+
+```bash
+cd android
+./gradlew assembleRelease                       # 分 ABI 的 APK
+./gradlew -PzippestBundle bundleRelease         # AAB
+./gradlew -PzippestEmulator assembleDebug       # 模拟器用 x86_64 调试包
+```
+
+- 需要 JDK 17+ 和 Android SDK（`platforms;android-37`、`build-tools;36.0.0`）；`android/local.properties` 的 `sdk.dir` 是机器相关路径、不纳入 Git，换环境后改成自己的 SDK 位置（或设 `ANDROID_HOME`）
+- 本仓库统一用 LF（见 `.gitattributes`），只有 `*.bat` 保持 CRLF；在 WSL 里不要开 `core.autocrlf=true`
+- `tools/release.ps1` 是 PowerShell 脚本，在 WSL 里需要装 `pwsh` 7+；也可以直接打 tag 交给 CI 发版
 
 发布签名配置放在本地 `.signing/`（不纳入 Git）。打 `v*` tag 会触发 GitHub Actions 自动构建、签名校验并发版。
 
