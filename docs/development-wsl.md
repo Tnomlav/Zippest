@@ -90,18 +90,27 @@ adb -s adb-XXXX._adb-tls-connect._tcp shell ...     # 多个设备时用 serial
 
 注意：手机「无线调试」页显示的 IP 可能是 VPN/热点网段（例如 `172.19.0.1`），WSL 要连的是 mDNS 报出来的局域网地址（例如 `192.168.3.99`）。
 
-**USB 经 Windows adb 转发**——维持 USB 调试不动，Windows 把 adb 服务开给局域网，WSL 连过去：
+**USB 经 Windows 转发（实测最省事）**——WSL 是 mirrored 网络，**本地回环与 Windows 共享**，所以 Windows 上的 adb server 直接就能用：
 
 ```powershell
-adb -a -P 5037 nodaemon server
-```
-
-```bash
-export ADB_SERVER_SOCKET=tcp:<Windows 局域网 IP>:5037
+# Windows：手机 USB 连上后，让 adb server 跑起来（普通 adb 即可，走 127.0.0.1:5037）
 adb devices
 ```
 
-Windows 那边的 adb 一直连着手机时，`ADB_SERVER_SOCKET` 指向它、然后 `adb connect <手机>:<端口>` 即可。前提是 Windows 侧的 adb 与手机仍是 USB 连接。
+```bash
+# WSL：指向同一个回环端口，别让 Linux 版 adb 自己再起一个
+adb -H 127.0.0.1 devices
+# 或
+export ADB_SERVER_SOCKET=tcp:127.0.0.1:5037
+adb devices
+```
+
+注意两点：
+
+- **不要在 WSL 里 `adb kill-server`**——回环是共享的，这条命令会把 Windows 的 server 一起杀掉，然后 WSL 侧就只剩 “Connection refused”。
+- Windows 侧 server 没起来时，WSL 的 adb 会尝试自己启动一个并失败（`ADB server didn't ACK`），此时回 Windows 跑一次 `adb devices` 即可。
+
+**局域网转发（备用）**——如果哪天关掉了 mirrored 网络，才需要 `adb -a -P 5037 nodaemon server` + `adb -H <Windows IP> -P 5037`，并放行防火墙 5037。本机当前不需要。
 
 ## 已知限制
 
