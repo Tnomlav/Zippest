@@ -24,6 +24,7 @@ private val LightColors = lightColorScheme(
     surfaceVariant = Color(0xFFE9EFEA),
     onSurfaceVariant = Color(0xFF59625D),
     outline = Color(0xFFB8C4BB),
+    outlineVariant = Color(0xFFDDE4DE),
     error = Color(0xFFC4622D),
     onError = Color.White
 )
@@ -40,16 +41,29 @@ private val DarkColors = darkColorScheme(
     surfaceVariant = Color(0xFF2A342E),
     onSurfaceVariant = Color(0xFFB8C4BB),
     outline = Color(0xFF4E5D54),
+    outlineVariant = Color(0xFF33403A),
     error = Color(0xFFF0A07A),
     onError = Color(0xFF3A1000)
 )
 
+/**
+ * 字阶：完整 13 档，数值与 `design/tokens.md` 的 Type scale 表一致。
+ * 之前只覆盖 5 档，其余档位走 M3 默认值（Roboto 22/16/14…），中英文混排时行高对不齐。
+ */
 private val AppTypography = Typography(
-    headlineSmall = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.SemiBold),
-    titleLarge = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.SemiBold),
-    titleMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
-    bodyMedium = TextStyle(fontSize = 14.sp),
-    labelMedium = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium)
+    displaySmall = TextStyle(fontSize = 32.sp, lineHeight = 40.sp, fontWeight = FontWeight.SemiBold),
+    headlineLarge = TextStyle(fontSize = 28.sp, lineHeight = 36.sp, fontWeight = FontWeight.SemiBold),
+    headlineMedium = TextStyle(fontSize = 26.sp, lineHeight = 34.sp, fontWeight = FontWeight.SemiBold),
+    headlineSmall = TextStyle(fontSize = 24.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold),
+    titleLarge = TextStyle(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold),
+    titleMedium = TextStyle(fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
+    titleSmall = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
+    bodyLarge = TextStyle(fontSize = 16.sp, lineHeight = 24.sp),
+    bodyMedium = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
+    bodySmall = TextStyle(fontSize = 12.sp, lineHeight = 16.sp),
+    labelLarge = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium),
+    labelMedium = TextStyle(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
+    labelSmall = TextStyle(fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium)
 )
 
 @Composable
@@ -73,6 +87,7 @@ fun ZippestTheme(
     MaterialTheme(
         colorScheme = if (darkTheme) dark else light,
         typography = AppTypography,
+        shapes = ZippestShapes,
         content = content
     )
 }

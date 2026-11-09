@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zippest — 当前态画板</title>
+<style>
+  :root {
+    --bg: #f6f7f5;
+    --surface: #ffffff;
+    --fg: #1b211e;
+    --muted: #59625d;
+    --border: #dde4de;
+    --accent: #0f6b4f;
+    --warning: #c4622d;
+    --radius: 20px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 48px 32px 96px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  }
+  header { max-width: 1120px; margin: 0 auto 40px; }
+  h1 { margin: 0 0 8px; font-size: 32px; line-height: 40px; }
+  .sub { margin: 0; color: var(--muted); font-size: 14px; line-height: 22px; }
+  .sub code { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; }
+  section { max-width: 1120px; margin: 0 auto 56px; }
+  h2 { font-size: 18px; line-height: 26px; margin: 0 0 16px; }
+  h2 span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
+
+  .swatches { display: flex; flex-wrap: wrap; gap: 12px; }
+  .swatch { width: 132px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
+  .swatch .chip { height: 56px; }
+  .swatch .meta { padding: 8px 10px; font-size: 11px; line-height: 15px; color: var(--muted); }
+  .swatch .meta b { display: block; color: var(--fg); font-size: 12px; }
+
+  .type-row { display: grid; grid-template-columns: 140px 1fr; gap: 8px 16px; align-items: baseline; }
+  .type-row .name { color: var(--muted); font-size: 12px; }
+  .type-row .sample { line-height: 1.25; }
+
+  .grid { display: flex; flex-wrap: wrap; gap: 28px; }
+  figure { margin: 0; width: 250px; }
+  figure img {
+    display: block; width: 100%; height: auto;
+    border-radius: 24px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: 0 10px 30px rgba(27, 33, 30, 0.10);
+  }
+  figcaption { margin-top: 10px; font-size: 13px; line-height: 19px; color: var(--muted); }
+  figcaption b { display: block; color: var(--fg); font-size: 14px; }
+
+  footer { max-width: 1120px; margin: 0 auto; color: var(--muted); font-size: 12px; line-height: 18px; border-top: 1px solid var(--border); padding-top: 16px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Zippest · 当前态画板</h1>
+    <p class="sub">
+      token 对应 <code>1.21.2</code>（2026-11-09）；截图采集于 2026-11-07（1.20.x），待下次真机采集替换。
+      每次发版重拍一次；<code>design/*.html</code> 里 10 月冻结的原型只作历史参考，不再作为事实。
+    </p>
+  </header>
+
+  <section>
+    <h2>颜色 <span>Material 角色 · 浅色 / 深色</span></h2>
+    <div class="swatches">
+      <div class="swatch"><div class="chip" style="background:#f6f7f5"></div><div class="meta"><b>background</b>#F6F7F5 / #121815</div></div>
+      <div class="swatch"><div class="chip" style="background:#ffffff"></div><div class="meta"><b>surface</b>#FFFFFF / #1B231F</div></div>
+      <div class="swatch"><div class="chip" style="background:#1b211e"></div><div class="meta"><b>onBackground</b>#1B211E / #E8EEE9</div></div>
+      <div class="swatch"><div class="chip" style="background:#59625d"></div><div class="meta"><b>onSurfaceVariant</b>#59625D / #B8C4BB</div></div>
+      <div class="swatch"><div class="chip" style="background:#dde4de"></div><div class="meta"><b>outlineVariant</b>#DDE4DE / #33403A</div></div>
+      <div class="swatch"><div class="chip" style="background:#0f6b4f"></div><div class="meta"><b>primary</b>#0F6B4F / #7FD6B6</div></div>
+      <div class="swatch"><div class="chip" style="background:#c4622d"></div><div class="meta"><b>error</b>#C4622D / #F0A07A</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>字阶 <span>13 档，完整定义在 Theme.kt</span></h2>
+    <div class="type-row">
+      <div class="name">headlineLarge 28/36</div><div class="sample" style="font-size:28px;font-weight:600">解压十个加密包只填一次密码</div>
+      <div class="name">headlineSmall 24/32</div><div class="sample" style="font-size:24px;font-weight:600">最近解压</div>
+      <div class="name">titleLarge 22/28</div><div class="sample" style="font-size:22px;font-weight:600">内部存储</div>
+      <div class="name">titleMedium 16/24</div><div class="sample" style="font-size:16px;font-weight:600">默认解压设置</div>
+      <div class="name">bodyMedium 14/20</div><div class="sample" style="font-size:14px">文件只在本机读写，不上传任何内容。</div>
+      <div class="name">labelMedium 12/16</div><div class="sample" style="font-size:12px;font-weight:500;color:#59625d">最后修改 · 2026-11-09 18:42</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>真机截图 <span>docs/screenshots/ · 由 <code>adb exec-out screencap</code> 采集</span></h2>
+    <div class="grid">
+      <figure><img src="../../docs/screenshots/01-onboarding.png" alt="首启页" loading="lazy" /><figcaption><b>首启 · 授权</b>三段式说明 + 主/次按钮 + 网络权限脚注</figcaption></figure>
+      <figure><img src="../../docs/screenshots/02-files.png" alt="文件页" loading="lazy" /><figcaption><b>文件页</b>顶栏 搜索 / 新建 / 更多，最近解压卡片</figcaption></figure>
+      <figure><img src="../../docs/screenshots/03-tasks.png" alt="任务中心" loading="lazy" /><figcaption><b>任务中心</b>进行中 / 已结束 / 历史</figcaption></figure>
+      <figure><img src="../../docs/screenshots/04-trash.png" alt="回收站" loading="lazy" /><figcaption><b>回收站</b>配额、保留期与恢复</figcaption></figure>
+      <figure><img src="../../docs/screenshots/05-compress.png" alt="压缩设置" loading="lazy" /><figcaption><b>压缩设置</b>格式、级别、体积预估</figcaption></figure>
+      <figure><img src="../../docs/screenshots/07-rename.png" alt="快捷重命名" loading="lazy" /><figcaption><b>快捷重命名</b>后缀自动选中 + 四个快捷键</figcaption></figure>
+      <figure><img src="../../docs/screenshots/08-password.png" alt="批量密码" loading="lazy" /><figcaption><b>批量密码</b>剪贴板直填 + 使用相同密码</figcaption></figure>
+    </div>
+  </section>
+
+  <footer>
+    颜色 / 字阶 / 间距的数值与用途见 <a href="../tokens.md">design/tokens.md</a>。
+    缺少「解压进度」一屏（原 06 未随本轮提交），下次采集补齐。
+  </footer>
+</body>
+</html>
