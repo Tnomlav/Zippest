@@ -22,6 +22,11 @@ Material 角色（跟随深浅色与强调色）。`Light` / `Dark` 两套，强
 | `error` | 失败、加密、风险 | `#C4622D` | `#F0A07A` |
 | `primary`（默认森林绿） | 主按钮、进度、可操作 | `#0F6B4F` | `#7FD6B6` |
 | `primaryContainer` | 选中态、轻量强调 | `#D9F2E7` | `#1D4B3A` |
+| `secondary` | 次强调控件 | `#4F6B5E` | `#A9C7B8` |
+| `secondaryContainer` | **FilterChip 选中态**、提示条底色 | `#DCE9E2` | `#2A3B34` |
+| `tertiary` | 压缩包/格式图标的专属色 | `#41586A` | `#A8C0D4` |
+
+> 2026-11-09 补：`secondary` / `tertiary` 之前没定义，走了 Material 默认的紫色系，真机上表现为「选中的格式 chip 是淡紫、压缩包图标是暗紫」。现改为上面这组绿灰 / 蓝灰，与品牌色不打架。
 
 强调色（设置 → 外观）只替换 `primary / primaryContainer / onPrimaryContainer`，其余角色不变：
 
