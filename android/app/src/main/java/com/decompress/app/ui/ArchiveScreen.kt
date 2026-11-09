@@ -113,6 +113,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -864,6 +867,15 @@ private fun ArchiveRow(
                 }
             )
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .semantics(mergeDescendants = true) {
+                val kind = if (node.isDirectory) {
+                    "文件夹"
+                } else {
+                    Formatter.formatShortFileSize(context, node.size)
+                }
+                contentDescription = "${node.name}，$kind"
+                if (selected) stateDescription = "已选中"
+            }
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

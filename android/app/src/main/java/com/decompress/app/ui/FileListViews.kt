@@ -28,6 +28,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,6 +62,12 @@ internal fun EntryRow(
                 }
             )
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "${entry.name}，${entryMeta(context, entry)}"
+                if (selectionMode) {
+                    stateDescription = if (selected) "已选中" else "未选中"
+                }
+            }
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
