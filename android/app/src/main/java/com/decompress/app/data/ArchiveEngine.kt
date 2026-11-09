@@ -43,7 +43,7 @@ enum class DestinationMode {
 enum class ConflictPolicy(val label: String) {
     OVERWRITE("覆盖"),
     SKIP("跳过"),
-    RENAME("重命名")
+    RENAME("自动重命名")
 }
 
 enum class FileNameEncoding(val label: String, val charsetName: String) {

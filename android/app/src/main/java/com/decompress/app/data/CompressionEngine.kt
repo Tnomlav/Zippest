@@ -717,7 +717,7 @@ class CompressionEngine(private val context: Context) {
         }
 
         fun finish() {
-            if (created.isEmpty()) throw ArchiveException("未生成压缩文件")
+            if (created.isEmpty()) throw ArchiveException("未生成压缩包")
         }
 
         fun copyGeneratedFiles(files: List<File>, names: List<String>) {
@@ -737,7 +737,7 @@ class CompressionEngine(private val context: Context) {
 
         fun result(): CompressionResult {
             val primary = created.firstOrNull()
-                ?: throw ArchiveException("未生成压缩文件")
+                ?: throw ArchiveException("未生成压缩包")
             val displayName = explicitDisplayName ?: if (splitSize == null) {
                 archiveName
             } else {
@@ -777,7 +777,7 @@ class CompressionEngine(private val context: Context) {
         private fun openOutput(uri: Uri): OutputStream =
             uri.localFile()?.let { FileOutputStream(it) }
                 ?: resolver.openOutputStream(uri, "w")
-                ?: throw ArchiveException("无法写入压缩文件")
+                ?: throw ArchiveException("无法写入压缩包")
 
         private fun makeUniqueName(
             requested: String,

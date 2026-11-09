@@ -531,7 +531,7 @@ fun SettingsScreen(
                     }
                     SettingsDivider()
                     SettingsChoice(
-                        title = "同名文件",
+                        title = "遇到同名文件",
                         options = ConflictPolicy.entries.map { it.label },
                         selectedIndex = ConflictPolicy.entries.indexOf(
                             settings.defaultConflictPolicy

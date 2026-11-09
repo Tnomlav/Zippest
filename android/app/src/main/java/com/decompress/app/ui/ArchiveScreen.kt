@@ -1440,7 +1440,7 @@ fun ExtractSheet(
                 val blockConflict: @Composable () -> Unit = {
                 Spacer(Modifier.height(18.dp))
                 Text(
-                    "同名文件",
+                    "遇到同名文件",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

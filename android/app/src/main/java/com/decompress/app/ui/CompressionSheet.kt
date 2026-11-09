@@ -270,7 +270,7 @@ fun CompressionSheet(
                     .verticalScroll(rememberScrollState())
             ) {
                 Text(
-                    "压缩文件",
+                    "压缩包",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -496,6 +496,13 @@ fun CompressionSheet(
                     Text(
                         splitDescription,
                         style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "分卷 = 把大包切成 .001 / .002… 几个小文件，方便发送；解压时打开第一个即可",
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

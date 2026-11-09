@@ -39,7 +39,7 @@ enum class ExtractSection(val label: String, val detail: String) {
     PASSWORD("密码", "压缩包加密时填写"),
     NAME("压缩包名称", "解压前改包名和后缀"),
     DESTINATION("解压位置", "当前文件夹 / 同名文件夹 / 其他位置"),
-    CONFLICT("同名文件", "覆盖 / 跳过 / 重命名"),
+    CONFLICT("遇到同名文件", "覆盖 / 跳过 / 自动重命名"),
     ENCODING("文件名编码", "自动 / GBK / UTF-8")
 }
 
