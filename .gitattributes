@@ -1,0 +1,12 @@
+# Repo convention: LF in the repository and in the working tree, on every OS.
+# Windows-only launchers keep CRLF so cmd.exe reads them reliably.
+* text=auto eol=lf
+*.bat text eol=crlf
+
+# Binary assets: never touch line endings.
+*.png binary
+*.jpg binary
+*.jks binary
+*.jar binary
+*.apk binary
+*.aab binary
