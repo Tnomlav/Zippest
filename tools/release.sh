@@ -36,7 +36,19 @@ dirty="$(git status --porcelain | grep -v '^?? design/' || true)"
 [ -z "$dirty" ] || { printf '工作区不干净，先提交这些改动：\n%s\n' "$dirty" >&2; exit 1; }
 
 if [ "$SKIP_BUILD" -eq 0 ]; then
-    if ! command -v java >/dev/null 2>&1 && [ -z "${JAVA_HOME:-}" ]; then
+    # 在 WSL 里没有全局 JAVA_HOME/ANDROID_HOME 时，用 docs/development-wsl.md 装的默认位置。
+    if [ -z "${JAVA_HOME:-}" ] && ! command -v java >/dev/null 2>&1; then
+        for candidate in "$HOME"/.local/java/jdk-17*; do
+            [ -x "$candidate/bin/java" ] && export JAVA_HOME="$candidate" && break
+        done
+    fi
+    if [ -z "${ANDROID_HOME:-}" ] && [ -d "$HOME/Android/Sdk" ]; then
+        export ANDROID_HOME="$HOME/Android/Sdk"
+    fi
+    if [ -n "${JAVA_HOME:-}" ]; then
+        export PATH="$JAVA_HOME/bin:$PATH"
+    fi
+    if ! command -v java >/dev/null 2>&1; then
         echo "找不到 java：请安装 JDK 17+，或设置 JAVA_HOME" >&2
         exit 1
     fi
