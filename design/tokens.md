@@ -27,6 +27,10 @@ Material 角色（跟随深浅色与强调色）。`Light` / `Dark` 两套，强
 | `tertiary` | 压缩包/格式图标的专属色 | `#41586A` | `#A8C0D4` |
 
 > 2026-11-09 补：`secondary` / `tertiary` 之前没定义，走了 Material 默认的紫色系，真机上表现为「选中的格式 chip 是淡紫、压缩包图标是暗紫」。现改为上面这组绿灰 / 蓝灰，与品牌色不打架。
+>
+> 同日补：`surfaceContainer*` 五个层级之前也没定义，`AlertDialog`、菜单、底部面板因此是淡紫底（`surfaceContainerHigh` 默认值）。现补齐：
+> 浅色 `Lowest #FFFFFF / Low #F1F4F1 / Container #EBEFEB / High #E5EAE6 / Highest #DFE6E0`；
+> 深色 `Lowest #0C110E / Low #171E1A / Container #1B231F / High #222B26 / Highest #2C3630`。
 
 强调色（设置 → 外观）只替换 `primary / primaryContainer / onPrimaryContainer`，其余角色不变：
 
