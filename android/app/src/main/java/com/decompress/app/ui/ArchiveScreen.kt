@@ -562,6 +562,18 @@ fun ArchiveScreen(
                 }
             }
                 }
+                if (rememberZippestWindowSize() == ZippestWindowSize.EXPANDED) {
+                    ArchiveInfoPane(
+                        archiveName = target.archive.name,
+                        sizeText = Formatter.formatShortFileSize(context, target.archive.size),
+                        entryCount = items.size,
+                        encodingLabel = encoding.label,
+                        modifier = Modifier
+                            .width(240.dp)
+                            .fillMaxHeight()
+                            .padding(padding)
+                    )
+                }
             }
             Surface(
                 modifier = Modifier

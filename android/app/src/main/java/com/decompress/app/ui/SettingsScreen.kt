@@ -58,6 +58,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -264,10 +266,16 @@ fun SettingsScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
+            contentAlignment = Alignment.TopCenter
+        ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxHeight()
+                .widthIn(max = 720.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(
                 horizontal = 16.dp,
                 vertical = 12.dp
@@ -910,6 +918,7 @@ fun SettingsScreen(
             }
             }
             item { Spacer(Modifier.height(10.dp).navigationBarsPadding()) }
+        }
         }
     }
 

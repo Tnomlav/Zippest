@@ -7,7 +7,7 @@ follows the finalized prototype in `C:\Decompress\design`.
 ## Current build
 
 - Package: `com.decompress.app`
-- Version: `1.21.8`
+- Version: `1.21.9`
 - Minimum Android: 8.0 (API 26)
 - UI: Kotlin, Jetpack Compose
 - Storage: Android Storage Access Framework, plus all-files access for direct

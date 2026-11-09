@@ -746,6 +746,17 @@ internal fun FileBrowserScreen(
             }
             }
                 }
+                if (rememberZippestWindowSize() == ZippestWindowSize.EXPANDED) {
+                    BrowserInfoPane(
+                        folderName = controller.folderName,
+                        path = controller.path,
+                        itemCount = visibleEntries.size,
+                        modifier = Modifier
+                            .width(240.dp)
+                            .fillMaxHeight()
+                            .padding(padding)
+                    )
+                }
             }
             FileBrowserOverlays(
                 state = state,
