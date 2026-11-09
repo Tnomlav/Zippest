@@ -45,6 +45,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -73,6 +74,7 @@ import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -124,6 +126,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import com.decompress.app.data.ArchiveItem
+import com.decompress.app.ui.theme.ZippestRadius
+import com.decompress.app.ui.theme.ZippestSpacing
 import com.decompress.app.data.ArchiveNode
 import com.decompress.app.data.AppSettings
 import com.decompress.app.data.BrowserEntry
@@ -415,6 +419,17 @@ fun ArchiveScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                if (rememberZippestWindowSize() != ZippestWindowSize.COMPACT) {
+                    ArchivePathPane(
+                        currentPath = currentPath,
+                        onOpen = { currentPath = it },
+                        modifier = Modifier
+                            .width(220.dp)
+                            .fillMaxHeight()
+                    )
+                }
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
             when {
                 searchOpen -> Column(
                     modifier = Modifier
@@ -544,6 +559,8 @@ fun ArchiveScreen(
                             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.32f)
                         )
                     }
+                }
+            }
                 }
             }
             Surface(
@@ -1879,4 +1896,65 @@ internal fun queryDisplayName(context: Context, treeUri: Uri): String {
         }
     }
     return "所选文件夹"
+}
+
+/** 宽屏（≥600dp）时显示在左侧的包内位置栏：面包屑式，点一下跳到该层。 */
+@Composable
+private fun ArchivePathPane(
+    currentPath: String,
+    onOpen: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val segments = remember(currentPath) {
+        if (currentPath.isBlank()) emptyList() else currentPath.split('/')
+    }
+    Column(
+        modifier = modifier.padding(
+            start = ZippestSpacing.md,
+            end = ZippestSpacing.sm,
+            top = ZippestSpacing.lg
+        ),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            "包内位置",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(ZippestSpacing.sm))
+        ArchivePathEntry("根目录", currentPath.isBlank()) { onOpen("") }
+        segments.forEachIndexed { index, name ->
+            val path = segments.take(index + 1).joinToString("/")
+            ArchivePathEntry(name, path == currentPath) { onOpen(path) }
+        }
+    }
+}
+
+@Composable
+private fun ArchivePathEntry(label: String, selected: Boolean, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(ZippestRadius.sm),
+        colors = ButtonDefaults.textButtonColors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                Color.Transparent
+            },
+            contentColor = if (selected) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            }
+        )
+    ) {
+        Text(
+            label,
+            modifier = Modifier.fillMaxWidth(),
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
 }
