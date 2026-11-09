@@ -55,18 +55,20 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
     # local.properties 在 Windows 与 WSL 之间共用：sdk.dir 指向不存在的 SDK 时临时改成本机路径，退出时还原。
     props="android/local.properties"
     restore_props=0
+    backup_props=""
     if [ -n "${ANDROID_HOME:-}" ] && [ -f "$props" ]; then
         current_sdk="$(grep -oP '^sdk\.dir=\K.*' "$props" 2>/dev/null || true)"
         plain_sdk="${current_sdk//\\/}"
         if [ -n "$plain_sdk" ] && [ ! -d "$plain_sdk" ]; then
-            cp "$props" "$props.wsl-backup"
+            backup_props="$(mktemp)"
+            cp "$props" "$backup_props"
             printf 'sdk.dir=%s\n' "$ANDROID_HOME" > "$props"
             restore_props=1
         fi
     fi
     cleanup_props() {
         if [ "$restore_props" -eq 1 ]; then
-            mv -f "$props.wsl-backup" "$props"
+            mv -f "$backup_props" "$props"
         fi
     }
     trap cleanup_props EXIT
