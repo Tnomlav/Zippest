@@ -1,0 +1,17 @@
+# 发布包允许出现的权限（第 5 章清单第 15 项）。
+# tools/preflight.sh 会把 APK 里实际声明的权限与本清单逐项比对：
+# 多出未列出的权限、或清单里的权限没打进包，都会让门禁失败。
+# 新增权限必须同时在这里写清用途，并在 PR/发布说明里说明原因。
+android.permission.POST_NOTIFICATIONS            # 解压/压缩完成与进度通知
+android.permission.INTERNET                      # 仅在“点版本号检查更新”时访问 GitHub Releases API
+android.permission.REQUEST_INSTALL_PACKAGES      # 检查更新后安装下载的 APK
+android.permission.FOREGROUND_SERVICE            # 大包解压/压缩的前台服务
+android.permission.FOREGROUND_SERVICE_DATA_SYNC  # API 34+ 前台服务类型 dataSync
+android.permission.WAKE_LOCK                     # 熄屏后任务继续
+android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS  # 引导用户把应用加入电池优化白名单
+android.permission.READ_EXTERNAL_STORAGE         # API ≤ 32 的存储读取（maxSdkVersion=32）
+android.permission.WRITE_EXTERNAL_STORAGE        # API ≤ 29 的存储写入（maxSdkVersion=29）
+android.permission.MANAGE_EXTERNAL_STORAGE       # 全盘文件管理（商店已单独说明用途）
+android.permission.ACCESS_NETWORK_STATE          # WorkManager 依赖，判断网络约束
+android.permission.RECEIVE_BOOT_COMPLETED        # WorkManager 依赖，重启后恢复队列元数据
+com.decompress.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION  # AndroidX 动态注册广播的内部签名权限

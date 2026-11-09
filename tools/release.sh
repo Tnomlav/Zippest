@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
 # 一键发版（WSL / Linux 版，对应 tools/release.ps1）：
-# 构建 -> 归档产物与校验和 -> 打 tag -> 推送（tag 会触发 CI 自动发 Release）。
-# 用法：tools/release.sh [--skip-build] [--skip-push]
+# 构建 -> 归档产物与校验和 -> 发布前门禁（tools/preflight.sh）-> 打 tag -> 推送（tag 会触发 CI 自动发 Release）。
+# 用法：tools/release.sh [--skip-build] [--skip-push] [--skip-preflight]
 # 前提：JDK 17+、Android SDK（ANDROID_HOME 或 android/local.properties），
 #       工作区干净（仅允许 design/ 下未跟踪图片），当前分支为 main。
 set -euo pipefail
 
 SKIP_BUILD=0
 SKIP_PUSH=0
+SKIP_PREFLIGHT=0
 for arg in "$@"; do
     case "$arg" in
-        --skip-build) SKIP_BUILD=1 ;;
-        --skip-push)  SKIP_PUSH=1 ;;
-        -h|--help)    sed -n '2,7p' "$0"; exit 0 ;;
-        *)            echo "未知参数：$arg" >&2; exit 2 ;;
+        --skip-build)     SKIP_BUILD=1 ;;
+        --skip-push)      SKIP_PUSH=1 ;;
+        --skip-preflight) SKIP_PREFLIGHT=1 ;;
+        -h|--help)        sed -n '2,7p' "$0"; exit 0 ;;
+        *)                echo "未知参数：$arg" >&2; exit 2 ;;
     esac
 done
 
@@ -99,8 +101,13 @@ cp -f "$aab"                                 "$out/Zippest-$version.aab"
 
 (
     cd "$out"
-    sha256sum Zippest-"$version"-* > "SHA256SUMS-$version.txt"
+    # 校验和覆盖全部四个产物（含 AAB）；1.21.x 时期这里的通配符漏掉了 AAB。
+    sha256sum Zippest-"$version"-* Zippest-"$version".aab > "SHA256SUMS-$version.txt"
 )
+
+if [ "$SKIP_PREFLIGHT" -eq 0 ]; then
+    bash tools/preflight.sh --skip-build --report "release/preflight-$version.txt"
+fi
 
 git tag -a "$tag" -m "Zippest $version"
 

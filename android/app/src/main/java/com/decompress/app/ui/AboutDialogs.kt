@@ -15,7 +15,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -24,6 +26,7 @@ internal fun AboutInfoDialog(
     versionName: String,
     packageName: String,
     onOpenLink: (String) -> Unit,
+    onOpenLocalLicense: () -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -65,6 +68,12 @@ internal fun AboutInfoDialog(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    TextButton(
+                        onClick = onOpenLocalLicense,
+                        modifier = Modifier.padding(top = 0.dp)
+                    ) {
+                        Text("离线查看许可证全文")
+                    }
                     TextButton(
                         onClick = { onOpenLink(ZIPPEST_LICENSE_URL) },
                         modifier = Modifier.padding(top = 0.dp)
@@ -191,6 +200,49 @@ internal fun OpenSourceLicensesDialog(
                             Text("查看许可证")
                         }
                     }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text("关闭")
+            }
+        }
+    )
+}
+
+/**
+ * 读取打包在 assets/legal/ 下的许可证原文。
+ * 断网时关于页的“查看项目许可证”链接打不开，这里给一份随包的离线副本（第 5 章清单第 18 项）。
+ */
+@Composable
+internal fun LegalTextDialog(
+    title: String,
+    assetName: String,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val body = remember(assetName) {
+        runCatching {
+            context.assets.open(assetName).bufferedReader().use { it.readText() }
+        }.getOrElse { "无法读取内置文本（" + assetName + "）。" }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 520.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                SelectionContainer {
+                    Text(
+                        body,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         },

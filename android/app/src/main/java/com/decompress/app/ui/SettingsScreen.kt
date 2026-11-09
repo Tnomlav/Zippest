@@ -120,6 +120,7 @@ private enum class SettingsPopup {
     QUICK_LOCATION_DELETE,
     ABOUT_INFO,
     PRIVACY_POLICY,
+    PROJECT_LICENSE,
     OPEN_SOURCE_LICENSES,
     FEEDBACK
 }
@@ -934,6 +935,12 @@ fun SettingsScreen(
             versionName = versionName,
             packageName = context.packageName,
             onOpenLink = ::openExternalLink,
+            onOpenLocalLicense = { activePopup = SettingsPopup.PROJECT_LICENSE },
+            onDismiss = { activePopup = null }
+        )
+        SettingsPopup.PROJECT_LICENSE -> LegalTextDialog(
+            title = "项目许可证（Apache-2.0）",
+            assetName = "legal/LICENSE",
             onDismiss = { activePopup = null }
         )
         SettingsPopup.PRIVACY_POLICY -> PrivacyPolicyDialog(

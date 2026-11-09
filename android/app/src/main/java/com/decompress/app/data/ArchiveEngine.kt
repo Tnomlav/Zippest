@@ -357,11 +357,18 @@ class ZipArchiveEngine(private val context: Context) {
         val splitZip = localZip?.let {
             runCatching { Zip4jFile(it).isSplitArchive }.getOrDefault(false)
         } == true
+        // 预览页遇到乱码会自动按 GBK 重读；解压如果还按 UTF-8 写文件名，
+        // 中文名就会落成 �。这里沿用同一判断（第 5 章清单第 8 项发现）。
+        val effective = if (settings.encoding == FileNameEncoding.AUTO) {
+            settings.copy(encoding = detectZipEncoding(localZip))
+        } else {
+            settings
+        }
         if (settings.password.isNotEmpty() || splitZip) {
             extractPasswordProtected(
                 archiveUri,
                 archiveName,
-                settings,
+                effective,
                 onProgress,
                 onFractionProgress
             )
@@ -372,7 +379,7 @@ class ZipArchiveEngine(private val context: Context) {
             onFractionProgress(0f)
             val input = resolver.openInputStream(archiveUri)
                 ?: throw ArchiveException("无法读取压缩包")
-            val zipCharset = Charset.forName(settings.encoding.charsetName)
+            val zipCharset = Charset.forName(effective.encoding.charsetName)
             val progressInput = ProgressInputStream(
                 input,
                 localZip?.length() ?: fileSize(archiveUri),
@@ -383,10 +390,10 @@ class ZipArchiveEngine(private val context: Context) {
                 ZipInputStream(buffered, zipCharset).use { zip ->
                     val output = SafOutput(
                         resolver = resolver,
-                        treeUri = settings.targetTreeUri,
-                        rootDocumentUri = settings.targetParentUri
+                        treeUri = effective.targetTreeUri,
+                        rootDocumentUri = effective.targetParentUri
                     )
-                    val destination = createDestination(output, archiveName, settings)
+                    val destination = createDestination(output, archiveName, effective)
 
                     var entry: ZipEntry? = zip.nextEntry
                     var processed = 0
@@ -405,7 +412,7 @@ class ZipArchiveEngine(private val context: Context) {
                         if (entry.compressedSize > 0) totalCompressed += entry.compressedSize
                         ensureSafeExpansion(declaredBytes, totalCompressed)
 
-                        if (!settings.matches(entry.name)) {
+                        if (!effective.matches(entry.name)) {
                             zip.closeEntry()
                             entry = zip.nextEntry
                             continue
@@ -425,14 +432,14 @@ class ZipArchiveEngine(private val context: Context) {
                                 val fileUri = output.createFile(
                                     parentUri = parent,
                                     name = segments.last(),
-                                    conflictPolicy = settings.conflictPolicy
+                                    conflictPolicy = effective.conflictPolicy
                                 )
                                 if (fileUri != null) {
                                     output.openOutputStream(fileUri)?.use { out ->
                                         writtenBytes += copyWithLimit(
                                             input = CheckpointInputStream(
                                                 zip,
-                                                settings.onCheckpoint
+                                                effective.onCheckpoint
                                             ),
                                             output = out,
                                             remainingBytes = MAX_TOTAL_BYTES - writtenBytes
@@ -440,7 +447,7 @@ class ZipArchiveEngine(private val context: Context) {
                                     } ?: throw ArchiveException(
                                         "无法写入文件：${segments.last()}"
                                     )
-                                    settings.onFileCreated(fileUri)
+                                    effective.onFileCreated(fileUri)
                                 }
                             }
                         }
@@ -498,6 +505,24 @@ class ZipArchiveEngine(private val context: Context) {
                 processed
             }
         }
+    }
+
+    /**
+     * 自动编码下先看中央目录里的文件名是否乱码。预览页用同一启发式回退到 GBK；
+     * 解压时不重复判断一次，中文名就会按 UTF-8 落成 �。
+     */
+    private fun detectZipEncoding(localZip: File?): FileNameEncoding {
+        val file = localZip ?: return FileNameEncoding.AUTO
+        return runCatching {
+            java.util.zip.ZipFile(file).use { zip ->
+                val names = mutableListOf<String>()
+                val entries = zip.entries()
+                while (entries.hasMoreElements() && names.size < 50) {
+                    names += entries.nextElement().name
+                }
+                if (names.any(::looksGarbled)) FileNameEncoding.GBK else FileNameEncoding.AUTO
+            }
+        }.getOrDefault(FileNameEncoding.AUTO)
     }
 
     private fun testPasswordProtected(

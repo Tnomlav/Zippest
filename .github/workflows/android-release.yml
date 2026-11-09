@@ -1,6 +1,7 @@
 name: android-release
 
-# 打 tag 即发版：构建 -> 签名与 16 KB 页校验 -> 产物与 SHA256SUMS 挂到 Release。
+# 打 tag 即发版：构建 -> 发布前门禁（tools/preflight.sh）-> 产物与 SHA256SUMS 挂到 Release。
+# 发布说明放在 docs/release-notes/<version>.md，缺失时拒绝发版（第 5 章清单第 20 项）。
 # 需要的仓库 Secrets：
 #   KEYSTORE_BASE64  发布 keystore 的 base64（.signing/zippest-release.jks）
 #   STORE_PASSWORD   keystore 口令
@@ -21,6 +22,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # versionCode 单调校验需要读取上一个 tag 的构建文件
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -62,6 +65,22 @@ jobs:
           fi
           echo "版本校验通过：$VERSION"
 
+      - name: Verify version code is monotonic
+        run: |
+          set -euo pipefail
+          CUR=$(grep -oP 'versionCode\s*=\s*\K[0-9]+' android/app/build.gradle.kts)
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
+          if [ -z "$PREV_TAG" ]; then
+            echo "没有更早的 tag，跳过 versionCode 比较"
+            exit 0
+          fi
+          PREV=$(git show "$PREV_TAG:android/app/build.gradle.kts" | grep -oP 'versionCode\s*=\s*\K[0-9]+')
+          if [ "$CUR" -le "$PREV" ]; then
+            echo "versionCode $CUR 未大于 $PREV_TAG 的 $PREV" >&2
+            exit 1
+          fi
+          echo "versionCode 校验通过：$PREV_TAG=$PREV -> $CUR"
+
       # AGP 不允许 ABI 拆分与 AAB 同时构建：先出分 ABI 的 APK，再用 -PzippestBundle 出 AAB。
       - name: Build APKs
         working-directory: android
@@ -74,43 +93,10 @@ jobs:
         working-directory: android
         run: ./gradlew --no-daemon --stacktrace -PzippestBundle bundleRelease
 
-      - name: Verify APK payload
-        run: |
-          set -euo pipefail
-          for apk in android/app/build/outputs/apk/release/*.apk; do
-            echo "== $apk"
-            listing=$(unzip -l "$apk")
-            if echo "$listing" | grep -qE "lib/(mips|mips64|armeabi|x86|x86_64)/"; then
-              echo "包含不该打进来的 ABI"; exit 1
-            fi
-            case "$apk" in
-              *arm64-v8a*)
-                echo "$listing" | grep -q "lib/arm64-v8a/" || { echo "缺少 arm64-v8a"; exit 1; } ;;
-              *armeabi-v7a*)
-                echo "$listing" | grep -q "lib/armeabi-v7a/" || { echo "缺少 armeabi-v7a"; exit 1; } ;;
-              *universal*)
-                echo "$listing" | grep -q "lib/arm64-v8a/" || { echo "缺少 arm64-v8a"; exit 1; }
-                echo "$listing" | grep -q "lib/armeabi-v7a/" || { echo "缺少 armeabi-v7a"; exit 1; } ;;
-              *)
-                echo "未知的 APK 变体"; exit 1 ;;
-            esac
-          done
-          ls -l android/app/build/outputs/apk/release/
-
-      - name: Verify 16 KB page alignment
-        run: |
-          set -euo pipefail
-          ZIPALIGN=$(find "$ANDROID_HOME/build-tools" -name zipalign -type f | sort -r | head -n 1)
-          for apk in android/app/build/outputs/apk/release/*.apk; do
-            "$ZIPALIGN" -c -P 16 -v 4 "$apk" > /dev/null
-            echo "16 KB ok: $apk"
-          done
-
-      - name: Verify signature
-        run: |
-          set -euo pipefail
-          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -r | head -n 1)
-          "$APKSIGNER" verify --print-certs android/app/build/outputs/apk/release/app-arm64-v8a-release.apk
+      # 与本地 tools/preflight.sh 同一份检查：ABI、16 KB 对齐、签名、权限清单、
+      # 网络调用面。CI 只跳过联网链接检查（发布说明的链接在发版后由人复核）。
+      - name: Preflight checks
+        run: bash tools/preflight.sh --skip-build --no-links
 
       - name: Collect artifacts and checksums
         run: |
@@ -125,6 +111,18 @@ jobs:
           sha256sum * > "SHA256SUMS-${VERSION}.txt"
           cat "SHA256SUMS-${VERSION}.txt"
 
+      - name: Verify release notes exist
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          NOTES="docs/release-notes/${VERSION}.md"
+          if [ ! -f "$NOTES" ]; then
+            echo "缺少发布说明 $NOTES：按第 5 章清单第 20 项，发版必须有面向用户的说明" >&2
+            exit 1
+          fi
+          echo "NOTES=$NOTES" >> "$GITHUB_ENV"
+          echo "发布说明：$NOTES"
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
@@ -132,5 +130,5 @@ jobs:
             dist/*.apk
             dist/*.aab
             dist/SHA256SUMS-*.txt
-          generate_release_notes: true
+          body_path: ${{ env.NOTES }}
           fail_on_unmatched_files: true

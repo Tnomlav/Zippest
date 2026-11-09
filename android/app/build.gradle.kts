@@ -1,3 +1,4 @@
+import java.io.File
 import java.util.Properties
 
 plugins {
@@ -15,6 +16,35 @@ val hasReleaseSigning = releaseSigningProperties.isNotEmpty()
 // -PzippestEmulator：构建模拟器用的 x86_64 调试包；普通构建只打 ARM 两个 ABI。
 val emulatorBuild = providers.gradleProperty("zippestEmulator").isPresent
 
+// 关于页的许可证离线副本：把仓库根目录的 LICENSE / PRIVACY.md / THIRD_PARTY_NOTICES.md
+// 复制进 APK 的 assets/legal/，离线也能查看（第 5 章清单第 18 项）。
+abstract class CopyLegalAssetsTask : DefaultTask() {
+    @get:InputFiles
+    abstract val sources: ConfigurableFileCollection
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun copyFiles() {
+        val target = outputDirectory.get().asFile.resolve("legal")
+        target.mkdirs()
+        sources.files.forEach { file ->
+            file.copyTo(File(target, file.name), overwrite = true)
+        }
+    }
+}
+
+val legalAssetsDir = layout.buildDirectory.dir("generated/legalAssets")
+val copyLegalAssets = tasks.register<CopyLegalAssetsTask>("copyLegalAssets") {
+    sources.from(
+        rootProject.file("../LICENSE"),
+        rootProject.file("../PRIVACY.md"),
+        rootProject.file("../THIRD_PARTY_NOTICES.md")
+    )
+    outputDirectory.set(legalAssetsDir)
+}
+
 android {
     namespace = "com.decompress.app"
     compileSdk = 37
@@ -23,8 +53,8 @@ android {
         applicationId = "com.decompress.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 141
-        versionName = "1.21.9"
+        versionCode = 142
+        versionName = "1.22.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -96,6 +126,17 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+}
+
+tasks.named("preBuild") { dependsOn(copyLegalAssets) }
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(
+            copyLegalAssets,
+            CopyLegalAssetsTask::outputDirectory
+        )
     }
 }
 
