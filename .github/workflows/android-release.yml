@@ -99,13 +99,13 @@ jobs:
       - name: Preflight checks
         run: |
           set +e
-          bash tools/preflight.sh --skip-build --no-links --report preflight-report.txt
+          bash -x tools/preflight.sh --skip-build --no-links --report preflight-report.txt > preflight.log 2>&1
           STATUS=$?
           if [ "$STATUS" -ne 0 ]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git checkout -B ci-preflight
-            git add -f preflight-report.txt
+            git add -f preflight-report.txt preflight.log
             git commit -m "ci: preflight report for ${GITHUB_REF_NAME}"
             git push -f origin ci-preflight || true
           fi
