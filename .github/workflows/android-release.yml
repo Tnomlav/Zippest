@@ -95,8 +95,21 @@ jobs:
 
       # 与本地 tools/preflight.sh 同一份检查：ABI、16 KB 对齐、签名、权限清单、
       # 网络调用面。CI 只跳过联网链接检查（发布说明的链接在发版后由人复核）。
+      # 失败时把报告推到 ci-preflight 分支，公开仓库不用登录也能 `git fetch` 读。
       - name: Preflight checks
-        run: bash tools/preflight.sh --skip-build --no-links
+        run: |
+          set +e
+          bash tools/preflight.sh --skip-build --no-links --report preflight-report.txt
+          STATUS=$?
+          if [ "$STATUS" -ne 0 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git checkout -B ci-preflight
+            git add -f preflight-report.txt
+            git commit -m "ci: preflight report for ${GITHUB_REF_NAME}"
+            git push -f origin ci-preflight || true
+          fi
+          exit "$STATUS"
 
       - name: Collect artifacts and checksums
         run: |
