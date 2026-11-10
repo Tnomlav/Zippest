@@ -38,14 +38,30 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-# JDK / Android SDK：与 tools/release.sh 相同，WSL 里找不到时用默认安装位置。
+# JDK / Android SDK：与 tools/release.sh 相同，WSL 里找不到时用默认安装位置；
+# CI 只设置 ANDROID_SDK_ROOT 时也认。
 if [ -z "${JAVA_HOME:-}" ] && ! command -v java >/dev/null 2>&1; then
     for candidate in "$HOME"/.local/java/jdk-17*; do
         [ -x "$candidate/bin/java" ] && export JAVA_HOME="$candidate" && break
     done
 fi
-if [ -z "${ANDROID_HOME:-}" ] && [ -d "$HOME/Android/Sdk" ]; then
-    export ANDROID_HOME="$HOME/Android/Sdk"
+if [ -z "${ANDROID_HOME:-}" ] && [ -n "${ANDROID_SDK_ROOT:-}" ]; then
+    export ANDROID_HOME="$ANDROID_SDK_ROOT"
+fi
+if [ -z "${ANDROID_HOME:-}" ] && [ -f android/local.properties ]; then
+    sdk_dir="$(grep -oP '^sdk\.dir=\K.*' android/local.properties 2>/dev/null | sed 's/\\\\//g' || true)"
+    case "$sdk_dir" in
+        [A-Za-z]:*)
+            drive="$(printf '%s' "${sdk_dir%%:*}" | tr 'A-Z' 'a-z')"
+            sdk_dir="/mnt/$drive${sdk_dir#*:}"
+            ;;
+    esac
+    [ -n "$sdk_dir" ] && [ -d "$sdk_dir" ] && export ANDROID_HOME="$sdk_dir"
+fi
+if [ -z "${ANDROID_HOME:-}" ]; then
+    for candidate in "$HOME/Android/Sdk" /usr/local/lib/android/sdk /opt/android-sdk; do
+        [ -d "$candidate" ] && export ANDROID_HOME="$candidate" && break
+    done
 fi
 [ -n "${JAVA_HOME:-}" ] && export PATH="$JAVA_HOME/bin:$PATH"
 [ -n "${ANDROID_HOME:-}" ] && export PATH="$ANDROID_HOME/platform-tools:$PATH"
@@ -73,6 +89,20 @@ mkdir -p "$(dirname "$REPORT")"
 FAILED=0
 PASSED=0
 
+# CI 里把结果贴到 job summary，失败时不用再翻日志（GitHub 的日志接口需要认证）。
+summary() {
+    if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+        {
+            echo
+            echo '## Zippest preflight'
+            echo
+            echo '```'
+            cat "$REPORT"
+            echo '```'
+        } >>"$GITHUB_STEP_SUMMARY"
+    fi
+}
+
 record() { # record <pass|fail|skip> <编号> <名称> <证据>
     printf '%-4s %-4s %-34s %s\n' "$1" "$2" "$3" "$4" | tee -a "$REPORT"
     case "$1" in
@@ -89,8 +119,8 @@ latest_build_tool() {
     find "$ANDROID_HOME/build-tools" -maxdepth 2 -name "$1" -type f 2>/dev/null | sort -V | tail -n 1
 }
 
-command -v java >/dev/null 2>&1 || { echo "找不到 java：安装 JDK 17+ 或设置 JAVA_HOME" >&2; exit 2; }
-[ -n "${ANDROID_HOME:-}" ] && [ -d "$ANDROID_HOME" ] || { echo "找不到 Android SDK：设置 ANDROID_HOME" >&2; exit 2; }
+command -v java >/dev/null 2>&1 || { echo "找不到 java：安装 JDK 17+ 或设置 JAVA_HOME" >&2; summary; exit 2; }
+[ -n "${ANDROID_HOME:-}" ] && [ -d "$ANDROID_HOME" ] || { echo "找不到 Android SDK：设置 ANDROID_HOME" >&2; summary; exit 2; }
 
 section "版本与标签"
 current_tag="$(git describe --tags --exact-match 2>/dev/null || true)"
@@ -377,4 +407,5 @@ fi
 
 printf '\n报告：%s\n' "$REPORT" | tee -a "$REPORT"
 printf '通过 %d ／ 失败 %d\n' "$PASSED" "$FAILED" | tee -a "$REPORT"
+summary
 [ "$FAILED" -eq 0 ] || exit 1
