@@ -111,7 +111,13 @@ record() { # record <pass|fail|skip> <编号> <名称> <证据>
     esac
 }
 pass() { record PASS "$1" "$2" "$3"; }
-fail() { record FAIL "$1" "$2" "$3"; }
+fail() {
+    record FAIL "$1" "$2" "$3"
+    # CI 里把失败项写成 annotation：公开仓库不用登录也能从 check-runs API 读到。
+    if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+        printf '::error title=preflight %s::%s — %s\n' "$2" "$3" "$4"
+    fi
+}
 skip() { record SKIP "$1" "$2" "$3"; }
 section() { printf '\n== %s ==\n' "$1" | tee -a "$REPORT"; }
 
@@ -119,8 +125,18 @@ latest_build_tool() {
     find "$ANDROID_HOME/build-tools" -maxdepth 2 -name "$1" -type f 2>/dev/null | sort -V | tail -n 1
 }
 
-command -v java >/dev/null 2>&1 || { echo "找不到 java：安装 JDK 17+ 或设置 JAVA_HOME" >&2; summary; exit 2; }
-[ -n "${ANDROID_HOME:-}" ] && [ -d "$ANDROID_HOME" ] || { echo "找不到 Android SDK：设置 ANDROID_HOME" >&2; summary; exit 2; }
+if ! command -v java >/dev/null 2>&1; then
+    echo "找不到 java：安装 JDK 17+ 或设置 JAVA_HOME" >&2
+    [ "${GITHUB_ACTIONS:-}" = "true" ] && echo "::error title=preflight-env::java not found (JAVA_HOME=${JAVA_HOME:-unset})"
+    summary
+    exit 2
+fi
+if [ -z "${ANDROID_HOME:-}" ] || [ ! -d "$ANDROID_HOME" ]; then
+    echo "找不到 Android SDK：设置 ANDROID_HOME（当前 ${ANDROID_HOME:-unset}）" >&2
+    [ "${GITHUB_ACTIONS:-}" = "true" ] && echo "::error title=preflight-env::sdk not found (ANDROID_HOME=${ANDROID_HOME:-unset} ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-unset})"
+    summary
+    exit 2
+fi
 
 section "版本与标签"
 current_tag="$(git describe --tags --exact-match 2>/dev/null || true)"
