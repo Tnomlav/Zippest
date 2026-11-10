@@ -99,8 +99,8 @@ jobs:
       - name: Preflight checks
         run: |
           set +e
-          bash -x tools/preflight.sh --skip-build --no-links --report preflight-report.txt > preflight.log 2>&1
-          STATUS=$?
+          bash -x tools/preflight.sh --skip-build --no-links --report preflight-report.txt 2>&1 | tee preflight.log
+          STATUS=${PIPESTATUS[0]}
           if [ "$STATUS" -ne 0 ]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
