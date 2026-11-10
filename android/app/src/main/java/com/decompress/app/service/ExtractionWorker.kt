@@ -29,6 +29,7 @@ import com.decompress.app.data.ConflictPolicy
 import com.decompress.app.data.DestinationMode
 import com.decompress.app.data.ExtractSettings
 import com.decompress.app.data.FileNameEncoding
+import com.decompress.app.data.archiveMessage
 import com.decompress.app.data.TaskHistoryCodec
 import com.decompress.app.data.TaskHistoryEntry
 import com.decompress.app.data.TaskHistoryStore
@@ -407,7 +408,8 @@ class ExtractionWorker(
             ExtractionCheckpointStore.clear(applicationContext, id)
             throw error
         } catch (error: Exception) {
-            val message = error.message ?: "无法完成解压"
+            // TAR / ZIP 的写入异常会带出 ENOSPC 这类系统原文；统一走人话映射。
+            val message = error.archiveMessage()
             if (shouldNotifyFinished()) {
                 notifyFinished("解压失败", message, successful = false)
             }
