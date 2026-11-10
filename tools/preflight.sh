@@ -115,7 +115,7 @@ fail() {
     record FAIL "$1" "$2" "$3"
     # CI 里把失败项写成 annotation：公开仓库不用登录也能从 check-runs API 读到。
     if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
-        printf '::error title=preflight %s::%s — %s\n' "$2" "$3" "$4"
+        printf '::error title=preflight %s::%s — %s\n' "$2" "$3" "${4:-}"
     fi
 }
 skip() { record SKIP "$1" "$2" "$3"; }
@@ -252,14 +252,15 @@ if [ -z "$APKSIGNER" ]; then
     fail 16 "签名与历史版本一致" "找不到 apksigner"
 elif [ "$missing" -eq 0 ]; then
     certs="$("$APKSIGNER" verify --print-certs "$ARM64" 2>/dev/null || true)"
-    dn="$(printf '%s\n' "$certs" | sed -n 's/^Signer #1 certificate DN: //p')"
-    digest="$(printf '%s\n' "$certs" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')"
+    # build-tools 36 输出 "Signer #1 certificate DN:"，37 输出 "V2 Signer: certificate DN:"。
+    dn="$(printf '%s\n' "$certs" | sed -n 's/.*certificate DN: //p' | head -n 1)"
+    digest="$(printf '%s\n' "$certs" | sed -n 's/.*certificate SHA-256 digest: //p' | head -n 1)"
     if [ -z "$dn" ] || [ -z "$digest" ]; then
         fail 16 "签名与历史版本一致" "APK 未签名或 apksigner 失败"
     else
         same=1
         for apk in "$V7A" "$UNIVERSAL"; do
-            other="$("$APKSIGNER" verify --print-certs "$apk" 2>/dev/null | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')"
+            other="$("$APKSIGNER" verify --print-certs "$apk" 2>/dev/null | sed -n 's/.*certificate SHA-256 digest: //p' | head -n 1)"
             [ "$other" = "$digest" ] || same=0
         done
         case "$dn" in
