@@ -567,6 +567,7 @@ class MultiArchiveEngine(private val context: Context) {
         ensureLocalFreeSpace(context, settings.targetTreeUri, declaredBytes)
 
         val output = outputWriter(settings)
+        try {
         val destination = prepareDestination(output, settings, archiveName)
         var processed = 0
         var writtenBytes = 0L
@@ -604,6 +605,10 @@ class MultiArchiveEngine(private val context: Context) {
             }
         }
         onFractionProgress(1f)
+        } catch (t: Throwable) {
+            output.rollback()
+            throw t
+        }
     }
 
     private fun nativeArchiveFiles(file: File, archiveName: String): List<File> =
@@ -903,6 +908,7 @@ class MultiArchiveEngine(private val context: Context) {
         onProgress: (Int, Int) -> Unit,
         onFractionProgress: (Float) -> Unit
     ) = withArchiveFile(uri) { file ->
+        var rollbackOutput: ArchiveOutput? = null
         runCatching {
             val sevenZ = if (settings.password.isBlank()) {
                 SevenZFile(file)
@@ -919,6 +925,7 @@ class MultiArchiveEngine(private val context: Context) {
                 ensureLocalFreeSpace(context, settings.targetTreeUri, declaredBytes)
                 onFractionProgress(0f)
                 val output = outputWriter(settings)
+                rollbackOutput = output
                 val destination = prepareDestination(output, settings, archiveName)
                 var writtenBytes = 0L
                 entries.forEachIndexed { index, entry ->
@@ -946,7 +953,10 @@ class MultiArchiveEngine(private val context: Context) {
                 }
                 onFractionProgress(1f)
             }
-        }.getOrElse { throw ArchiveException("7Z 解压失败：${it.archiveMessage()}", it) }
+        }.getOrElse {
+            rollbackOutput?.rollback()
+            throw ArchiveException("7Z 解压失败：${it.archiveMessage()}", it)
+        }
     }
 
     private suspend fun listRar(uri: Uri, password: String): List<ArchiveItem> =
@@ -1022,6 +1032,7 @@ class MultiArchiveEngine(private val context: Context) {
         onProgress: (Int, Int) -> Unit,
         onFractionProgress: (Float) -> Unit
     ) = withArchiveFile(uri) { file ->
+        var rollbackOutput: ArchiveOutput? = null
         runCatching {
             val headers = rarHeaders(file, settings.password)
             if (headers.size > MAX_ENTRIES) {
@@ -1041,6 +1052,7 @@ class MultiArchiveEngine(private val context: Context) {
             }
             archive.use { rar ->
                 val output = outputWriter(settings)
+                rollbackOutput = output
                 val destination = prepareDestination(output, settings, archiveName)
                 var writtenBytes = 0L
                 var processed = 0
@@ -1075,7 +1087,10 @@ class MultiArchiveEngine(private val context: Context) {
                 }
                 onFractionProgress(1f)
             }
-        }.getOrElse { throw ArchiveException("RAR 解压失败：${it.archiveMessage()}", it) }
+        }.getOrElse {
+            rollbackOutput?.rollback()
+            throw ArchiveException("RAR 解压失败：${it.archiveMessage()}", it)
+        }
     }
 
     private suspend fun listStream(
@@ -1142,6 +1157,7 @@ class MultiArchiveEngine(private val context: Context) {
         onFractionProgress(0f)
         openStreamArchive(uri, lowerName, onFractionProgress, settings.encoding).use { archive ->
             val output = outputWriter(settings)
+            try {
             val destination = prepareDestination(output, settings, archiveName)
             var entry: ArchiveEntry? = archive.nextEntry
             var processed = 0
@@ -1174,6 +1190,10 @@ class MultiArchiveEngine(private val context: Context) {
                 entry = archive.nextEntry
             }
             onFractionProgress(1f)
+            } catch (t: Throwable) {
+                output.rollback()
+                throw t
+            }
         }
     }
 
@@ -1209,6 +1229,7 @@ class MultiArchiveEngine(private val context: Context) {
         }
         compressed.use { stream ->
             val output = outputWriter(settings)
+            try {
             val destination = prepareDestination(output, settings, archiveName)
             val name = sanitizePath(singleOutputName(archiveName, lowerName)).lastOrNull()
                 ?: throw ArchiveException("无法确定输出文件名")
@@ -1224,6 +1245,10 @@ class MultiArchiveEngine(private val context: Context) {
             } ?: throw ArchiveException("无法写入解压文件")
             settings.onFileCreated(fileUri)
             onFractionProgress(1f)
+            } catch (t: Throwable) {
+                output.rollback()
+                throw t
+            }
         }
     }
 
@@ -1463,6 +1488,28 @@ class MultiArchiveEngine(private val context: Context) {
         private val resolver: ContentResolver,
         private val treeUri: Uri
     ) {
+        // 记录本次解压新建的文件/目录；失败时回滚，避免留下半截文件。
+        private val created = mutableListOf<Uri>()
+
+        private fun track(uri: Uri?): Uri? {
+            if (uri != null) created += uri
+            return uri
+        }
+
+        fun rollback() {
+            created.asReversed().forEach { uri ->
+                runCatching {
+                    val file = uri.localFile()
+                    if (file != null) {
+                        if (file.isDirectory) file.deleteRecursively() else file.delete()
+                    } else {
+                        DocumentsContract.deleteDocument(resolver, uri)
+                    }
+                }
+            }
+            created.clear()
+        }
+
         private val directoryCache = mutableMapOf<String, Uri?>()
 
         fun ensureDirectory(parentUri: Uri, name: String): Uri? {
@@ -1475,10 +1522,10 @@ class MultiArchiveEngine(private val context: Context) {
                 if (directory.isDirectory) {
                     Uri.fromFile(directory)
                 } else {
-                    if (directory.mkdirs()) Uri.fromFile(directory) else null
+                    if (directory.mkdirs()) track(Uri.fromFile(directory)) else null
                 }
             } ?: findChild(parentUri, name)
-                ?: createDocument(parentUri, name, Document.MIME_TYPE_DIR)
+                ?: track(createDocument(parentUri, name, Document.MIME_TYPE_DIR))
             directoryCache[cacheKey] = directory
             return directory
         }
@@ -1548,7 +1595,7 @@ class MultiArchiveEngine(private val context: Context) {
                 parentUri.localFile()?.let { parent ->
                     val target = File(parent, candidate)
                     if (!target.exists() && target.createNewFile()) {
-                        return Uri.fromFile(target)
+                        return track(Uri.fromFile(target))
                     }
                     return@let
                 }
@@ -1561,18 +1608,20 @@ class MultiArchiveEngine(private val context: Context) {
         }
 
         private fun createDocument(parentUri: Uri, name: String, mime: String): Uri? =
-            parentUri.localFile()?.let { parent ->
-                val target = File(parent, name)
-                if (target.exists() || target.createNewFile()) {
-                    Uri.fromFile(target)
-                } else {
-                    null
+            track(
+                parentUri.localFile()?.let { parent ->
+                    val target = File(parent, name)
+                    when {
+                        target.exists() -> return Uri.fromFile(target)
+                        target.createNewFile() -> Uri.fromFile(target)
+                        else -> null
+                    }
+                } ?: run {
+                    runCatching {
+                        DocumentsContract.createDocument(resolver, parentUri, mime, name)
+                    }.getOrNull()
                 }
-            } ?: run {
-            runCatching {
-                DocumentsContract.createDocument(resolver, parentUri, mime, name)
-            }.getOrNull()
-            }
+            )
 
         private fun findChild(parentUri: Uri, name: String): Uri? {
             parentUri.localFile()?.let { parent ->

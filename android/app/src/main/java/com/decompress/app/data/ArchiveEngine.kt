@@ -395,6 +395,7 @@ class ZipArchiveEngine(private val context: Context) {
                     )
                     val destination = createDestination(output, archiveName, effective)
 
+                    try {
                     var entry: ZipEntry? = zip.nextEntry
                     var processed = 0
                     var declaredBytes = 0L
@@ -458,6 +459,10 @@ class ZipArchiveEngine(private val context: Context) {
                         entry = zip.nextEntry
                     }
                     onFractionProgress(1f)
+                    } catch (t: Throwable) {
+                        output.rollback()
+                        throw t
+                    }
                 }
             }
         }
@@ -602,6 +607,7 @@ class ZipArchiveEngine(private val context: Context) {
                 } ?: throw ArchiveException("无法读取压缩包")
             }
 
+            var rollbackOutput: SafOutput? = null
             runCatching {
                 val archive = Zip4jFile(archiveFile, settings.password.toCharArray())
                 val headers = archive.fileHeaders
@@ -619,7 +625,7 @@ class ZipArchiveEngine(private val context: Context) {
                     resolver = resolver,
                     treeUri = settings.targetTreeUri,
                     rootDocumentUri = settings.targetParentUri
-                )
+                ).also { rollbackOutput = it }
                 val destination = createDestination(output, archiveName, settings)
                 var writtenBytes = 0L
                 headers.forEachIndexed { index, header ->
@@ -644,6 +650,7 @@ class ZipArchiveEngine(private val context: Context) {
                 }
                 onFractionProgress(1f)
             }.getOrElse { error ->
+                rollbackOutput?.rollback()
                 if (error is ArchiveException) throw error
                 throw ArchiveException(
                     "ZIP 解压失败：${error.archiveMessage()}",
@@ -737,21 +744,45 @@ class ZipArchiveEngine(private val context: Context) {
         private val treeUri: Uri,
         private val rootDocumentUri: Uri
     ) {
+        // 记录本次解压真正新建的文件/目录；失败时回滚，避免留下半截文件。
+        private val created = mutableListOf<Uri>()
+
+        private fun track(uri: Uri?): Uri? {
+            if (uri != null) created += uri
+            return uri
+        }
+
+        fun rollback() {
+            created.asReversed().forEach { uri ->
+                runCatching {
+                    val file = uri.localFile()
+                    if (file != null) {
+                        if (file.isDirectory) file.deleteRecursively() else file.delete()
+                    } else {
+                        DocumentsContract.deleteDocument(resolver, uri)
+                    }
+                }
+            }
+            created.clear()
+        }
+
         fun ensureDirectory(parentUri: Uri, name: String): Uri? {
             parentUri.localFile()?.let { parent ->
                 val directory = File(parent, name)
                 if (directory.isDirectory) return Uri.fromFile(directory)
-                return if (directory.mkdirs()) Uri.fromFile(directory) else null
+                return if (directory.mkdirs()) track(Uri.fromFile(directory)) else null
             }
             findChild(parentUri, name)?.let { return it }
-            return runCatching {
-                DocumentsContract.createDocument(
-                    resolver,
-                    parentUri,
-                    Document.MIME_TYPE_DIR,
-                    name
-                )
-            }.getOrNull()
+            return track(
+                runCatching {
+                    DocumentsContract.createDocument(
+                        resolver,
+                        parentUri,
+                        Document.MIME_TYPE_DIR,
+                        name
+                    )
+                }.getOrNull()
+            )
         }
 
         fun createFile(
@@ -804,7 +835,7 @@ class ZipArchiveEngine(private val context: Context) {
                 parentUri.localFile()?.let { parent ->
                     val target = File(parent, candidate)
                     if (!target.exists() && target.createNewFile()) {
-                        return Uri.fromFile(target)
+                        return track(Uri.fromFile(target))
                     }
                     return@let
                 }
@@ -817,23 +848,25 @@ class ZipArchiveEngine(private val context: Context) {
         }
 
         private fun createDocument(parentUri: Uri, name: String): Uri? =
-            parentUri.localFile()?.let { parent ->
-                val target = File(parent, name)
-                if (target.exists() || target.createNewFile()) {
-                    Uri.fromFile(target)
-                } else {
-                    null
+            track(
+                parentUri.localFile()?.let { parent ->
+                    val target = File(parent, name)
+                    when {
+                        target.exists() -> return Uri.fromFile(target)
+                        target.createNewFile() -> Uri.fromFile(target)
+                        else -> null
+                    }
+                } ?: run {
+                    runCatching {
+                        DocumentsContract.createDocument(
+                            resolver,
+                            parentUri,
+                            "application/octet-stream",
+                            name
+                        )
+                    }.getOrNull()
                 }
-            } ?: run {
-            runCatching {
-                DocumentsContract.createDocument(
-                    resolver,
-                    parentUri,
-                    "application/octet-stream",
-                    name
-                )
-            }.getOrNull()
-            }
+            )
 
         private fun findChild(parentUri: Uri, name: String): Uri? {
             parentUri.localFile()?.let { parent ->
