@@ -1,6 +1,7 @@
 package com.decompress.app.ui
 
 import com.decompress.app.data.AppAccent
+import com.decompress.app.data.AppLanguage
 import com.decompress.app.data.BrowserSortMode
 import com.decompress.app.data.ConflictPolicy
 import com.decompress.app.data.DefaultDestinationMode
@@ -19,6 +20,12 @@ internal fun ThemeMode.label(): String = when (this) {
     ThemeMode.SYSTEM -> "跟随系统"
     ThemeMode.LIGHT -> "浅色"
     ThemeMode.DARK -> "深色"
+}
+
+internal fun AppLanguage.label(): String = when (this) {
+    AppLanguage.SYSTEM -> "跟随系统"
+    AppLanguage.CHINESE -> "中文"
+    AppLanguage.ENGLISH -> "English"
 }
 
 internal fun DefaultDestinationMode.label(): String = when (this) {

@@ -3,12 +3,15 @@
 package com.decompress.app.ui
 
 import android.Manifest
+import android.app.Activity
+import android.app.LocaleManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.os.LocaleList
 import android.os.PowerManager
 import android.provider.DocumentsContract
 import android.provider.Settings
@@ -92,6 +95,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.work.WorkManager
+import com.decompress.app.data.AppLanguage
 import com.decompress.app.data.AppSettingsRepository
 import com.decompress.app.data.BrowserSortMode
 import com.decompress.app.data.ConflictPolicy
@@ -314,6 +318,31 @@ fun SettingsScreen(
                             repository.update {
                                 it.copy(themeMode = ThemeMode.entries[index])
                             }
+                        }
+                    )
+                    SettingsDivider()
+                    SettingsChoice(
+                        title = "语言",
+                        options = AppLanguage.entries.map { it.label() },
+                        selectedIndex = AppLanguage.entries.indexOf(settings.language),
+                        onSelected = { index ->
+                            val language = AppLanguage.entries[index]
+                            repository.update { current ->
+                                current.copy(language = language)
+                            }
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                val localeManager = context.getSystemService(LocaleManager::class.java)
+                                if (localeManager != null) {
+                                    localeManager.applicationLocales = when (language) {
+                                        AppLanguage.SYSTEM -> LocaleList.getEmptyLocaleList()
+                                        AppLanguage.CHINESE ->
+                                            LocaleList.forLanguageTags("zh-CN")
+                                        AppLanguage.ENGLISH ->
+                                            LocaleList.forLanguageTags("en")
+                                    }
+                                }
+                            }
+                            (context as? Activity)?.recreate()
                         }
                     )
                     SettingsDivider()

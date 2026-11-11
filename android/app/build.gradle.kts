@@ -53,8 +53,8 @@ android {
         applicationId = "com.decompress.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 153
-        versionName = "1.30.0"
+        versionCode = 154
+        versionName = "1.31.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -69,6 +69,10 @@ android {
                 listOf("arm64-v8a", "armeabi-v7a")
             }
         }
+
+        // I18N-11：默认资源为英文、中文在 values-zh；未翻译语言自动落到英文。
+        // 伪语言 en-XA 只在 debug 构建里生成（见 buildTypes.debug），
+        // 用来在真机上找英文变长后的截断问题。
     }
 
     signingConfigs {
@@ -88,6 +92,8 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            // 生成 en-XA 伪语言资源，配合系统「按应用设置语言」检查英文截断。
+            isPseudoLocalesEnabled = true
         }
         release {
             isMinifyEnabled = true
@@ -126,6 +132,21 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+
+    // I18N-11：翻译一致性门禁。缺翻译 / 多余翻译直接判定失败，
+    // 防止新增文案时只改默认语言而漏掉其他语言。
+    lint {
+        error += "MissingTranslation"
+        error += "ExtraTranslation"
+
+        // 过渡计划：当前仍有 900+ 处硬编码文案（尚未走 P2 抽取），
+        // 因此先以 warning 暴露、暂不阻塞 CI；等 P2 把硬编码文案全部抽到
+        // strings.xml 之后，再把这里改成 error += "HardcodedText"，
+        // 届时三项 i18n 检查统一为 error。
+        warning += "HardcodedText"
+
+        // 不使用 baseline：不走"存量问题一次性豁免"的路线，避免新问题被 baseline 吸收。
     }
 }
 

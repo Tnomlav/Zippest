@@ -1,21 +1,42 @@
 package com.decompress.app
 
 import android.content.ContentResolver
+import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
+import android.os.LocaleList
 import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.IntentCompat
+import com.decompress.app.data.AppLanguage
+import com.decompress.app.data.AppSettingsRepository
 import com.decompress.app.service.TaskNavigation
 import com.decompress.app.ui.ZippestApp
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     private val incomingArchive = mutableStateOf<IncomingArchive?>(null)
     private val openLocation = mutableStateOf<OpenLocationRequest?>(null)
+
+    override fun attachBaseContext(newBase: Context) {
+        val language = AppSettingsRepository.read(newBase).language
+        if (language == AppLanguage.SYSTEM) {
+            super.attachBaseContext(newBase)
+            return
+        }
+        val locale = Locale.forLanguageTag(
+            if (language == AppLanguage.CHINESE) "zh-CN" else "en"
+        )
+        val config = Configuration(newBase.resources.configuration)
+        config.setLocale(locale)
+        config.setLocales(LocaleList(locale))
+        super.attachBaseContext(newBase.createConfigurationContext(config))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

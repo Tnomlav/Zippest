@@ -12,6 +12,12 @@ enum class ThemeMode {
     DARK
 }
 
+enum class AppLanguage {
+    SYSTEM,
+    CHINESE,
+    ENGLISH
+}
+
 enum class DefaultDestinationMode {
     NEW_FOLDER,
     CURRENT_FOLDER,
@@ -72,6 +78,7 @@ enum class RestoreConflictPolicy {
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val accentColor: AppAccent = AppAccent.GREEN,
+    val language: AppLanguage = AppLanguage.SYSTEM,
     val extractOrder: List<ExtractSection> = ExtractSection.entries.toList(),
     val hiddenExtractSections: Set<ExtractSection> = emptySet(),
     val showHiddenFiles: Boolean = false,
@@ -119,6 +126,7 @@ class AppSettingsRepository(context: Context) {
         preferences.edit {
             putString(KEY_THEME, updated.themeMode.name)
             putString(KEY_ACCENT, updated.accentColor.name)
+            putString(KEY_LANGUAGE, updated.language.name)
             putString(KEY_EXTRACT_ORDER, updated.extractOrder.joinToString(",") { it.name })
             putString(
                 KEY_EXTRACT_HIDDEN,
@@ -152,6 +160,7 @@ class AppSettingsRepository(context: Context) {
         private const val PREFERENCES = "zippest-settings"
         private const val KEY_THEME = "theme"
         private const val KEY_ACCENT = "accent"
+        private const val KEY_LANGUAGE = "language"
         private const val KEY_EXTRACT_ORDER = "extract_order"
         private const val KEY_EXTRACT_HIDDEN = "extract_hidden"
         private const val KEY_SHOW_HIDDEN = "show_hidden"
@@ -185,6 +194,7 @@ class AppSettingsRepository(context: Context) {
         ): AppSettings = AppSettings(
             themeMode = preferences.enumValue(KEY_THEME, ThemeMode.SYSTEM),
             accentColor = preferences.enumValue(KEY_ACCENT, AppAccent.GREEN),
+            language = preferences.enumValue(KEY_LANGUAGE, AppLanguage.SYSTEM),
             extractOrder = preferences.getString(KEY_EXTRACT_ORDER, null)
                 ?.split(',')
                 ?.mapNotNull { name -> ExtractSection.entries.firstOrNull { it.name == name } }
