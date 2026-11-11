@@ -12,6 +12,7 @@ import androidx.compose.material.icons.outlined.Sort
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Unarchive
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -42,6 +43,7 @@ internal fun FileBrowserMenus(
     onOpenSettings: () -> Unit,
     onCompressSelected: () -> Unit,
     onOpenWithFile: (BrowserEntry) -> Unit,
+    onOpenArchive: (BrowserEntry) -> Unit,
     onNotify: (String) -> Unit,
     onClosePanels: () -> Unit,
     onDismissDialogs: () -> Unit
@@ -147,6 +149,18 @@ internal fun FileBrowserMenus(
             ),
             onDismissRequest = { state.selectionMenuExpanded = false }
         ) {
+            selectedEntries.singleOrNull()?.takeIf { it.isArchive && !it.isDirectory }
+                ?.let { candidate ->
+                    ZippestMenuItem(
+                        text = { Text("预览") },
+                        leadingIcon = { Icon(Icons.Outlined.Visibility, null) },
+                        onClick = {
+                            state.selectionMenuExpanded = false
+                            controller.clearSelection()
+                            onOpenArchive(candidate)
+                        }
+                    )
+                }
             ZippestMenuItem(
                 text = { Text("压缩") },
                 leadingIcon = { Icon(Icons.Outlined.Unarchive, null) },

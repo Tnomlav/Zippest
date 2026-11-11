@@ -1731,7 +1731,7 @@ fun ExtractSheet(
         if (archive != null) {
             AlertDialog(
                 onDismissRequest = { passwordDialogIndex = null },
-                title = { Text("输入第 ${index + 1}/${archives.size} 个密码") },
+                title = { Text("「" + archive.name + "」的密码") },
                 text = {
                     Column {
                         Text(
@@ -1743,7 +1743,8 @@ fun ExtractSheet(
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "压缩包没有密码时可留空。",
+                            "第 " + (index + 1) + "/" + archives.size +
+                                " 个 · 压缩包没有密码时可留空。",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

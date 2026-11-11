@@ -34,6 +34,9 @@ import com.decompress.app.data.TaskHistoryCodec
 import com.decompress.app.data.TaskHistoryEntry
 import com.decompress.app.data.TaskHistoryStore
 import com.decompress.app.data.MultiArchiveEngine
+import com.decompress.app.data.ArchiveException
+import com.decompress.app.data.PendingPasswordRequest
+import com.decompress.app.data.PendingPasswordStore
 import kotlinx.coroutines.CancellationException
 import org.json.JSONArray
 import java.security.KeyStore
@@ -452,6 +455,7 @@ class ExtractionWorker(
         val requestedEntries = task.entryPaths.toSet()
         var currentEntry = ""
         var entryStartedAt = SystemClock.elapsedRealtime()
+        val passwordFailures = mutableListOf<Int>()
         task.archiveUris.forEachIndexed { index, archiveUri ->
             if (!engine.supports(task.archiveNames[index])) {
                 throw IllegalArgumentException("暂不支持 ${task.archiveNames[index]}")
@@ -460,6 +464,7 @@ class ExtractionWorker(
                 (index * 100f / total).toInt(),
                 "正在解压 ${index + 1}/$total · ${task.archiveNames[index]}"
             )
+            try {
             engine.extract(
                 archiveUri = archiveUri,
                 archiveName = task.archiveNames[index],
@@ -511,6 +516,39 @@ class ExtractionWorker(
                 archiveTreeUri = task.parentTreeUri,
                 archiveParentUri = task.parentUri
             )
+            } catch (error: Exception) {
+                if (error.isPasswordFailure()) {
+                    // 这个包的密码和前面不同：先跳过，攒起来回前台补填后单独重试。
+                    passwordFailures += index
+                    return@forEachIndexed
+                }
+                throw error
+            }
+        }
+        if (passwordFailures.isNotEmpty()) {
+            PendingPasswordStore.add(
+                applicationContext,
+                passwordFailures.map { index ->
+                    val uri = task.archiveUris[index]
+                    PendingPasswordRequest.create(
+                        archiveUri = uri.toString(),
+                        archiveName = task.archiveNames[index],
+                        parentUri = task.parentUri?.toString(),
+                        parentTreeUri = task.parentTreeUri?.toString(),
+                        parentName = task.parentName,
+                        parentPath = task.parentPath,
+                        mode = task.mode,
+                        customTreeUri = task.customTreeUri?.toString(),
+                        customRootUri = task.customRootUri?.toString(),
+                        createFolder = task.createFolder,
+                        conflictPolicy = task.conflictPolicy,
+                        encoding = task.encoding,
+                        entryPaths = task.entryPaths
+                    )
+                }
+            )
+            val names = passwordFailures.joinToString("、") { task.archiveNames[it] }
+            throw ArchiveException("有 ${passwordFailures.size} 个压缩包需要单独输入密码：$names")
         }
         scanCreatedFiles(createdFiles)
         val created = destinations.lastOrNull()
@@ -817,4 +855,10 @@ private object ExtractionCheckpointStore {
 
     private fun preferences(context: Context) =
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+}
+
+
+private fun Throwable.isPasswordFailure(): Boolean {
+    val text = (message ?: "").lowercase()
+    return "密码" in text || "password" in text || "encrypted" in text
 }

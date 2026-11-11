@@ -793,6 +793,7 @@ internal fun FileBrowserScreen(
                 onOpenSettings = onOpenSettings,
                 onCompressSelected = { compressSelected() },
                 onOpenWithFile = { entry -> openWithFile(entry) },
+                onOpenArchive = { entry -> onOpenArchive(entry) },
                 onNotify = { message -> notify(message) },
                 onClosePanels = { closePanelPopups() },
                 onDismissDialogs = { dismissFileDialogs() }

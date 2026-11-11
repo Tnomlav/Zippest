@@ -121,6 +121,9 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -161,6 +164,8 @@ import com.decompress.app.IncomingArchive
 import com.decompress.app.OpenLocationRequest
 import com.decompress.app.MainActivity
 import com.decompress.app.data.AppSettingsRepository
+import com.decompress.app.data.PendingPasswordRequest
+import com.decompress.app.data.PendingPasswordStore
 import com.decompress.app.data.BrowserSortMode
 import com.decompress.app.data.BrowserEntry
 import com.decompress.app.data.FileBrowserController
@@ -176,6 +181,7 @@ import com.decompress.app.data.TaskHistoryCodec
 import com.decompress.app.data.TaskHistoryEntry
 import com.decompress.app.data.TaskHistoryStore
 import com.decompress.app.service.ExtractionScheduler
+import com.decompress.app.service.ExtractionTask
 import com.decompress.app.service.ExtractionTaskRegistry
 import com.decompress.app.service.CompressionScheduler
 import com.decompress.app.service.ArchiveTaskControl
@@ -235,6 +241,8 @@ fun ZippestApp(
     var restored by remember { mutableStateOf(false) }
     var archiveTarget by remember { mutableStateOf<ArchiveTarget?>(null) }
     var extractTarget by remember { mutableStateOf<ExtractTarget?>(null) }
+    var pendingPasswordRequest by remember { mutableStateOf<PendingPasswordRequest?>(null) }
+    var pendingPasswordInput by remember { mutableStateOf("") }
     var showSettings by remember { mutableStateOf(false) }
     var archiveTasks by remember { mutableStateOf<List<WorkInfo>>(emptyList()) }
     var showGlobalTaskQueue by remember { mutableStateOf(false) }
@@ -304,6 +312,34 @@ fun ZippestApp(
         )
     }
 
+    LaunchedEffect(Unit) {
+        pendingPasswordRequest = PendingPasswordStore.all(context).firstOrNull()
+    }
+
+    fun enqueuePendingPassword(request: PendingPasswordRequest, password: String) {
+        runCatching {
+            ExtractionScheduler.enqueue(
+                context,
+                ExtractionTask(
+                    archiveUris = listOf(Uri.parse(request.archiveUri)),
+                    archiveNames = listOf(request.archiveName),
+                    parentUri = request.parentUri?.let(Uri::parse),
+                    parentTreeUri = request.parentTreeUri?.let(Uri::parse),
+                    mode = request.mode,
+                    customTreeUri = request.customTreeUri?.let(Uri::parse),
+                    customRootUri = request.customRootUri?.let(Uri::parse),
+                    createFolder = request.createFolder,
+                    conflictPolicy = request.conflictPolicy,
+                    encoding = request.encoding,
+                    passwords = listOf(password),
+                    parentPath = request.parentPath,
+                    parentName = request.parentName,
+                    entryPaths = request.entryPaths
+                )
+            )
+        }
+    }
+
     DisposableEffect(controller) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
@@ -354,6 +390,11 @@ fun ZippestApp(
                     }
                 ).orEmpty()
                 archiveTarget = null
+                if (intent?.action == ExtractionScheduler.ACTION_EXTRACTION_FINISHED) {
+                    context?.let { ctx ->
+                        pendingPasswordRequest = PendingPasswordStore.all(ctx).firstOrNull()
+                    }
+                }
                 scope.launch {
                     controller.refresh()
                     val result = snackbarHostState.showSnackbar(
@@ -459,6 +500,64 @@ fun ZippestApp(
                             "关闭",
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                }
+            )
+        }
+        pendingPasswordRequest?.let { request ->
+            AlertDialog(
+                onDismissRequest = { pendingPasswordRequest = null },
+                title = { Text("需要密码") },
+                text = {
+                    Column {
+                        Text(
+                            request.archiveName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "这个压缩包的密码和前面几个不同，单独输入后继续解压。",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        OutlinedTextField(
+                            value = pendingPasswordInput,
+                            onValueChange = { pendingPasswordInput = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text("密码") },
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Text,
+                                capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.None
+                            )
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        enabled = pendingPasswordInput.isNotEmpty(),
+                        onClick = {
+                            enqueuePendingPassword(request, pendingPasswordInput)
+                            PendingPasswordStore.remove(context, request.id)
+                            pendingPasswordInput = ""
+                            pendingPasswordRequest = PendingPasswordStore.all(context).firstOrNull()
+                        }
+                    ) {
+                        Text("开始解压")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        // 只收起，不丢请求：下次进应用或任务结束时还会再问。
+                        pendingPasswordRequest = null
+                        pendingPasswordInput = ""
+                    }) {
+                        Text("稍后再说")
                     }
                 }
             )
