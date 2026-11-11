@@ -35,7 +35,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <intent-filter android:label="用 Zippest 打开">
+            <intent-filter android:label="@string/open_with_zippest">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -56,7 +56,7 @@
                 <data android:mimeType="application/x-cpio" />
                 <data android:mimeType="application/java-archive" />
             </intent-filter>
-            <intent-filter android:label="用 Zippest 打开">
+            <intent-filter android:label="@string/open_with_zippest">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -82,7 +82,7 @@
                 <data android:pathPattern=".*\\.cpio" />
                 <data android:pathPattern=".*\\.jar" />
             </intent-filter>
-            <intent-filter android:label="用 Zippest 打开">
+            <intent-filter android:label="@string/open_with_zippest">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/zip" />

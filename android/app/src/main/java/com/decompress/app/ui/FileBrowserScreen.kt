@@ -53,6 +53,7 @@ import androidx.core.content.ContextCompat
 import com.decompress.app.data.AppSettingsRepository
 import com.decompress.app.data.BrowserSortMode
 import com.decompress.app.data.BrowserEntry
+import com.decompress.app.data.NameText
 import com.decompress.app.data.collapseSplitSelections
 import com.decompress.app.data.FileBrowserController
 import com.decompress.app.data.QuickLocationRepository
@@ -301,17 +302,26 @@ internal fun FileBrowserScreen(
     }
 
     val appSettings = settingsRepository.settings
+    val nameCollator = NameText.collator()
     val sortComparator = when (appSettings.defaultSortMode) {
-        BrowserSortMode.NAME -> compareBy<BrowserEntry> { it.name.lowercase() }
-        BrowserSortMode.SIZE -> compareBy { it.size }
-        BrowserSortMode.DATE -> compareBy { it.lastModified }
+        BrowserSortMode.NAME -> Comparator<BrowserEntry> { a, b ->
+            nameCollator.compare(a.name, b.name)
+        }
+        BrowserSortMode.SIZE -> compareBy<BrowserEntry> { it.size }
+        BrowserSortMode.DATE -> compareBy<BrowserEntry> { it.lastModified }
         BrowserSortMode.TYPE -> compareBy<BrowserEntry> {
-            it.extension.ifBlank { "\uFFFF" }
-        }.thenBy { it.name.lowercase() }
+            it.extension.ifBlank { "￿" }
+        }.then(Comparator { a, b -> nameCollator.compare(a.name, b.name) })
     }
     val visibleEntries = controller.entries
         .filter { appSettings.showHiddenFiles || !it.name.startsWith(".") }
-        .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
+        .filter {
+            if (query.isBlank()) {
+                true
+            } else {
+                NameText.foldForSearch(it.name).contains(NameText.foldForSearch(query))
+            }
+        }
         .sortedWith(
             compareByDescending<BrowserEntry> { it.isDirectory }.then(
                 if (appSettings.sortAscending) sortComparator else sortComparator.reversed()

@@ -103,10 +103,7 @@ class SafFileRepository(private val context: Context) {
             }
         }
 
-        result.sortedWith(
-            compareByDescending<BrowserEntry> { it.isDirectory }
-                .thenBy { it.name.lowercase() }
-        )
+        result.sortedWith(NameText.comparator())
     }
 
     suspend fun createDirectory(parentUri: Uri, name: String): Boolean =
@@ -135,7 +132,7 @@ class SafFileRepository(private val context: Context) {
                     documentUri,
                     name
                 ) ?: return@runCatching null
-                if (queryDisplayName(renamedUri) != name) {
+                if (!NameText.sameName(queryDisplayName(renamedUri).orEmpty(), name)) {
                     return@runCatching null
                 }
                 if (
@@ -163,10 +160,7 @@ class SafFileRepository(private val context: Context) {
             directory.listFiles()
                 .orEmpty()
                 .map { file -> directEntry(file) }
-                .sortedWith(
-                    compareByDescending<BrowserEntry> { it.isDirectory }
-                        .thenBy { it.name.lowercase() }
-                )
+                .sortedWith(NameText.comparator())
         }
 
     fun directEntry(file: File): BrowserEntry {

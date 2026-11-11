@@ -126,6 +126,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
+import com.decompress.app.data.ArchiveErrorKind
+import com.decompress.app.data.ArchiveException
 import com.decompress.app.data.ArchiveItem
 import com.decompress.app.ui.theme.ZippestRadius
 import com.decompress.app.ui.theme.ZippestSpacing
@@ -137,6 +139,7 @@ import com.decompress.app.data.DefaultDestinationMode
 import com.decompress.app.data.DestinationMode
 import com.decompress.app.data.FileNameEncoding
 import com.decompress.app.data.MultiArchiveEngine
+import com.decompress.app.data.NameText
 import com.decompress.app.service.ExtractionScheduler
 import com.decompress.app.service.ExtractionTask
 import kotlinx.coroutines.Dispatchers
@@ -317,7 +320,8 @@ fun ArchiveScreen(
         if (keyword.isBlank()) {
             emptyList()
         } else {
-            items.filter { it.path.contains(keyword, ignoreCase = true) }
+            val folded = NameText.foldForSearch(keyword)
+            items.filter { NameText.foldForSearch(it.path).contains(folded) }
                 .take(500)
                 .map { item ->
                     ArchiveNode(
@@ -573,7 +577,7 @@ fun ArchiveScreen(
                         archiveName = target.archive.name,
                         sizeText = Formatter.formatShortFileSize(context, target.archive.size),
                         entryCount = items.size,
-                        encodingLabel = encoding.label,
+                        encodingLabel = encoding.label(),
                         entry = if (selectedPaths.size == 1) {
                             items.firstOrNull { it.path in selectedPaths }
                         } else {
@@ -653,7 +657,7 @@ fun ArchiveScreen(
                                 }
                             )
                             Text(
-                                option.label,
+                                option.label(),
                                 modifier = Modifier.padding(start = 8.dp)
                             )
                         }
@@ -906,7 +910,7 @@ private fun ArchiveRow(
                 node.name,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                maxLines = 1,
+                maxLines = if (NameText.hasRtlScript(node.name)) 2 else 1,
                 overflow = TextOverflow.Ellipsis
             )
             if (!node.isDirectory) {
@@ -1485,7 +1489,7 @@ fun ExtractSheet(
                         FilterChip(
                             selected = conflictPolicy == policy,
                             onClick = { conflictPolicy = policy },
-                            label = { Text(policy.label) }
+                            label = { Text(policy.label()) }
                         )
                     }
                 }
@@ -1505,7 +1509,7 @@ fun ExtractSheet(
                         FilterChip(
                             selected = encoding == item,
                             onClick = { encoding = item },
-                            label = { Text(item.label) }
+                            label = { Text(item.label()) }
                         )
                     }
                 }
@@ -1521,8 +1525,12 @@ fun ExtractSheet(
                         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
                     ) {
                         Text(
-                            "压缩包约 %.1f GB，解压时建议保持应用在前台；系统会限制后台运行时长，超时后任务可能被暂停。"
-                                .format(totalBytes / 1073741824.0),
+                            "压缩包约 " +
+                                android.text.format.Formatter.formatShortFileSize(
+                                    context,
+                                    totalBytes
+                                ) +
+                                "，解压时建议保持应用在前台；系统会限制后台运行时长，超时后任务可能被暂停。",
                             modifier = Modifier.padding(12.dp),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -1935,6 +1943,7 @@ private fun ArchivePathEntry(label: String, selected: Boolean, onClick: () -> Un
 }
 
 private fun Throwable.isPasswordProblem(): Boolean {
+    if (this is ArchiveException && kind == ArchiveErrorKind.PASSWORD) return true
     val text = (message ?: "").lowercase()
-    return "密码" in text || "password" in text || "encrypted" in text
+    return "password" in text || "encrypted" in text
 }

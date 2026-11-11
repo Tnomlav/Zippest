@@ -678,7 +678,7 @@ internal fun TaskQueueRow(
                 Text(
                     buildString {
                         percentPerSecond?.let {
-                            append("速度 ${"%.1f".format(it)}%/秒")
+                            append("速度 " + String.format(java.util.Locale.ROOT, "%.1f", it) + "%/秒")
                         }
                         etaSeconds?.let {
                             if (isNotEmpty()) append(" · ")

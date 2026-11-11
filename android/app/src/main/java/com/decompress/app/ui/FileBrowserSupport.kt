@@ -201,7 +201,7 @@ internal fun batchNameFor(entry: BrowserEntry, index: Int, pattern: String): Str
             "n", "num" -> index.toString()
             "date" -> java.text.SimpleDateFormat("yyyyMMdd", locale).format(now)
             "time" -> java.text.SimpleDateFormat("HHmmss", locale).format(now)
-            else -> "%0${token.length}d".format(index)
+            else -> String.format(java.util.Locale.ROOT, "%0${token.length}d", index)
         }
     }
     return if (usedExtensionToken || extension.isEmpty()) result else result + extension

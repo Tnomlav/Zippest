@@ -6,20 +6,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.edit
 
-enum class ThemeMode(val label: String) {
-    SYSTEM("跟随系统"),
-    LIGHT("浅色"),
-    DARK("深色")
+enum class ThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK
 }
 
-enum class DefaultDestinationMode(val label: String) {
-    NEW_FOLDER("同名文件夹"),
-    CURRENT_FOLDER("当前文件夹"),
-    CUSTOM("固定位置")
+enum class DefaultDestinationMode {
+    NEW_FOLDER,
+    CURRENT_FOLDER,
+    CUSTOM
 }
 
 enum class AppAccent(
-    val label: String,
     val lightPrimary: Long,
     val lightContainer: Long,
     val lightOnContainer: Long,
@@ -27,47 +26,47 @@ enum class AppAccent(
     val darkContainer: Long,
     val darkOnContainer: Long
 ) {
-    GREEN("森林绿", 0xFF0F6B4F, 0xFFD9F2E7, 0xFF083B2B, 0xFF7FD6B6, 0xFF1D4B3A, 0xFFC8F4E2),
-    BLUE("海蓝", 0xFF1E5FA8, 0xFFDCE9F8, 0xFF0B2E52, 0xFF8FC2FF, 0xFF1B3A5C, 0xFFD6E9FF),
-    PURPLE("紫罗兰", 0xFF6A4C93, 0xFFEDE4F7, 0xFF2F1F4A, 0xFFC9AEF0, 0xFF3A2B52, 0xFFEDE2FF),
-    AMBER("琥珀", 0xFFA8561C, 0xFFF7E5D6, 0xFF4A2208, 0xFFF0B183, 0xFF4A2C16, 0xFFFFE3CC),
-    ROSE("玫瑰", 0xFFA8365A, 0xFFF8DFE6, 0xFF4A0F22, 0xFFF2A6BC, 0xFF4C2030, 0xFFFFDDE7),
-    GRAPHITE("石墨", 0xFF3F4A45, 0xFFE2E7E4, 0xFF1B211E, 0xFFC2CFC8, 0xFF2B342F, 0xFFE6EDE9)
+    GREEN(0xFF0F6B4F, 0xFFD9F2E7, 0xFF083B2B, 0xFF7FD6B6, 0xFF1D4B3A, 0xFFC8F4E2),
+    BLUE(0xFF1E5FA8, 0xFFDCE9F8, 0xFF0B2E52, 0xFF8FC2FF, 0xFF1B3A5C, 0xFFD6E9FF),
+    PURPLE(0xFF6A4C93, 0xFFEDE4F7, 0xFF2F1F4A, 0xFFC9AEF0, 0xFF3A2B52, 0xFFEDE2FF),
+    AMBER(0xFFA8561C, 0xFFF7E5D6, 0xFF4A2208, 0xFFF0B183, 0xFF4A2C16, 0xFFFFE3CC),
+    ROSE(0xFFA8365A, 0xFFF8DFE6, 0xFF4A0F22, 0xFFF2A6BC, 0xFF4C2030, 0xFFFFDDE7),
+    GRAPHITE(0xFF3F4A45, 0xFFE2E7E4, 0xFF1B211E, 0xFFC2CFC8, 0xFF2B342F, 0xFFE6EDE9)
 }
 
-enum class ExtractSection(val label: String, val detail: String) {
-    PASSWORD("密码", "压缩包加密时填写"),
-    NAME("压缩包名称", "解压前改包名和后缀"),
-    DESTINATION("解压位置", "当前文件夹 / 同名文件夹 / 其他位置"),
-    CONFLICT("遇到同名文件", "覆盖 / 跳过 / 自动重命名"),
-    ENCODING("文件名编码", "自动 / GBK / UTF-8")
+enum class ExtractSection {
+    PASSWORD,
+    NAME,
+    DESTINATION,
+    CONFLICT,
+    ENCODING
 }
 
-enum class BrowserSortMode(val label: String) {
-    NAME("名称"),
-    SIZE("大小"),
-    DATE("日期"),
-    TYPE("类型")
+enum class BrowserSortMode {
+    NAME,
+    SIZE,
+    DATE,
+    TYPE
 }
 
-enum class TrashRetention(val label: String, val days: Int) {
-    DAYS_7("7 天", 7),
-    DAYS_30("30 天", 30),
-    DAYS_90("90 天", 90),
-    FOREVER("永久保留", 0)
+enum class TrashRetention(val days: Int) {
+    DAYS_7(7),
+    DAYS_30(30),
+    DAYS_90(90),
+    FOREVER(0)
 }
 
-enum class TrashQuota(val label: String, val bytes: Long) {
-    MB_500("500 MB", 500L * 1024 * 1024),
-    GB_1("1 GB", 1L * 1024 * 1024 * 1024),
-    GB_2("2 GB", 2L * 1024 * 1024 * 1024),
-    GB_5("5 GB", 5L * 1024 * 1024 * 1024),
-    UNLIMITED("不限", 0L)
+enum class TrashQuota(val bytes: Long) {
+    MB_500(500L * 1024 * 1024),
+    GB_1(1L * 1024 * 1024 * 1024),
+    GB_2(2L * 1024 * 1024 * 1024),
+    GB_5(5L * 1024 * 1024 * 1024),
+    UNLIMITED(0L)
 }
 
-enum class RestoreConflictPolicy(val label: String) {
-    RENAME("改名，全部留下"),
-    OVERWRITE("覆盖同名文件")
+enum class RestoreConflictPolicy {
+    RENAME,
+    OVERWRITE
 }
 
 data class AppSettings(

@@ -1462,9 +1462,11 @@ class MultiArchiveEngine(private val context: Context) {
             .filter { it.isNotBlank() && it != "." }
         if (segments.any { it == ".." }) return emptyList()
         return segments.mapNotNull { segment ->
-            val cleaned = segment
-                .replace(Regex("[\\u0000-\\u001F<>:\"|?*]"), "_")
-                .trim()
+            val cleaned = NameText.sanitizeBidi(
+                segment
+                    .replace(Regex("[\\u0000-\\u001F<>:\"|?*]"), "_")
+                    .trim()
+            )
             if (cleaned.isBlank()) return@mapNotNull null
             if (cleaned.toByteArray(Charsets.UTF_8).size <= 255) {
                 cleaned
@@ -1477,7 +1479,10 @@ class MultiArchiveEngine(private val context: Context) {
                 }
                 var base = cleaned.removeSuffix(extension)
                 while (base.toByteArray(Charsets.UTF_8).size > 200 && base.isNotEmpty()) {
-                    base = base.dropLast(1)
+                    base = NameText.truncateByCodePoints(
+                        base,
+                        base.codePointCount(0, base.length) - 1
+                    )
                 }
                 base + "_" + Integer.toHexString(cleaned.hashCode()) + extension
             }
@@ -1539,12 +1544,12 @@ class MultiArchiveEngine(private val context: Context) {
         ): Uri? {
             val used = usedNames.getOrPut(parentUri.toString()) { mutableSetOf() }
             var resolved = name
-            if (!used.add(resolved.lowercase())) {
+            if (!used.add(NameText.nfc(resolved).lowercase())) {
                 val dot = name.lastIndexOf('.')
                 val base = if (dot > 0) name.substring(0, dot) else name
                 val ext = if (dot > 0) name.substring(dot) else ""
                 var index = 2
-                while (!used.add("$base ($index)$ext".lowercase())) index++
+                while (!used.add(NameText.nfc("$base ($index)$ext").lowercase())) index++
                 resolved = "$base ($index)$ext"
             }
             return createFileInternal(parentUri, resolved, conflictPolicy)
@@ -1655,9 +1660,11 @@ class MultiArchiveEngine(private val context: Context) {
 
     companion object {
         private fun formatBytes(bytes: Long): String = when {
-    bytes >= 1L shl 30 -> "%.1f GB".format(bytes / (1L shl 30).toDouble())
-    bytes >= 1L shl 20 -> "%.0f MB".format(bytes / (1L shl 20).toDouble())
-    else -> "%.0f KB".format(bytes / 1024.0)
+    bytes >= 1L shl 30 ->
+        String.format(java.util.Locale.ROOT, "%.1f GB", bytes / (1L shl 30).toDouble())
+    bytes >= 1L shl 20 ->
+        String.format(java.util.Locale.ROOT, "%.0f MB", bytes / (1L shl 20).toDouble())
+    else -> String.format(java.util.Locale.ROOT, "%.0f KB", bytes / 1024.0)
 }
 
 private const val PREPARATION_SHARE = 0.1f

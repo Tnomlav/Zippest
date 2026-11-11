@@ -245,6 +245,7 @@ class FileBrowserController(context: Context) {
         limit: Int = 200
     ): List<GlobalSearchHit> = withContext(Dispatchers.IO) {
         val needle = query.trim()
+        val foldedNeedle = NameText.foldForSearch(needle)
         if (needle.isEmpty() || storageMode != StorageMode.DIRECT) return@withContext emptyList()
         val root = Environment.getExternalStorageDirectory()
         val hits = mutableListOf<GlobalSearchHit>()
@@ -263,13 +264,13 @@ class FileBrowserController(context: Context) {
                     val relative = child.relativeTo(root).path
                     if (relative.startsWith(SKIP_SEARCH_PREFIX)) continue
                     queue.addLast(child)
-                    if (name.contains(needle, ignoreCase = true)) {
+                    if (NameText.foldForSearch(name).contains(foldedNeedle)) {
                         hits += GlobalSearchHit(
                             entry = repository.directEntry(child),
                             parentPath = displayPath(root, child.parentFile)
                         )
                     }
-                } else if (name.contains(needle, ignoreCase = true)) {
+                } else if (NameText.foldForSearch(name).contains(foldedNeedle)) {
                     hits += GlobalSearchHit(
                         entry = repository.directEntry(child),
                         parentPath = displayPath(root, child.parentFile)

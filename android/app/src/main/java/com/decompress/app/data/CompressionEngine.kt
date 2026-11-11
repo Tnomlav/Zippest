@@ -656,11 +656,14 @@ class CompressionEngine(private val context: Context) {
     }
 
     private fun normalizedArchiveName(name: String, format: CompressionFormat): String {
-        val cleaned = name.trim()
-            .replace(Regex("""[\\/:*?"<>|\u0000-\u001F]"""), "_")
-            .trim('.', ' ')
-            .ifBlank { "压缩包" }
-            .take(180)
+        val cleaned = NameText.truncateByCodePoints(
+            NameText.sanitizeBidi(
+                name.trim()
+                    .replace(Regex("""[\\/:*?"<>|\u0000-\u001F]"""), "_")
+                    .trim('.', ' ')
+            ).ifBlank { "压缩包" },
+            180
+        )
         return if (cleaned.lowercase().endsWith(format.extension)) {
             cleaned
         } else {

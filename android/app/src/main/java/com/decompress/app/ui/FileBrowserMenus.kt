@@ -63,7 +63,7 @@ internal fun FileBrowserMenus(
             BrowserSortMode.entries.forEach { mode ->
                 val active = settings.defaultSortMode == mode
                 ZippestMenuItem(
-                    text = { Text(mode.label) },
+                    text = { Text(mode.label()) },
                     onClick = {
                         settingsRepository.update {
                             if (it.defaultSortMode == mode) {

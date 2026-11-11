@@ -130,7 +130,7 @@ fun TrashContent(
                         val quotaLabel = if (settings.trashQuota.bytes <= 0L) {
                             "不限"
                         } else {
-                            settings.trashQuota.label
+                            settings.trashQuota.label()
                         }
                         "${items.size} 项 · 已用 " +
                             Formatter.formatShortFileSize(context, usedBytes) +

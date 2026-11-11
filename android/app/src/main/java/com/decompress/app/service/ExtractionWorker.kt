@@ -29,6 +29,7 @@ import com.decompress.app.data.ConflictPolicy
 import com.decompress.app.data.DestinationMode
 import com.decompress.app.data.ExtractSettings
 import com.decompress.app.data.FileNameEncoding
+import com.decompress.app.data.ArchiveErrorKind
 import com.decompress.app.data.archiveMessage
 import com.decompress.app.data.TaskHistoryCodec
 import com.decompress.app.data.TaskHistoryEntry
@@ -548,7 +549,10 @@ class ExtractionWorker(
                 }
             )
             val names = passwordFailures.joinToString("、") { task.archiveNames[it] }
-            throw ArchiveException("有 ${passwordFailures.size} 个压缩包需要单独输入密码：$names")
+            throw ArchiveException(
+                "有 ${passwordFailures.size} 个压缩包需要单独输入密码：$names",
+                kind = ArchiveErrorKind.PASSWORD
+            )
         }
         scanCreatedFiles(createdFiles)
         val created = destinations.lastOrNull()
@@ -859,6 +863,7 @@ private object ExtractionCheckpointStore {
 
 
 private fun Throwable.isPasswordFailure(): Boolean {
+    if (this is ArchiveException && kind == ArchiveErrorKind.PASSWORD) return true
     val text = (message ?: "").lowercase()
-    return "密码" in text || "password" in text || "encrypted" in text
+    return "password" in text || "encrypted" in text
 }

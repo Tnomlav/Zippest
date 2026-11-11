@@ -308,7 +308,7 @@ fun SettingsScreen(
                 SettingsSection("外观", showHeader = false) {
                     SettingsChoice(
                         title = "主题",
-                        options = ThemeMode.entries.map { it.label },
+                        options = ThemeMode.entries.map { it.label() },
                         selectedIndex = ThemeMode.entries.indexOf(settings.themeMode),
                         onSelected = { index ->
                             repository.update {
@@ -446,7 +446,7 @@ fun SettingsScreen(
                     SettingsDivider()
                     SettingsChoice(
                         title = "默认排序",
-                        options = BrowserSortMode.entries.map { it.label },
+                        options = BrowserSortMode.entries.map { it.label() },
                         selectedIndex =
                             BrowserSortMode.entries.indexOf(settings.defaultSortMode),
                         onSelected = { index ->
@@ -530,7 +530,7 @@ fun SettingsScreen(
                 SettingsSection("默认解压设置", showHeader = false) {
                     SettingsChoice(
                         title = "默认位置",
-                        options = DefaultDestinationMode.entries.map { it.label },
+                        options = DefaultDestinationMode.entries.map { it.label() },
                         selectedIndex = DefaultDestinationMode.entries.indexOf(
                             settings.defaultDestinationMode
                         ),
@@ -554,7 +554,7 @@ fun SettingsScreen(
                     SettingsDivider()
                     SettingsChoice(
                         title = "遇到同名文件",
-                        options = ConflictPolicy.entries.map { it.label },
+                        options = ConflictPolicy.entries.map { it.label() },
                         selectedIndex = ConflictPolicy.entries.indexOf(
                             settings.defaultConflictPolicy
                         ),
@@ -569,7 +569,7 @@ fun SettingsScreen(
                     SettingsDivider()
                     SettingsChoice(
                         title = "文件名编码",
-                        options = FileNameEncoding.entries.map { it.label },
+                        options = FileNameEncoding.entries.map { it.label() },
                         selectedIndex = FileNameEncoding.entries.indexOf(
                             settings.defaultEncoding
                         ),
@@ -688,7 +688,7 @@ fun SettingsScreen(
                     SettingsDivider()
                     SettingsChoice(
                         title = "回收站保留时间",
-                        options = TrashRetention.entries.map { it.label },
+                        options = TrashRetention.entries.map { it.label() },
                         selectedIndex = TrashRetention.entries.indexOf(
                             settings.trashRetention
                         ),
@@ -711,7 +711,7 @@ fun SettingsScreen(
                     SettingsDivider()
                     SettingsChoice(
                         title = "回收站容量上限",
-                        options = TrashQuota.entries.map { it.label },
+                        options = TrashQuota.entries.map { it.label() },
                         selectedIndex = TrashQuota.entries.indexOf(settings.trashQuota),
                         onSelected = { index ->
                             repository.update {
@@ -722,7 +722,7 @@ fun SettingsScreen(
                     SettingsDivider()
                     SettingsChoice(
                         title = "恢复同名文件",
-                        options = RestoreConflictPolicy.entries.map { it.label },
+                        options = RestoreConflictPolicy.entries.map { it.label() },
                         selectedIndex = RestoreConflictPolicy.entries.indexOf(
                             settings.restoreConflictPolicy
                         ),
@@ -1156,12 +1156,12 @@ private fun ExtractLayoutEditor(
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            section.label,
+                            section.label(),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            section.detail,
+                            section.detail(),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -1171,7 +1171,7 @@ private fun ExtractLayoutEditor(
                     IconButton(onClick = { onHiddenChange(hidden + section) }) {
                         Icon(
                             Icons.Outlined.VisibilityOff,
-                            contentDescription = "隐藏 ${section.label}"
+                            contentDescription = "隐藏 ${section.label()}"
                         )
                     }
                 }
@@ -1198,7 +1198,7 @@ private fun ExtractLayoutEditor(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            section.label,
+                            section.label(),
                             modifier = Modifier.weight(1f),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1206,7 +1206,7 @@ private fun ExtractLayoutEditor(
                         IconButton(onClick = { onHiddenChange(hidden - section) }) {
                             Icon(
                                 Icons.Outlined.Add,
-                                contentDescription = "恢复 ${section.label}"
+                                contentDescription = "恢复 ${section.label()}"
                             )
                         }
                     }

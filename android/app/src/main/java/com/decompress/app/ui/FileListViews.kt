@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.decompress.app.data.BrowserEntry
+import com.decompress.app.data.NameText
 
 @Composable
 internal fun EntryRow(
@@ -95,7 +96,7 @@ internal fun EntryRow(
                 text = entry.name,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                maxLines = 1,
+                maxLines = if (NameText.hasRtlScript(entry.name)) 2 else 1,
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(3.dp))

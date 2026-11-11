@@ -40,16 +40,17 @@ enum class DestinationMode {
     CUSTOM
 }
 
-enum class ConflictPolicy(val label: String) {
-    OVERWRITE("覆盖"),
-    SKIP("跳过"),
-    RENAME("自动重命名")
+enum class ConflictPolicy {
+    OVERWRITE,
+    SKIP,
+    RENAME
 }
 
-enum class FileNameEncoding(val label: String, val charsetName: String) {
-    AUTO("自动", "UTF-8"),
-    GBK("GBK", "GBK"),
-    UTF8("UTF-8", "UTF-8")
+enum class FileNameEncoding(val charsetName: String) {
+    AUTO("UTF-8"),
+    GBK("GBK"),
+    SHIFT_JIS("Shift-JIS"),
+    UTF8("UTF-8")
 }
 
 data class ExtractSettings(
@@ -70,7 +71,23 @@ data class ExtractSettings(
     fun matches(entryName: String): Boolean = entryFilter?.invoke(entryName) ?: true
 }
 
-class ArchiveException(message: String, cause: Throwable? = null) : Exception(message, cause)
+enum class ArchiveErrorKind {
+    PASSWORD,
+    CORRUPT,
+    NO_SPACE,
+    MISSING_VOLUME,
+    NOT_FOUND,
+    UNSUPPORTED,
+    PERMISSION,
+    TOO_LARGE,
+    OTHER
+}
+
+class ArchiveException(
+    message: String,
+    cause: Throwable? = null,
+    val kind: ArchiveErrorKind = ArchiveErrorKind.OTHER
+) : Exception(message, cause)
 
 internal fun ensureLocalFreeSpace(context: Context, treeUri: Uri, expectedBytes: Long) {
     if (expectedBytes <= 0L) return
@@ -94,7 +111,10 @@ internal fun Uri.localFile(): File? =
 
 internal fun ensureSafeExpansion(unpackedBytes: Long, packedBytes: Long) {
     if (unpackedBytes > MAX_ARCHIVE_UNPACKED_BYTES) {
-        throw ArchiveException("解压后体积超过安全上限")
+        throw ArchiveException(
+            "解压后体积超过安全上限",
+            kind = ArchiveErrorKind.TOO_LARGE
+        )
     }
     if (
         unpackedBytes > SAFE_RATIO_BYTES &&
@@ -111,7 +131,10 @@ internal fun copyWithLimit(
     remainingBytes: Long,
     onProgress: (Long) -> Unit = {}
 ): Long {
-    if (remainingBytes < 0L) throw ArchiveException("解压后体积超过安全上限")
+    if (remainingBytes < 0L) throw ArchiveException(
+            "解压后体积超过安全上限",
+            kind = ArchiveErrorKind.TOO_LARGE
+        )
     val buffer = ByteArray(DEFAULT_ARCHIVE_BUFFER_SIZE)
     var written = 0L
     while (true) {
@@ -119,7 +142,10 @@ internal fun copyWithLimit(
         if (read < 0) break
         written += read
         if (written > remainingBytes) {
-            throw ArchiveException("解压后体积超过安全上限")
+            throw ArchiveException(
+            "解压后体积超过安全上限",
+            kind = ArchiveErrorKind.TOO_LARGE
+        )
         }
         output.write(buffer, 0, read)
         onProgress(written)
@@ -177,6 +203,23 @@ internal fun reportFraction(
 
 internal fun Throwable.archiveMessage(): String {
     val detail = message?.trim().orEmpty()
+    if (this is ArchiveException && kind != ArchiveErrorKind.OTHER) {
+        return when (kind) {
+            ArchiveErrorKind.PASSWORD ->
+                "密码错误。加密 ZIP 注意大小写；7Z / RAR 头加密需要先解锁。"
+            ArchiveErrorKind.CORRUPT ->
+                "压缩包可能损坏或没下载完整。可以重新下载后再试，ZIP 还能试试修复。"
+            ArchiveErrorKind.NO_SPACE ->
+                "存储空间不足。清理一些文件，或换到空间更大的位置（比如 SD 卡）再解压。"
+            ArchiveErrorKind.MISSING_VOLUME ->
+                "缺少分卷。把同一目录下的其他分卷（.001 / .z01 / .part2.rar 等）补齐后再试。"
+            ArchiveErrorKind.NOT_FOUND -> "文件已被移动或删除，刷新后再试。"
+            ArchiveErrorKind.UNSUPPORTED -> "暂不支持这个压缩格式或加密方式。"
+            ArchiveErrorKind.PERMISSION -> "没有写入权限。换一个文件夹，或先授予所有文件访问权限。"
+            ArchiveErrorKind.TOO_LARGE -> "解压后体积超过安全上限，已停止。"
+            ArchiveErrorKind.OTHER -> detail
+        }
+    }
     val lower = detail.lowercase()
     val mapped = when {
         "without a password" in lower ||
@@ -196,8 +239,7 @@ internal fun Throwable.archiveMessage(): String {
             "space" in lower && "insufficient" in lower ->
             "存储空间不足。清理一些文件，或换到空间更大的位置（比如 SD 卡）再解压。"
         "volume" in lower && ("missing" in lower || "not found" in lower) ||
-            "part" in lower && ("missing" in lower || "cannot" in lower) ||
-            "分卷" in lower ->
+            "part" in lower && ("missing" in lower || "cannot" in lower) ->
             "缺少分卷。把同一目录下的其他分卷（.001 / .z01 / .part2.rar 等）补齐后再试。"
         "enoent" in lower ||
             "no such file" in lower ||
@@ -229,10 +271,7 @@ private const val MAX_ARCHIVE_RATIO = 1_000L
 private const val DEFAULT_ARCHIVE_BUFFER_SIZE = 64 * 1024
 private fun looksGarbled(name: String): Boolean =
     name.contains('\uFFFD') ||
-        name.contains("锟斤拷") ||
-        name.contains("Ã") ||
-        name.contains("Ð") ||
-        name.contains("â€")
+        name.contains("锟斤拷")
 
 private const val LIST_BATCH_SIZE = 200
 
@@ -270,7 +309,10 @@ class ZipArchiveEngine(private val context: Context) {
                     var count = 0
                     while (entry != null) {
                         if (++count > MAX_ENTRIES) {
-                            throw ArchiveException("压缩包条目过多，已停止读取")
+                            throw ArchiveException(
+                            "压缩包条目过多，已停止读取",
+                            kind = ArchiveErrorKind.TOO_LARGE
+                        )
                         }
                         result += ArchiveItem(
                             path = entry.name,
@@ -331,7 +373,10 @@ class ZipArchiveEngine(private val context: Context) {
                 if (charset != null) setCharset(charset)
             }.fileHeaders
             if (headers.size > MAX_ENTRIES) {
-                throw ArchiveException("压缩包条目过多，已停止读取")
+                throw ArchiveException(
+                            "压缩包条目过多，已停止读取",
+                            kind = ArchiveErrorKind.TOO_LARGE
+                        )
             }
             return headers.map { header ->
                 ArchiveItem(
@@ -406,7 +451,10 @@ class ZipArchiveEngine(private val context: Context) {
                     while (entry != null) {
                         entryCount++
                         if (entryCount > MAX_ENTRIES) {
-                            throw ArchiveException("压缩包条目过多，已停止解压")
+                            throw ArchiveException(
+                            "压缩包条目过多，已停止解压",
+                            kind = ArchiveErrorKind.TOO_LARGE
+                        )
                         }
 
                         declaredBytes += entry.size.coerceAtLeast(0L)
@@ -490,7 +538,10 @@ class ZipArchiveEngine(private val context: Context) {
                 var compressedBytes = 0L
                 while (entry != null) {
                     if (processed >= MAX_ENTRIES) {
-                        throw ArchiveException("压缩包条目过多，已停止测试")
+                        throw ArchiveException(
+                            "压缩包条目过多，已停止测试",
+                            kind = ArchiveErrorKind.TOO_LARGE
+                        )
                     }
                     declaredBytes += entry.size.coerceAtLeast(0L)
                     compressedBytes += entry.compressedSize.coerceAtLeast(0L)
@@ -552,7 +603,10 @@ class ZipArchiveEngine(private val context: Context) {
                 val archive = Zip4jFile(archiveFile, password.toCharArray())
                 val headers = archive.fileHeaders
                 if (headers.size > MAX_ENTRIES) {
-                    throw ArchiveException("压缩包条目过多，已停止测试")
+                    throw ArchiveException(
+                            "压缩包条目过多，已停止测试",
+                            kind = ArchiveErrorKind.TOO_LARGE
+                        )
                 }
                 val declaredBytes = headers.sumOf {
                     it.uncompressedSize.coerceAtLeast(0L)
@@ -612,7 +666,10 @@ class ZipArchiveEngine(private val context: Context) {
                 val archive = Zip4jFile(archiveFile, settings.password.toCharArray())
                 val headers = archive.fileHeaders
                 if (headers.size > MAX_ENTRIES) {
-                    throw ArchiveException("压缩包条目过多，已停止解压")
+                    throw ArchiveException(
+                            "压缩包条目过多，已停止解压",
+                            kind = ArchiveErrorKind.TOO_LARGE
+                        )
                 }
                 val declaredBytes = headers.sumOf {
                     it.uncompressedSize.coerceAtLeast(0L)
