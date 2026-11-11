@@ -18,6 +18,7 @@ internal fun FileBrowserBottomBar(
     onStartTransfer: (Boolean) -> Unit,
     onCancelTransfer: () -> Unit,
     onConfirmTransfer: () -> Unit,
+    onExtract: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
     onMenuExpandedChange: (Boolean) -> Unit
@@ -41,6 +42,7 @@ internal fun FileBrowserBottomBar(
                 onConfirm = onConfirmTransfer
             )
             selectedCount > 0 -> SelectionToolbar(
+                onExtract = onExtract,
                 onCopy = { onStartTransfer(false) },
                 onMove = { onStartTransfer(true) },
                 onRename = onRename,

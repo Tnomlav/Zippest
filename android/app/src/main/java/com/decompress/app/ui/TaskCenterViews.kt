@@ -652,11 +652,11 @@ internal fun TaskQueueRow(
                 }
                 if (active) {
                     if (onCancel != null) {
-                        IconButton(onClick = onCancel, modifier = Modifier.size(34.dp)) {
+                        IconButton(onClick = onCancel, modifier = Modifier.size(48.dp)) {
                             Icon(
                                 Icons.Outlined.Close,
                                 contentDescription = "取消任务",
-                                modifier = Modifier.size(17.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }

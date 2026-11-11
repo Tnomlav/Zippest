@@ -610,6 +610,7 @@ internal fun FileBrowserScreen(
                 onStartTransfer = { move -> startTransfer(move = move) },
                 onCancelTransfer = ::cancelTransfer,
                 onConfirmTransfer = ::confirmTransfer,
+                onExtract = { extractSelected() },
                 onRename = {
                     closePanelPopups()
                     dismissFileDialogs()

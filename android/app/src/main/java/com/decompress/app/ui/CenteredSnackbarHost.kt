@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,13 +24,17 @@ fun CenteredSnackbarHost(
     hostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
+    // 底部导航/手势条上方 8dp、左对齐，不压在列表中间。
     Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        modifier = modifier
+            .fillMaxSize()
+            .navigationBarsPadding()
+            .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+        contentAlignment = Alignment.BottomStart
     ) {
         SnackbarHost(
             hostState = hostState,
-            modifier = Modifier.widthIn(max = 280.dp)
+            modifier = Modifier.widthIn(max = 420.dp)
         ) { data ->
             Surface(
                 shape = RoundedCornerShape(14.dp),
@@ -45,7 +50,7 @@ fun CenteredSnackbarHost(
                     Text(
                         text = data.visuals.message,
                         style = MaterialTheme.typography.labelMedium,
-                        maxLines = 3,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                     data.visuals.actionLabel?.let { actionLabel ->

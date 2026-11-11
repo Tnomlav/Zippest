@@ -614,7 +614,7 @@ fun ArchiveScreen(
                     )
                 }
             }
-            DreamPreviewBorder(
+            PreviewBorder(
                 modifier = Modifier.matchParentSize()
             )
             EdgeSwipeBackZones(
@@ -736,33 +736,14 @@ fun ArchiveScreen(
 }
 
 @Composable
-private fun DreamPreviewBorder(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "preview-border")
-    val glow by transition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "preview-border-glow"
-    )
-    val primary = MaterialTheme.colorScheme.primary
-    val secondary = MaterialTheme.colorScheme.secondary
-    val tertiary = MaterialTheme.colorScheme.tertiary
+private fun PreviewBorder(modifier: Modifier = Modifier) {
+    // 静态 1dp 描边：预览页不需要无限呼吸动画（费电，也和工具气质相反）。
+    val color = MaterialTheme.colorScheme.primary.copy(alpha = 0.32f)
     Canvas(modifier = modifier.padding(3.dp)) {
-        val stroke = 2.dp.toPx()
-        val inset = stroke / 2f
+        val stroke = 1.dp.toPx()
         drawRoundRect(
-            brush = Brush.linearGradient(
-                colors = listOf(
-                    primary.copy(alpha = 0.28f + glow * 0.55f),
-                    secondary.copy(alpha = 0.45f + glow * 0.35f),
-                    tertiary.copy(alpha = 0.32f + glow * 0.5f),
-                    primary.copy(alpha = 0.28f + glow * 0.55f)
-                )
-            ),
-            topLeft = Offset(inset, inset),
+            color = color,
+            topLeft = Offset(stroke / 2f, stroke / 2f),
             size = Size(
                 width = size.width - stroke,
                 height = size.height - stroke

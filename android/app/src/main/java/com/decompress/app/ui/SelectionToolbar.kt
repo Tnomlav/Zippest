@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DriveFileMove
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 internal fun SelectionToolbar(
+    onExtract: () -> Unit,
     onCopy: () -> Unit,
     onMove: () -> Unit,
     onRename: () -> Unit,
@@ -49,6 +51,7 @@ internal fun SelectionToolbar(
                 .height(64.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            SelectionAction(Icons.Outlined.Archive, "解压", onExtract)
             SelectionAction(Icons.Outlined.ContentCopy, "复制", onCopy)
             SelectionAction(Icons.Outlined.DriveFileMove, "移动", onMove)
             SelectionAction(Icons.Outlined.Edit, "重命名", onRename)

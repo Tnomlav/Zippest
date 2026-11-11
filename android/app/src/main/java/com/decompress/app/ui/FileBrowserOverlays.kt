@@ -38,28 +38,6 @@ internal fun BoxScope.FileBrowserOverlays(
     onDismissDialogs: () -> Unit
 ) {
     val context = LocalContext.current
-    if (selectedCount > 0 && !state.selectionMenuExpanded) {
-        FloatingActionButton(
-            onClick = onExtractSelected,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(
-                    end = 24.dp,
-                    bottom = padding.calculateBottomPadding() + 16.dp
-                )
-                .size(58.dp)
-                .zIndex(2f),
-            shape = CircleShape,
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
-        ) {
-            Icon(
-                Icons.Outlined.Archive,
-                contentDescription = "解压",
-                modifier = Modifier.size(28.dp)
-            )
-        }
-    }
     EdgeSwipeBackZones(
         onBack = onBack,
         onHome = {
