@@ -89,7 +89,7 @@ internal fun FileKindIcon(
             icon,
             contentDescription = null,
             tint = colors.content,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(24.dp)
         )
     }
 }

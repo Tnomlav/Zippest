@@ -90,7 +90,7 @@ internal fun QuickAccessTopTitle(
                     "展开固定位置"
                 },
                 tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(21.dp)
+                modifier = Modifier.size(20.dp)
             )
         }
     }
@@ -219,7 +219,7 @@ internal fun StorageExternalQuickLocation(
                 } else {
                     MaterialTheme.colorScheme.primary
                 },
-                modifier = Modifier.size(21.dp)
+                modifier = Modifier.size(20.dp)
             )
             Column(
                 modifier = Modifier
@@ -270,7 +270,7 @@ internal fun StorageQuickLocationAdd(
                 Icons.Outlined.Add,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(21.dp)
+                modifier = Modifier.size(20.dp)
             )
             Text(
                 "新增",
@@ -329,7 +329,7 @@ internal fun StorageQuickLocation(
                 } else {
                     MaterialTheme.colorScheme.primary
                 },
-                modifier = Modifier.size(21.dp)
+                modifier = Modifier.size(20.dp)
             )
             Text(
                 location.label,

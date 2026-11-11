@@ -468,7 +468,7 @@ fun ArchiveScreen(
                         else -> LazyColumn {
                             items(searchResults, key = { it.path }) { node ->
                                 ArchiveRow(
-                                    modifier = Modifier.animateItem(),
+                                    modifier = animateItemRespectingMotion(),
                                     node = node,
                                     selected = false,
                                     onClick = {
@@ -514,11 +514,17 @@ fun ArchiveScreen(
                         Text("输入密码")
                     }
                 }
-                nodes.isEmpty() -> Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("压缩包为空", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                nodes.isEmpty() -> StatePanel(modifier = Modifier.fillMaxSize()) {
+                    EmptyIllustration(EmptyArt.FOLDER)
+                    Text(
+                        "压缩包是空的",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        "换一个包，或先确认下载是否完整",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 else -> LazyColumn(
                     state = archiveListState,
@@ -545,7 +551,7 @@ fun ArchiveScreen(
                     }
                     items(nodes, key = { it.path }) { node ->
                         ArchiveRow(
-                            modifier = Modifier.animateItem(),
+                            modifier = animateItemRespectingMotion(),
                             node = node,
                             selected = node.path in selectedPaths,
                             onClick = {
@@ -853,7 +859,7 @@ private fun androidx.compose.foundation.layout.RowScope.ArchiveAction(
                 accent -> MaterialTheme.colorScheme.primary
                 else -> MaterialTheme.colorScheme.onSurface
             },
-            modifier = Modifier.size(23.dp)
+            modifier = Modifier.size(24.dp)
         )
         Spacer(Modifier.height(4.dp))
         Text(

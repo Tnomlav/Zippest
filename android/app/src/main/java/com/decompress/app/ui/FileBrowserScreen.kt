@@ -692,14 +692,12 @@ internal fun FileBrowserScreen(
                 },
                 onChooseFolder = { folderPicker.launch(null) }
             )
-            !pullRefreshing && controller.loading && controller.entries.isEmpty() -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
+            !pullRefreshing && controller.loading && controller.entries.isEmpty() ->
+                LoadingSkeleton(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                )
             controller.error != null -> ErrorState(
                 modifier = Modifier
                     .fillMaxSize()

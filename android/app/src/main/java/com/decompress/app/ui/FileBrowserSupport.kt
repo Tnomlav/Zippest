@@ -213,11 +213,7 @@ internal fun EmptyState(
     filtered: Boolean,
     onBrowseDownloads: (() -> Unit)? = null
 ) {
-    Column(
-        modifier = modifier.padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
+    StatePanel(modifier = modifier) {
         if (filtered) {
             Icon(
                 Icons.Outlined.Search,
@@ -255,24 +251,13 @@ internal fun ErrorState(
     onRetry: () -> Unit,
     onChooseFolder: () -> Unit
 ) {
-    Column(
-        modifier = modifier.padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            Icons.Outlined.Info,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.error,
-            modifier = Modifier.size(42.dp)
-        )
-        Spacer(Modifier.height(12.dp))
-        Text(message, style = MaterialTheme.typography.bodyMedium)
-        Spacer(Modifier.height(16.dp))
-        Button(onClick = onRetry) { Text("重试") }
-        Spacer(Modifier.height(8.dp))
-        TextButton(onClick = onChooseFolder) { Text("重新选择文件夹") }
-    }
+    ErrorTemplate(
+        message = message,
+        onRetry = onRetry,
+        secondaryLabel = "重新选择文件夹",
+        onSecondary = onChooseFolder,
+        modifier = modifier
+    )
 }
 
 internal fun fileNameWithSuffixSelected(name: String): TextFieldValue {

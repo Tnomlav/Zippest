@@ -84,7 +84,7 @@ private fun RowScope.SelectionMenu(
                 Icons.Outlined.MoreVert,
                 contentDescription = "菜单",
                 tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(23.dp)
+                modifier = Modifier.size(24.dp)
             )
             Spacer(Modifier.height(4.dp))
             Text(
@@ -113,7 +113,7 @@ private fun RowScope.SelectionAction(
             icon,
             contentDescription = label,
             tint = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.size(23.dp)
+            modifier = Modifier.size(24.dp)
         )
         Spacer(Modifier.height(4.dp))
         Text(

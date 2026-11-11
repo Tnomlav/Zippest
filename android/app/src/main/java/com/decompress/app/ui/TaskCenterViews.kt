@@ -116,14 +116,13 @@ internal fun TaskQueueDialog(onDismiss: () -> Unit) {
         title = { Text("后台任务") },
         text = {
             when {
-                loading -> Box(
+                loading -> LoadingSkeleton(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+                        .height(240.dp),
+                    rows = 3,
+                    delayMillis = 200
+                )
                 sortedTasks.isEmpty() -> Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -515,7 +514,7 @@ internal fun ActiveArchiveTaskBar(
                                 else Icons.Outlined.Archive,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.size(19.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -674,7 +673,7 @@ internal fun TaskQueueRow(
                         Icon(
                             if (paused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
                             contentDescription = null,
-                            modifier = Modifier.size(17.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(if (paused) "继续" else "暂停")

@@ -168,7 +168,7 @@ internal fun FileBrowserContent(
         val shownEntries = visibleEntries.take(pageSize)
         items(shownEntries, key = { it.uri.toString() }) { entry ->
             EntryRow(
-                modifier = Modifier.animateItem(),
+                modifier = animateItemRespectingMotion(),
                 entry = entry,
                 selectionMode = controller.selectionMode,
                 selected = entry.uri in controller.selected,
