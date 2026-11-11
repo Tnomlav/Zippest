@@ -71,7 +71,7 @@ class CopyBenchmarkTest {
         assertEquals(FILES, parallelTarget.listFiles()?.size)
 
         root.deleteRecursively()
-        throw AssertionError(
+        println(
             "COPY_BENCH files=$FILES bytes=$FILE_BYTES " +
                 "sequential=${sequentialMillis}ms parallel=${parallelMillis}ms"
         )

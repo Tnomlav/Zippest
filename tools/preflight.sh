@@ -320,6 +320,16 @@ else
     fail 15 "M3 角色完整" "缺：$missing_roles"
 fi
 
+if [ -f tools/i18n-budget.txt ]; then
+    i18n_budget="$(tr -dc '0-9' < tools/i18n-budget.txt)"
+    i18n_actual="$(grep -rP '"[^"]*[\x{4e00}-\x{9fff}][^"]*"' android/app/src/main/java/com/decompress/app/ui --include='*.kt' | wc -l | tr -dc '0-9')"
+    if [ -n "$i18n_budget" ] && [ "$i18n_actual" -le "$i18n_budget" ]; then
+        pass 15 "中文文案预算" "ui/ 中文硬编码 $i18n_actual ≤ 预算 $i18n_budget"
+    else
+        fail 15 "中文文案预算" "ui/ 中文硬编码 $i18n_actual 超过预算 $i18n_budget（抽完请下调 tools/i18n-budget.txt）"
+    fi
+fi
+
 radius_hits="$(grep -rn 'RoundedCornerShape([0-9]' android/app/src/main/java/com/decompress/app/ui --include='*.kt' | grep -v '/theme/' || true)"
 if [ -z "$radius_hits" ]; then
     pass 15 "圆角只用 token" "ui/ 下无 RoundedCornerShape(数字"
