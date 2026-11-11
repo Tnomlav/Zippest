@@ -480,7 +480,21 @@ internal fun FileBrowserDialogs(
                             .fillMaxWidth()
                             .focusRequester(renameFocus),
                         singleLine = true,
-                        label = { Text("新名称") }
+                        label = { Text("新名称") },
+                        trailingIcon = {
+                            if (state.renameValue.text.isNotEmpty()) {
+                                IconButton(
+                                    onClick = {
+                                        state.renameValue = clearNameField(state.renameValue)
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.Close,
+                                        contentDescription = "清空名称"
+                                    )
+                                }
+                            }
+                        }
                     )
                     Spacer(Modifier.height(10.dp))
                     Text(

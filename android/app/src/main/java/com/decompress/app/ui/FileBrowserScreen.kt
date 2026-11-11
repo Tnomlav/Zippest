@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.unit.dp
@@ -52,6 +53,7 @@ import androidx.core.content.ContextCompat
 import com.decompress.app.data.AppSettingsRepository
 import com.decompress.app.data.BrowserSortMode
 import com.decompress.app.data.BrowserEntry
+import com.decompress.app.data.collapseSplitSelections
 import com.decompress.app.data.FileBrowserController
 import com.decompress.app.data.QuickLocationRepository
 import com.decompress.app.data.TaskHistoryEntry
@@ -353,6 +355,10 @@ internal fun FileBrowserScreen(
     val selectedCount = controller.selected.size
     val selectedEntries = controller.entries.filter { it.uri in controller.selected }
 
+    val listStates = remember { mutableMapOf<String, LazyListState>() }
+    val listKey = controller.currentUri?.toString() ?: controller.path.joinToString("/")
+    val fileListState = listStates.getOrPut(listKey) { LazyListState() }
+
     fun startTransfer(move: Boolean) {
         if (selectedEntries.isEmpty()) {
             notify(if (move) "请选择要移动的文件" else "请选择要复制的文件")
@@ -467,9 +473,9 @@ internal fun FileBrowserScreen(
     fun extractSelected() {
         closePanelPopups()
         dismissFileDialogs()
-        val selectedFiles = controller.entries.filter {
-            it.uri in controller.selected && !it.isDirectory
-        }
+        val selectedFiles = collapseSplitSelections(
+            controller.entries.filter { it.uri in controller.selected && !it.isDirectory }
+        )
         val parentUri = controller.currentUri
         val parentTreeUri = controller.treeUri
         if (selectedFiles.isEmpty()) {
@@ -482,6 +488,8 @@ internal fun FileBrowserScreen(
                 controller.path.joinToString(" / "),
                 controller.folderName
             )
+            // 批量解压交给解压面板后收回多选态，避免解压完还停在选择模式。
+            controller.clearSelection()
         }
     }
 
@@ -718,10 +726,12 @@ internal fun FileBrowserScreen(
                     recentExtracts = recentExtracts,
                     pageSize = entryPageSize,
                     onLoadMore = { entryPageSize += 300 },
+                    listState = fileListState,
                     transferActive = transferSession != null,
                     transferBusy = transferBusy,
                     scope = scope,
                     onExtractFile = { entry -> extractFile(entry) },
+                    onExtractArchive = { entry -> extractFile(entry) },
                     onOpenArchive = { entry -> onOpenArchive(entry) },
                     onOpenWithFile = { entry -> openWithFile(entry) },
                     onGlobalHitOpen = { entry ->

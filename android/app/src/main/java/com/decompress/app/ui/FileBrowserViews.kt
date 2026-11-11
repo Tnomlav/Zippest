@@ -2,6 +2,7 @@ package com.decompress.app.ui
 
 import android.os.Environment
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,10 +46,12 @@ internal fun FileBrowserContent(
     recentExtracts: List<TaskHistoryEntry>,
     pageSize: Int,
     onLoadMore: () -> Unit,
+    listState: LazyListState,
     transferActive: Boolean,
     transferBusy: Boolean,
     scope: CoroutineScope,
     onExtractFile: (BrowserEntry) -> Unit,
+    onExtractArchive: (BrowserEntry) -> Unit,
     onOpenArchive: (BrowserEntry) -> Unit,
     onOpenWithFile: (BrowserEntry) -> Unit,
     onGlobalHitOpen: (BrowserEntry) -> Unit,
@@ -127,6 +130,7 @@ internal fun FileBrowserContent(
     }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             start = 12.dp,
@@ -180,7 +184,7 @@ internal fun FileBrowserContent(
                         }
                         controller.selectionMode -> controller.toggleSelection(entry.uri)
                         entry.isDirectory -> scope.launch { controller.open(entry) }
-                        entry.isArchive -> onOpenArchive(entry)
+                        entry.isArchive -> onExtractArchive(entry)
                         else -> onOpenWithFile(entry)
                     }
                 },

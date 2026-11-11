@@ -47,6 +47,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -158,6 +159,8 @@ fun ArchiveScreen(
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var currentPath by rememberSaveable { mutableStateOf("") }
+    val archiveListStates = remember { mutableMapOf<String, LazyListState>() }
+    val archiveListState = archiveListStates.getOrPut(currentPath) { LazyListState() }
     var archivePassword by rememberSaveable(target.archive.uri.toString()) {
         mutableStateOf("")
     }
@@ -518,6 +521,7 @@ fun ArchiveScreen(
                     Text("压缩包为空", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 else -> LazyColumn(
+                    state = archiveListState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = 12.dp,
@@ -1068,10 +1072,10 @@ fun ExtractSheet(
             }
         )
     }
-    var samePassword by rememberSaveable { mutableStateOf(false) }
     var perArchivePasswords by remember(target.archives) {
         mutableStateOf(List(target.archives.size) { "" })
     }
+    var pendingPasswordQueue by remember { mutableStateOf<List<Int>>(emptyList()) }
     var passwordDialogIndex by remember { mutableStateOf<Int?>(null) }
     var passwordDialogValue by remember { mutableStateOf("") }
     var pendingPasswords by remember { mutableStateOf<List<String>?>(null) }
@@ -1216,12 +1220,27 @@ fun ExtractSheet(
                 com.decompress.app.data.PasswordVault.save(context, archive.name, password)
             }
         }
-        if (selectedArchives.size > 1 && !samePassword) {
-            if (perArchivePasswords.size != selectedArchives.size) {
-                perArchivePasswords = List(selectedArchives.size) { "" }
+        if (selectedArchives.size > 1 && password.isNotEmpty()) {
+            // 多包默认全部复用同一个密码；先用列表探测哪些包的密码不同，只补问这些。
+            scope.launch {
+                val mismatched = selectedArchives.mapIndexedNotNull { index, archive ->
+                    val failure = runCatching {
+                        engine.list(archive.uri, archive.name, password)
+                    }.exceptionOrNull()
+                    if (failure != null && failure.isPasswordProblem()) index else null
+                }
+                if (mismatched.isEmpty()) {
+                    requestPermissionAndLaunch(
+                        selectedArchives,
+                        selectedArchives.map { password }
+                    )
+                } else {
+                    perArchivePasswords = List(selectedArchives.size) { password }
+                    pendingPasswordQueue = mismatched
+                    passwordDialogValue = ""
+                    passwordDialogIndex = mismatched.first()
+                }
             }
-            passwordDialogValue = ""
-            passwordDialogIndex = 0
         } else {
             requestPermissionAndLaunch(selectedArchives, selectedArchives.map { password })
         }
@@ -1406,7 +1425,21 @@ fun ExtractSheet(
                         onValueChange = { archiveNameValue = it },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        label = { Text("文件名") }
+                        label = { Text("文件名") },
+                        trailingIcon = {
+                            if (archiveNameValue.text.isNotEmpty()) {
+                                IconButton(
+                                    onClick = {
+                                        archiveNameValue = clearNameField(archiveNameValue)
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.Close,
+                                        contentDescription = "清空文件名"
+                                    )
+                                }
+                            }
+                        }
                     )
                     Spacer(Modifier.height(6.dp))
                     Row(
@@ -1559,38 +1592,6 @@ fun ExtractSheet(
                                 )
                     }
                     .forEach { section -> extractBlocks[section]?.invoke() }
-
-                if (archives.size > 1) {
-                    Spacer(Modifier.height(14.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { samePassword = !samePassword }
-                            .padding(vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(
-                            checked = samePassword,
-                            onCheckedChange = { samePassword = it }
-                        )
-                        Column(modifier = Modifier.padding(start = 4.dp)) {
-                            Text(
-                                "使用相同密码",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                if (samePassword) {
-                                    "本次选择的 ${archives.size} 个压缩包复用此密码"
-                                } else {
-                                    "关闭时，将逐个输入密码"
-                                },
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
 
                 error?.let {
                     Spacer(Modifier.height(10.dp))
@@ -1768,12 +1769,15 @@ fun ExtractSheet(
                                 it[index] = passwordDialogValue
                             }
                             perArchivePasswords = updated
-                            val next = index + 1
-                            if (next < archives.size) {
+                            val next = pendingPasswordQueue
+                                .dropWhile { it <= index }
+                                .firstOrNull()
+                            if (next != null) {
                                 passwordDialogValue = ""
                                 passwordDialogIndex = next
                             } else {
                                 passwordDialogIndex = null
+                                pendingPasswordQueue = emptyList()
                                 requestPermissionAndLaunch(archives, updated)
                             }
                         }
@@ -1974,4 +1978,9 @@ private fun ArchivePathEntry(label: String, selected: Boolean, onClick: () -> Un
             overflow = TextOverflow.Ellipsis
         )
     }
+}
+
+private fun Throwable.isPasswordProblem(): Boolean {
+    val text = (message ?: "").lowercase()
+    return "密码" in text || "password" in text || "encrypted" in text
 }

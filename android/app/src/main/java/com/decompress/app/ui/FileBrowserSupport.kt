@@ -280,6 +280,16 @@ internal fun fileNameWithSuffixSelected(name: String): TextFieldValue {
     )
 }
 
+/** 名称输入框右侧的清除按钮：有选中就只删选中段，没选中就清空。 */
+internal fun clearNameField(value: TextFieldValue): TextFieldValue {
+    if (value.selection.collapsed) return TextFieldValue("")
+    val start = value.selection.min
+    return TextFieldValue(
+        text = value.text.removeRange(value.selection.min, value.selection.max),
+        selection = TextRange(start)
+    )
+}
+
 internal fun selectedFileSuffix(value: TextFieldValue): String {
     val range = effectiveSuffixRange(value)
     return value.text.substring(range.start, range.end)
