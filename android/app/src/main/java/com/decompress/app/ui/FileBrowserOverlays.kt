@@ -38,16 +38,6 @@ internal fun BoxScope.FileBrowserOverlays(
     onDismissDialogs: () -> Unit
 ) {
     val context = LocalContext.current
-    EdgeSwipeBackZones(
-        onBack = onBack,
-        onHome = {
-            scope.launch {
-                state.storageExpanded = false
-                controller.clearSelection()
-                controller.openInternalStorage()
-            }
-        }
-    )
     if (
         state.storageExpanded &&
         controller.storageMode == FileBrowserController.StorageMode.DIRECT

@@ -619,16 +619,6 @@ fun ArchiveScreen(
             PreviewBorder(
                 modifier = Modifier.matchParentSize()
             )
-            EdgeSwipeBackZones(
-                onBack = {
-                    when {
-                        selectedPaths.isNotEmpty() -> selectedPaths = emptySet()
-                        currentPath.isNotEmpty() ->
-                            currentPath = parentArchivePath(currentPath)
-                        else -> onBack()
-                    }
-                }
-            )
         }
     }
 

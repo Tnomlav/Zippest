@@ -7,6 +7,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -34,7 +38,9 @@ internal fun Onboarding(
     onChooseFolder: () -> Unit
 ) {
     Column(
-        modifier = modifier.padding(horizontal = 28.dp),
+        modifier = modifier
+            .padding(horizontal = 28.dp)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.Center
     ) {
@@ -73,9 +79,13 @@ internal fun Onboarding(
             onClick = onRequestAccess,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .heightIn(min = 52.dp)
         ) {
-            Text("授予所有文件访问权限")
+            Text(
+                "授予所有文件访问权限",
+                maxLines = 2,
+                textAlign = TextAlign.Center
+            )
         }
         Spacer(Modifier.height(4.dp))
         TextButton(
