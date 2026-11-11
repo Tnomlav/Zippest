@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /** 空态插画（8.4）：单色线性 + 主色点缀，不用 3D / 渐变。 */
-enum class EmptyArt { FOLDER, TRASH, TASKS }
+enum class EmptyArt { FOLDER, TRASH, TASKS, SEARCH }
 
 @Composable
 internal fun EmptyIllustration(
@@ -53,6 +53,21 @@ internal fun EmptyIllustration(
                 drawLine(line, Offset(w * 0.40f, h * 0.18f), Offset(w * 0.60f, h * 0.18f), stroke)
                 drawLine(accent, Offset(w * 0.42f, h * 0.44f), Offset(w * 0.42f, h * 0.66f), stroke)
                 drawLine(accent, Offset(w * 0.58f, h * 0.44f), Offset(w * 0.58f, h * 0.66f), stroke)
+            }
+            EmptyArt.SEARCH -> {
+                drawCircle(
+                    color = line,
+                    radius = w * 0.22f,
+                    center = Offset(w * 0.44f, h * 0.42f),
+                    style = Stroke(stroke)
+                )
+                drawLine(
+                    line,
+                    Offset(w * 0.60f, h * 0.58f),
+                    Offset(w * 0.78f, h * 0.76f),
+                    stroke
+                )
+                drawCircle(accent, radius = w * 0.035f, center = Offset(w * 0.44f, h * 0.42f))
             }
             EmptyArt.TASKS -> {
                 drawRoundRect(

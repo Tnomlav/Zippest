@@ -514,18 +514,14 @@ fun ArchiveScreen(
                         Text("输入密码")
                     }
                 }
-                nodes.isEmpty() -> StatePanel(modifier = Modifier.fillMaxSize()) {
-                    EmptyIllustration(EmptyArt.FOLDER)
-                    Text(
-                        "压缩包是空的",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        "换一个包，或先确认下载是否完整",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                nodes.isEmpty() -> EmptyStateView(
+                    art = EmptyArt.FOLDER,
+                    title = "压缩包是空的",
+                    description = "换一个包，或先确认下载是否完整",
+                    actionLabel = "返回",
+                    onAction = onBack,
+                    modifier = Modifier.fillMaxSize()
+                )
                 else -> LazyColumn(
                     state = archiveListState,
                     modifier = Modifier.fillMaxSize(),

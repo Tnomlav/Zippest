@@ -171,17 +171,12 @@ fun TrashContent(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        EmptyIllustration(EmptyArt.TRASH)
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "回收站为空",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "删除文件时默认先移到这里，保留期可在设置里调整",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        EmptyStateView(
+                            art = EmptyArt.TRASH,
+                            title = "回收站是空的",
+                            description = "删除文件时默认先移到这里，保留期可在设置里调整",
+                            actionLabel = if (onClose != null) "关闭" else null,
+                            onAction = onClose
                         )
                     }
                     else -> LazyColumn(modifier = Modifier.fillMaxSize()) {

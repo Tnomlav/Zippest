@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.decompress.app.ui.theme.ZippestRadius
@@ -150,4 +152,38 @@ internal fun ErrorTemplate(
 internal fun LazyItemScope.animateItemRespectingMotion(): Modifier {
     val reduceMotion = rememberReduceMotion()
     return if (reduceMotion) Modifier else Modifier.animateItem()
+}
+
+/**
+ * 空态模板：插画 + 一句解释 + 一个主操作。8.6
+ * 文件页、回收站、任务中心、空压缩包都走这一个，不再各写各的。
+ */
+@Composable
+internal fun EmptyStateView(
+    art: EmptyArt,
+    title: String,
+    description: String,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    StatePanel(modifier) {
+        EmptyIllustration(art)
+        Text(
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            description,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        if (actionLabel != null && onAction != null) {
+            OutlinedButton(onClick = onAction) {
+                Text(actionLabel)
+            }
+        }
+    }
 }

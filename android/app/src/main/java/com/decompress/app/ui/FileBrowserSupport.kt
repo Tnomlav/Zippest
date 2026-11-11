@@ -213,34 +213,22 @@ internal fun EmptyState(
     filtered: Boolean,
     onBrowseDownloads: (() -> Unit)? = null
 ) {
-    StatePanel(modifier = modifier) {
-        if (filtered) {
-            Icon(
-                Icons.Outlined.Search,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(48.dp)
-            )
-        } else {
-            EmptyIllustration(EmptyArt.FOLDER)
-        }
-        Spacer(Modifier.height(12.dp))
-        Text(
-            if (filtered) "没有匹配的文件" else "此文件夹为空",
-            style = MaterialTheme.typography.titleMedium
+    if (filtered) {
+        EmptyStateView(
+            art = EmptyArt.SEARCH,
+            title = "没有匹配的文件",
+            description = "换个关键词试试",
+            modifier = modifier
         )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            if (filtered) "换个关键词试试" else "通过顶部的新建按钮创建文件夹",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+    } else {
+        EmptyStateView(
+            art = EmptyArt.FOLDER,
+            title = "此文件夹为空",
+            description = "通过顶部的新建按钮创建文件夹，或去下载目录看看",
+            actionLabel = if (onBrowseDownloads != null) "去下载目录看看" else null,
+            onAction = onBrowseDownloads,
+            modifier = modifier
         )
-        if (!filtered && onBrowseDownloads != null) {
-            Spacer(Modifier.height(16.dp))
-            androidx.compose.material3.OutlinedButton(onClick = onBrowseDownloads) {
-                Text("去下载目录看看")
-            }
-        }
     }
 }
 

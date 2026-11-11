@@ -123,19 +123,13 @@ internal fun TaskQueueDialog(onDismiss: () -> Unit) {
                     rows = 3,
                     delayMillis = 200
                 )
-                sortedTasks.isEmpty() -> Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    EmptyIllustration(EmptyArt.TASKS)
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        "暂无后台任务",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                sortedTasks.isEmpty() -> EmptyStateView(
+                    art = EmptyArt.TASKS,
+                    title = "暂无后台任务",
+                    description = "解压、压缩任务会出现在这里，熄屏也会继续",
+                    actionLabel = "关闭",
+                    onAction = onDismiss
+                )
                 else -> Column(
                     modifier = Modifier
                         .fillMaxWidth()
