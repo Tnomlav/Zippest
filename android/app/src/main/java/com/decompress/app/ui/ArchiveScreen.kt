@@ -563,11 +563,16 @@ fun ArchiveScreen(
             }
                 }
                 if (rememberZippestWindowSize() == ZippestWindowSize.EXPANDED) {
-                    ArchiveInfoPane(
+                    ArchiveEntryPane(
                         archiveName = target.archive.name,
                         sizeText = Formatter.formatShortFileSize(context, target.archive.size),
                         entryCount = items.size,
                         encodingLabel = encoding.label,
+                        entry = if (selectedPaths.size == 1) {
+                            items.firstOrNull { it.path in selectedPaths }
+                        } else {
+                            null
+                        },
                         modifier = Modifier
                             .width(240.dp)
                             .fillMaxHeight()

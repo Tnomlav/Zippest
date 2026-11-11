@@ -747,7 +747,8 @@ internal fun FileBrowserScreen(
             }
                 }
                 if (rememberZippestWindowSize() == ZippestWindowSize.EXPANDED) {
-                    BrowserInfoPane(
+                    BrowserPreviewPane(
+                        entry = selectedEntries.singleOrNull(),
                         folderName = controller.folderName,
                         path = controller.path,
                         itemCount = visibleEntries.size,

@@ -50,7 +50,7 @@ internal fun ArchiveInfoPane(
 }
 
 @Composable
-private fun InfoPaneScaffold(
+internal fun InfoPaneScaffold(
     title: String,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
@@ -79,7 +79,7 @@ private fun InfoPaneScaffold(
 }
 
 @Composable
-private fun InfoLine(label: String, value: String) {
+internal fun InfoLine(label: String, value: String) {
     Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
         Text(
             label,

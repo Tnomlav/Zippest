@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.decompress.app.data.BrowserEntry
 import java.io.File
@@ -78,14 +79,17 @@ private object ThumbnailCache {
 }
 
 @Composable
-private fun MediaThumbnail(entry: BrowserEntry) {
+internal fun MediaThumbnail(entry: BrowserEntry, size: Dp = 44.dp) {
     val context = LocalContext.current
-    val cacheKey = entry.uri.toString()
-    var bitmap by remember(entry.uri) {
+    // 列表行用 96 px，宽屏预览栏用 320 px；缓存键带上尺寸，避免互相顶掉。
+    val thumbPx = if (size.value >= 100f) 320 else 96
+    val corner = if (size.value >= 100f) 16.dp else 12.dp
+    val cacheKey = entry.uri.toString() + "@" + thumbPx
+    var bitmap by remember(entry.uri, thumbPx) {
         mutableStateOf(ThumbnailCache.get(cacheKey)?.asImageBitmap())
     }
 
-    LaunchedEffect(entry.uri) {
+    LaunchedEffect(entry.uri, thumbPx) {
         if (bitmap != null) return@LaunchedEffect
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val loaded = withContext(Dispatchers.IO) {
@@ -95,20 +99,20 @@ private fun MediaThumbnail(entry: BrowserEntry) {
                         if (entry.isVideo) {
                             ThumbnailUtils.createVideoThumbnail(
                                 file,
-                                Size(96, 96),
+                                Size(thumbPx, thumbPx),
                                 null
                             )
                         } else {
                             ThumbnailUtils.createImageThumbnail(
                                 file,
-                                Size(96, 96),
+                                Size(thumbPx, thumbPx),
                                 null
                             )
                         }
                     } else {
                         context.contentResolver.loadThumbnail(
                             entry.uri,
-                            Size(96, 96),
+                            Size(thumbPx, thumbPx),
                             null
                         )
                     }
@@ -123,8 +127,8 @@ private fun MediaThumbnail(entry: BrowserEntry) {
 
     Box(
         modifier = Modifier
-            .size(44.dp)
-            .clip(RoundedCornerShape(12.dp)),
+            .size(size)
+            .clip(RoundedCornerShape(corner)),
         contentAlignment = Alignment.Center
     ) {
         if (bitmap != null) {
