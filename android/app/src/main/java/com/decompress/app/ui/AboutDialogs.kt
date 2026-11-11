@@ -19,7 +19,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.decompress.app.R
 
 @Composable
 internal fun AboutInfoDialog(
@@ -31,7 +33,7 @@ internal fun AboutInfoDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("关于 Zippest") },
+        title = { Text(stringResource(R.string.about_title)) },
         text = {
             SelectionContainer {
                 Column {
@@ -72,26 +74,26 @@ internal fun AboutInfoDialog(
                         onClick = onOpenLocalLicense,
                         modifier = Modifier.padding(top = 0.dp)
                     ) {
-                        Text("离线查看许可证全文")
+                        Text(stringResource(R.string.about_license_offline))
                     }
                     TextButton(
                         onClick = { onOpenLink(ZIPPEST_LICENSE_URL) },
                         modifier = Modifier.padding(top = 0.dp)
                     ) {
-                        Text("查看项目许可证")
+                        Text(stringResource(R.string.about_view_license))
                     }
                     TextButton(
                         onClick = { onOpenLink(ZIPPEST_GITHUB_URL) },
                         modifier = Modifier.padding(top = 0.dp)
                     ) {
-                        Text("打开 GitHub 项目")
+                        Text(stringResource(R.string.about_open_github))
                     }
                 }
             }
         },
         confirmButton = {
             Button(onClick = onDismiss) {
-                Text("关闭")
+                Text(stringResource(R.string.about_close))
             }
         }
     )
@@ -103,7 +105,7 @@ internal fun PrivacyPolicyDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("隐私政策") },
+        title = { Text(stringResource(R.string.about_privacy_title)) },
         text = {
             Box(
                 modifier = Modifier
@@ -138,7 +140,7 @@ internal fun PrivacyPolicyDialog(
         },
         confirmButton = {
             Button(onClick = onDismiss) {
-                Text("关闭")
+                Text(stringResource(R.string.about_close))
             }
         }
     )
@@ -151,7 +153,7 @@ internal fun OpenSourceLicensesDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("第三方开源许可") },
+        title = { Text(stringResource(R.string.about_third_party_title)) },
         text = {
             Box(
                 modifier = Modifier
@@ -197,7 +199,7 @@ internal fun OpenSourceLicensesDialog(
                                 horizontal = 0.dp
                             )
                         ) {
-                            Text("查看许可证")
+                            Text(stringResource(R.string.about_view_license_short))
                         }
                     }
                 }
@@ -205,7 +207,7 @@ internal fun OpenSourceLicensesDialog(
         },
         confirmButton = {
             Button(onClick = onDismiss) {
-                Text("关闭")
+                Text(stringResource(R.string.about_close))
             }
         }
     )
@@ -248,7 +250,7 @@ internal fun LegalTextDialog(
         },
         confirmButton = {
             Button(onClick = onDismiss) {
-                Text("关闭")
+                Text(stringResource(R.string.about_close))
             }
         }
     )

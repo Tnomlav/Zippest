@@ -2,4 +2,21 @@
 <resources>
     <string name="app_name">Zippest</string>
     <string name="open_with_zippest">Open with Zippest</string>
+    <string name="onboarding_title">Access your files</string>
+    <string name="onboarding_subtitle">Extract, compress and organise files right on this phone. No internet needed.</string>
+    <string name="onboarding_benefit_all_files">Browse every folder without picking one each time</string>
+    <string name="onboarding_benefit_local">Files are read and written locally, never uploaded</string>
+    <string name="onboarding_benefit_revoke">Revoke access anytime in system settings</string>
+    <string name="onboarding_grant">Allow all file access</string>
+    <string name="onboarding_folder_mode">Choose a single folder (more conservative)</string>
+    <string name="onboarding_denied">Last time didn\'t work. Try again, or start in folder mode — extract, compress and search still work.</string>
+    <string name="onboarding_privacy_note">Zippest only goes online when you tap the version to check for updates (GitHub Releases API). Files always stay on this phone. Check permissions in Settings → Apps → Zippest → Permissions.</string>
+    <string name="about_title">About Zippest</string>
+    <string name="about_license_offline">Read the full licence offline</string>
+    <string name="about_view_license">View project licence</string>
+    <string name="about_open_github">Open GitHub project</string>
+    <string name="about_close">Close</string>
+    <string name="about_privacy_title">Privacy policy</string>
+    <string name="about_third_party_title">Third-party licences</string>
+    <string name="about_view_license_short">View licence</string>
 </resources>

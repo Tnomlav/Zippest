@@ -27,7 +27,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.decompress.app.R
 import com.decompress.app.ui.theme.ZippestRadius
 
 @Composable
@@ -60,20 +62,20 @@ internal fun Onboarding(
         }
         Spacer(Modifier.height(20.dp))
         Text(
-            "访问手机文件",
+            stringResource(R.string.onboarding_title),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "解压、压缩和整理文件都在这台手机上完成，过程中不需要联网。",
+            stringResource(R.string.onboarding_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(20.dp))
-        OnboardingBenefit("打开所有文件夹，不用每次选目录")
-        OnboardingBenefit("文件只在本机读写，不上传任何内容")
-        OnboardingBenefit("随时可以在系统设置里撤销")
+        OnboardingBenefit(stringResource(R.string.onboarding_benefit_all_files))
+        OnboardingBenefit(stringResource(R.string.onboarding_benefit_local))
+        OnboardingBenefit(stringResource(R.string.onboarding_benefit_revoke))
         Spacer(Modifier.height(24.dp))
         Button(
             onClick = onRequestAccess,
@@ -82,7 +84,7 @@ internal fun Onboarding(
                 .heightIn(min = 52.dp)
         ) {
             Text(
-                "授予所有文件访问权限",
+                stringResource(R.string.onboarding_grant),
                 maxLines = 2,
                 textAlign = TextAlign.Center
             )
@@ -92,19 +94,19 @@ internal fun Onboarding(
             onClick = onChooseFolder,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("只选一个文件夹（更保守）")
+            Text(stringResource(R.string.onboarding_folder_mode))
         }
         if (deniedOnce) {
             Spacer(Modifier.height(8.dp))
             Text(
-                "上次没有授权成功。可以再试一次，或先用文件夹模式——解压、压缩、搜索都能用。",
+                stringResource(R.string.onboarding_denied),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.error
             )
         }
         Spacer(Modifier.height(12.dp))
         Text(
-            "Zippest 只在点按版本号检查更新时联网（访问 GitHub Releases API），文件始终只在本机处理；可在 系统设置 → 应用 → Zippest → 权限 里查看。",
+            stringResource(R.string.onboarding_privacy_note),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

@@ -104,3 +104,23 @@ WSL 的完整环境准备（JDK / SDK / 代理 / 已知限制）见 [docs/develo
 ## 许可
 
 项目代码以 [Apache-2.0](LICENSE) 发布；第三方组件许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+---
+
+## English
+
+**Zippest is a local Android archive tool: rename without retyping, extract many encrypted archives with one password, no ads, no account, no tracking.**
+
+- Rename: the extension after the dot is selected automatically; tap a preset (`.7z` / `.zip` / `.rar`) to switch it.
+- Passwords: clipboard passwords are offered inline; for a batch of encrypted archives, fill one password and reuse it. Archives with a different password are reported after the batch and can be filled one by one.
+- Offline by default: only the "check for updates" action on the About page uses the network (GitHub Releases API).
+- Built with Kotlin + Jetpack Compose; minSdk 26, targetSdk 37.
+
+Download the latest APK from the [releases page](https://github.com/Tnomlav/Zippest/releases) or build it yourself:
+
+```bash
+cd android
+./gradlew :app:assembleRelease
+```
+
+The UI is currently Chinese; an English interface is in progress. Privacy details are in [PRIVACY.md](PRIVACY.md). Licensed under [Apache-2.0](LICENSE).

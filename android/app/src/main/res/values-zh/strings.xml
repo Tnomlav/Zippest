@@ -2,4 +2,21 @@
 <resources>
     <string name="app_name">Zippest</string>
     <string name="open_with_zippest">用 Zippest 打开</string>
+    <string name="onboarding_title">访问手机文件</string>
+    <string name="onboarding_subtitle">解压、压缩和整理文件都在这台手机上完成，过程中不需要联网。</string>
+    <string name="onboarding_benefit_all_files">打开所有文件夹，不用每次选目录</string>
+    <string name="onboarding_benefit_local">文件只在本机读写，不上传任何内容</string>
+    <string name="onboarding_benefit_revoke">随时可以在系统设置里撤销</string>
+    <string name="onboarding_grant">授予所有文件访问权限</string>
+    <string name="onboarding_folder_mode">只选一个文件夹（更保守）</string>
+    <string name="onboarding_denied">上次没有授权成功。可以再试一次，或先用文件夹模式——解压、压缩、搜索都能用。</string>
+    <string name="onboarding_privacy_note">Zippest 只在点按版本号检查更新时联网（访问 GitHub Releases API），文件始终只在本机处理；可在 系统设置 → 应用 → Zippest → 权限 里查看。</string>
+    <string name="about_title">关于 Zippest</string>
+    <string name="about_license_offline">离线查看许可证全文</string>
+    <string name="about_view_license">查看项目许可证</string>
+    <string name="about_open_github">打开 GitHub 项目</string>
+    <string name="about_close">关闭</string>
+    <string name="about_privacy_title">隐私政策</string>
+    <string name="about_third_party_title">第三方开源许可</string>
+    <string name="about_view_license_short">查看许可证</string>
 </resources>

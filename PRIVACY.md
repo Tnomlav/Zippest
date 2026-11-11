@@ -53,3 +53,27 @@ Zippest 不会使用这些权限执行与用户所选操作无关的数据收集
 
 如果后续功能引入联网、云服务或数据收集，本政策将同步更新。问题可通过
 [GitHub Issues](https://github.com/Tnomlav/Zippest/issues) 联系项目维护者。
+
+---
+
+## English
+
+Zippest is a local file and archive tool for Android. This policy explains how it
+handles permissions, files, clipboard content and background tasks.
+
+- **No accounts, ads, tracking or analytics.**
+- **Network:** the app declares `INTERNET`, but only uses it when you tap the version
+  number on the About page to query the GitHub Releases API. Files, file names,
+  passwords and clipboard content are never uploaded.
+- **Local processing:** files are read and written on the device through Android's
+  storage APIs; nothing is sent to a server.
+- **Clipboard:** read only when you open the password field, and only to offer the
+  clipboard text as a candidate password; it is not stored.
+- **Background tasks:** extraction and compression can continue in the background
+  using WorkManager; task metadata (including an encrypted password when needed for
+  retry) stays on the device.
+- **Third-party components** are open-source libraries that run locally. See
+  [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+If a future feature adds cloud services or data collection, this policy will be
+updated. Questions: [GitHub Issues](https://github.com/Tnomlav/Zippest/issues).
