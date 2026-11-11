@@ -77,7 +77,7 @@ private fun RowScope.SelectionMenu(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(onClick = onClick)
-                .padding(vertical = 6.dp),
+                .padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
@@ -86,7 +86,7 @@ private fun RowScope.SelectionMenu(
                 tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(23.dp)
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
                 "菜单",
                 style = MaterialTheme.typography.labelMedium,
@@ -106,7 +106,7 @@ private fun RowScope.SelectionAction(
         modifier = Modifier
             .weight(1f)
             .combinedClickable(onClick = onClick)
-            .padding(vertical = 6.dp),
+            .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
@@ -115,7 +115,7 @@ private fun RowScope.SelectionAction(
             tint = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.size(23.dp)
         )
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(4.dp))
         Text(
             label,
             style = MaterialTheme.typography.labelMedium,

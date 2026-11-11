@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.decompress.app.ui.theme.ZippestRadius
 
 @Composable
 internal fun Onboarding(
@@ -38,7 +39,7 @@ internal fun Onboarding(
         verticalArrangement = Arrangement.Center
     ) {
         Surface(
-            shape = RoundedCornerShape(22.dp),
+            shape = RoundedCornerShape(ZippestRadius.xl),
             color = MaterialTheme.colorScheme.primaryContainer,
             modifier = Modifier.size(76.dp)
         ) {
@@ -63,7 +64,7 @@ internal fun Onboarding(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(20.dp))
         OnboardingBenefit("打开所有文件夹，不用每次选目录")
         OnboardingBenefit("文件只在本机读写，不上传任何内容")
         OnboardingBenefit("随时可以在系统设置里撤销")
@@ -84,14 +85,14 @@ internal fun Onboarding(
             Text("只选一个文件夹（更保守）")
         }
         if (deniedOnce) {
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 "上次没有授权成功。可以再试一次，或先用文件夹模式——解压、压缩、搜索都能用。",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.error
             )
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
         Text(
             "Zippest 只在点按版本号检查更新时联网（访问 GitHub Releases API），文件始终只在本机处理；可在 系统设置 → 应用 → Zippest → 权限 里查看。",
             style = MaterialTheme.typography.labelSmall,
@@ -112,7 +113,7 @@ internal fun OnboardingBenefit(text: String) {
             Icons.Outlined.Check,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(20.dp)
         )
         Spacer(Modifier.width(8.dp))
         Text(text, style = MaterialTheme.typography.bodyMedium)

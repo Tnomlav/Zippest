@@ -112,6 +112,7 @@ import com.decompress.app.service.CompressionScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.decompress.app.ui.theme.ZippestRadius
 
 private enum class SettingsPopup {
     TASK_QUEUE,
@@ -281,7 +282,7 @@ fun SettingsScreen(
                 horizontal = 16.dp,
                 vertical = 12.dp
             ),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (activeCategory == null) {
                 item {
@@ -316,19 +317,19 @@ fun SettingsScreen(
                         }
                     )
                     SettingsDivider()
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
                         Text(
                             "主题色",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )
-                        Spacer(Modifier.height(10.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             AppAccent.entries.forEach { accent ->
                                 val selected = settings.accentColor == accent
                                 Box(
                                     modifier = Modifier
-                                        .size(30.dp)
+                                        .size(32.dp)
                                         .clip(CircleShape)
                                         .background(Color(accent.lightPrimary))
                                         .border(
@@ -487,7 +488,7 @@ fun SettingsScreen(
                             Icon(
                                 Icons.Outlined.Add,
                                 contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                             Text("新建", modifier = Modifier.padding(start = 4.dp))
                         }
@@ -878,7 +879,7 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(Modifier.height(2.dp))
+                        Spacer(Modifier.height(4.dp))
                         Text(
                             "点按版本号检查 GitHub 更新",
                             style = MaterialTheme.typography.labelSmall,
@@ -918,7 +919,7 @@ fun SettingsScreen(
                 }
             }
             }
-            item { Spacer(Modifier.height(10.dp).navigationBarsPadding()) }
+            item { Spacer(Modifier.height(12.dp).navigationBarsPadding()) }
         }
         }
     }
@@ -1110,7 +1111,7 @@ private fun ExtractLayoutEditor(
                         .fillMaxWidth()
                         .height(64.dp)
                         .offset { IntOffset(0, offset.roundToInt()) }
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(ZippestRadius.sm))
                         .background(MaterialTheme.colorScheme.surface)
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -1183,13 +1184,13 @@ private fun ExtractLayoutEditor(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 hidden.forEach { section ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(ZippestRadius.sm))
                             .background(
                                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                             )
@@ -1233,7 +1234,7 @@ private fun SettingsSection(
             )
         }
         Surface(
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(ZippestRadius.md),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 1.dp
         ) {
@@ -1280,14 +1281,14 @@ private fun SettingsChoice(
     if (dialogOpen) {
         Dialog(onDismissRequest = { dialogOpen = false }) {
             Surface(
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(ZippestRadius.xl),
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 4.dp
             ) {
                 Column(
                     modifier = Modifier
                         .width(300.dp)
-                        .padding(horizontal = 18.dp, vertical = 14.dp)
+                        .padding(horizontal = 20.dp, vertical = 16.dp)
                 ) {
                     Text(title, style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
@@ -1296,7 +1297,7 @@ private fun SettingsChoice(
                         initialIndex = selectedIndex,
                         onCentered = { pendingIndex = it }
                     )
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End,
@@ -1308,7 +1309,7 @@ private fun SettingsChoice(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
                                 onSelected(pendingIndex)
@@ -1352,7 +1353,7 @@ private fun WheelPicker(
                 .height(itemHeight)
                 .background(
                     MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
-                    RoundedCornerShape(10.dp)
+                    RoundedCornerShape(ZippestRadius.xs)
                 )
         )
         VerticalPager(
@@ -1418,7 +1419,7 @@ private fun SettingsSwitch(
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
         }
-        Spacer(Modifier.width(18.dp))
+        Spacer(Modifier.width(20.dp))
         Box(modifier = Modifier.scale(0.82f)) {
             Switch(checked = checked, onCheckedChange = onCheckedChange)
         }
@@ -1477,7 +1478,7 @@ private fun SettingsStatus(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {

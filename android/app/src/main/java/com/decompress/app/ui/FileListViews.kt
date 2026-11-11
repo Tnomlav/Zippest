@@ -69,7 +69,7 @@ internal fun EntryRow(
                     stateDescription = if (selected) "已选中" else "未选中"
                 }
             }
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (selectionMode) {
@@ -89,7 +89,7 @@ internal fun EntryRow(
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(start = 10.dp)
+                .padding(start = 12.dp)
         ) {
             Text(
                 text = entry.name,

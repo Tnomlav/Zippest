@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.decompress.app.ui.theme.ZippestRadius
 
 @Composable
 internal fun ZippestDropdownMenu(
@@ -40,7 +41,7 @@ internal fun ZippestDropdownMenu(
         onDismissRequest = onDismissRequest,
         modifier = modifier.widthIn(min = 190.dp, max = 220.dp),
         offset = offset,
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(ZippestRadius.md),
         containerColor = MaterialTheme.colorScheme.background,
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
@@ -70,7 +71,7 @@ internal fun ZippestBarAttachedMenu(
             modifier = panelModifier
                 .align(alignment)
                 .widthIn(min = 190.dp, max = 220.dp),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(ZippestRadius.md),
             color = MaterialTheme.colorScheme.background,
             tonalElevation = 0.dp,
             shadowElevation = 0.dp,
@@ -110,9 +111,9 @@ internal fun ZippestMenuItem(
         },
         onClick = onClick,
         modifier = modifier
-            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
             .heightIn(min = 50.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(ZippestRadius.sm))
             .background(
                 if (selected) {
                     MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.56f)

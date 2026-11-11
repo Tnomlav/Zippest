@@ -320,6 +320,20 @@ else
     fail 15 "M3 角色完整" "缺：$missing_roles"
 fi
 
+radius_hits="$(grep -rn 'RoundedCornerShape([0-9]' android/app/src/main/java/com/decompress/app/ui --include='*.kt' | grep -v '/theme/' || true)"
+if [ -z "$radius_hits" ]; then
+    pass 15 "圆角只用 token" "ui/ 下无 RoundedCornerShape(数字"
+else
+    fail 15 "圆角只用 token" "$(printf '%s' "$radius_hits" | head -n 3 | tr '\n' ' ')"
+fi
+
+odd_spacing="$(grep -rnE '\.(padding|paddingValues)\(|spacedBy\(|Spacer\(' android/app/src/main/java/com/decompress/app/ui --include='*.kt' | grep -v '/theme/' | grep -E '\b(2|6|10|14|18|22|26|30)\.dp' || true)"
+if [ -z "$odd_spacing" ]; then
+    pass 15 "间距只用 4 的倍数" "ui/ 下无 2/6/10/14/18/22/26/30.dp"
+else
+    fail 15 "间距只用 4 的倍数" "$(printf '%s' "$odd_spacing" | head -n 3 | tr '\n' ' ')"
+fi
+
 if [ -f "release/SHA256SUMS-$VERSION.txt" ]; then
     checksum_ok=0
     for pair in \

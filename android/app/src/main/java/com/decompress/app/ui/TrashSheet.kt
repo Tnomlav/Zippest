@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import com.decompress.app.data.TrashItem
 import com.decompress.app.data.TrashRepository
 import kotlinx.coroutines.launch
+import com.decompress.app.ui.theme.ZippestRadius
 
 /** 底部导航「回收站」页与弹层共用的一份内容。 */
 @Composable
@@ -152,7 +153,7 @@ fun TrashContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(ZippestRadius.md),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -170,12 +171,7 @@ fun TrashContent(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Icon(
-                            Icons.Outlined.Delete,
-                            contentDescription = null,
-                            modifier = Modifier.size(40.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        EmptyIllustration(EmptyArt.TRASH)
                         Spacer(Modifier.height(8.dp))
                         Text(
                             "回收站为空",
@@ -301,7 +297,7 @@ private fun TrashItemRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
+            .padding(start = 12.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {

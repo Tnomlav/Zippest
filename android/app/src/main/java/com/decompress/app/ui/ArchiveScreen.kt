@@ -453,7 +453,7 @@ fun ArchiveScreen(
                             }
                         }
                     )
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     when {
                         archiveQuery.isBlank() -> Text(
                             "输入关键字，搜索整个压缩包",
@@ -534,7 +534,7 @@ fun ArchiveScreen(
                         item {
                             Column(modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)) {
                                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                                Spacer(Modifier.height(6.dp))
+                                Spacer(Modifier.height(8.dp))
                                 Text(
                                     "正在读取… 已读取 ${items.size} 项",
                                     style = MaterialTheme.typography.labelMedium,
@@ -588,14 +588,14 @@ fun ArchiveScreen(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 8.dp),
-                shape = RoundedCornerShape(999.dp),
+                shape = RoundedCornerShape(ZippestRadius.pill),
                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.94f),
                 shadowElevation = 4.dp
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
                         Icons.Outlined.AutoAwesome,
@@ -689,7 +689,7 @@ fun ArchiveScreen(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = passwordInput,
                         onValueChange = { passwordInput = it },
@@ -748,7 +748,7 @@ private fun PreviewBorder(modifier: Modifier = Modifier) {
                 width = size.width - stroke,
                 height = size.height - stroke
             ),
-            cornerRadius = CornerRadius(18.dp.toPx()),
+            cornerRadius = CornerRadius(ZippestRadius.md.toPx()),
             style = Stroke(width = stroke)
         )
     }
@@ -759,7 +759,7 @@ private fun ArchiveSkeleton() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 18.dp)
+            .padding(horizontal = 16.dp, vertical = 20.dp)
     ) {
         Text(
             "正在读取压缩包目录…",
@@ -772,13 +772,13 @@ private fun ArchiveSkeleton() {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(16.dp))
         repeat(7) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(ZippestRadius.xs))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             )
             Spacer(Modifier.height(8.dp))
@@ -842,7 +842,7 @@ private fun androidx.compose.foundation.layout.RowScope.ArchiveAction(
         modifier = Modifier
             .weight(1f)
             .combinedClickable(enabled = enabled, onClick = onClick)
-            .padding(vertical = 6.dp),
+            .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
@@ -855,7 +855,7 @@ private fun androidx.compose.foundation.layout.RowScope.ArchiveAction(
             },
             modifier = Modifier.size(23.dp)
         )
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(4.dp))
         Text(
             label,
             style = MaterialTheme.typography.labelMedium,
@@ -880,7 +880,7 @@ private fun ArchiveRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 60.dp)
+            .heightIn(min = 64.dp)
             .background(
                 if (selected) {
                     MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
@@ -898,37 +898,17 @@ private fun ArchiveRow(
                 contentDescription = "${node.name}，$kind"
                 if (selected) stateDescription = "已选中"
             }
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val background = if (node.isDirectory) {
-            MaterialTheme.colorScheme.secondaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant
-        }
-        val tint = if (node.isDirectory) {
-            MaterialTheme.colorScheme.onSecondaryContainer
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
-        }
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(background),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                if (node.isDirectory) Icons.Outlined.Folder else Icons.Outlined.InsertDriveFile,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(23.dp)
-            )
-        }
+        FileKindIcon(
+            kind = com.decompress.app.ui.theme.fileKindOf(node.name, node.isDirectory),
+            size = 40.dp
+        )
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(start = 10.dp)
+                .padding(start = 12.dp)
         ) {
             Text(
                 node.name,
@@ -1288,7 +1268,7 @@ fun ExtractSheet(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
@@ -1338,11 +1318,11 @@ fun ExtractSheet(
                 Box {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(ZippestRadius.sm),
                         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
                     ) {
                         Row(
-                            modifier = Modifier.padding(start = 10.dp, end = 2.dp),
+                            modifier = Modifier.padding(start = 12.dp, end = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(
@@ -1361,7 +1341,7 @@ fun ExtractSheet(
                                     Icons.Outlined.ContentCopy,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
                                 Text(
                                     clipboardText ?: "剪贴板为空",
@@ -1394,13 +1374,13 @@ fun ExtractSheet(
                 }
 
                 val blockName: @Composable () -> Unit = {
-                    Spacer(Modifier.height(18.dp))
+                    Spacer(Modifier.height(20.dp))
                     Text(
                         "压缩包名称",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
                         value = archiveNameValue,
                         onValueChange = { archiveNameValue = it },
@@ -1422,7 +1402,7 @@ fun ExtractSheet(
                             }
                         }
                     )
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -1460,7 +1440,7 @@ fun ExtractSheet(
                 }
 
                 val blockDestination: @Composable () -> Unit = {
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(20.dp))
                 Text(
                     "解压到",
                     style = MaterialTheme.typography.labelMedium,
@@ -1501,7 +1481,7 @@ fun ExtractSheet(
                 }
 
                 val blockConflict: @Composable () -> Unit = {
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(20.dp))
                 Text(
                     "遇到同名文件",
                     style = MaterialTheme.typography.labelMedium,
@@ -1521,7 +1501,7 @@ fun ExtractSheet(
                 }
 
                 val blockEncoding: @Composable () -> Unit = {
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
                 Text(
                     "文件名编码",
                     style = MaterialTheme.typography.labelMedium,
@@ -1544,8 +1524,8 @@ fun ExtractSheet(
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 10.dp),
-                        shape = RoundedCornerShape(12.dp),
+                            .padding(bottom = 12.dp),
+                        shape = RoundedCornerShape(ZippestRadius.sm),
                         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
                     ) {
                         Text(
@@ -1575,7 +1555,7 @@ fun ExtractSheet(
                     .forEach { section -> extractBlocks[section]?.invoke() }
 
                 error?.let {
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     Text(
                         it,
                         style = MaterialTheme.typography.labelMedium,
@@ -1589,7 +1569,7 @@ fun ExtractSheet(
                 destinationHint,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                    .padding(horizontal = 4.dp, vertical = 4.dp),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -1600,8 +1580,8 @@ fun ExtractSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 TextButton(
                     onClick = onDismiss,
@@ -1722,14 +1702,14 @@ fun ExtractSheet(
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(8.dp))
                         Text(
                             "第 " + (index + 1) + "/" + archives.size +
                                 " 个 · 压缩包没有密码时可留空。",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(12.dp))
                         OutlinedTextField(
                             value = passwordDialogValue,
                             onValueChange = { passwordDialogValue = it },
@@ -1788,7 +1768,7 @@ private fun DestinationChoice(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(ZippestRadius.sm),
         color = if (selected) {
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
         } else {
@@ -1801,7 +1781,7 @@ private fun DestinationChoice(
         )
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             RadioButton(selected = selected, onClick = null)
@@ -1815,7 +1795,7 @@ private fun DestinationChoice(
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(
                     detail,
                     style = MaterialTheme.typography.labelMedium,
@@ -1917,7 +1897,7 @@ private fun ArchivePathPane(
             end = ZippestSpacing.sm,
             top = ZippestSpacing.lg
         ),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
             "包内位置",

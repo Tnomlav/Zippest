@@ -49,7 +49,7 @@ internal fun BrowserNavPane(
                 end = ZippestSpacing.sm,
                 top = ZippestSpacing.md
             ),
-        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp)
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp)
     ) {
         Text(
             "位置",
@@ -81,7 +81,7 @@ internal fun BrowserNavPane(
                 Icon(
                     Icons.Outlined.Folder,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(20.dp),
                     tint = if (selected) {
                         MaterialTheme.colorScheme.onPrimaryContainer
                     } else {
@@ -127,7 +127,7 @@ internal fun BrowserNavPane(
                     Icon(
                         Icons.Outlined.Folder,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.width(ZippestSpacing.sm))

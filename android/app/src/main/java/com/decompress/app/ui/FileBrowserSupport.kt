@@ -218,12 +218,16 @@ internal fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            if (filtered) Icons.Outlined.Search else Icons.Outlined.FolderOpen,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(48.dp)
-        )
+        if (filtered) {
+            Icon(
+                Icons.Outlined.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(48.dp)
+            )
+        } else {
+            EmptyIllustration(EmptyArt.FOLDER)
+        }
         Spacer(Modifier.height(12.dp))
         Text(
             if (filtered) "没有匹配的文件" else "此文件夹为空",
@@ -236,7 +240,7 @@ internal fun EmptyState(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (!filtered && onBrowseDownloads != null) {
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             androidx.compose.material3.OutlinedButton(onClick = onBrowseDownloads) {
                 Text("去下载目录看看")
             }
@@ -266,7 +270,7 @@ internal fun ErrorState(
         Text(message, style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(16.dp))
         Button(onClick = onRetry) { Text("重试") }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         TextButton(onClick = onChooseFolder) { Text("重新选择文件夹") }
     }
 }

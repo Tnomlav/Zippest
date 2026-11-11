@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.decompress.app.ui.theme.ZippestRadius
 
 @Composable
 fun CenteredSnackbarHost(
@@ -37,7 +38,7 @@ fun CenteredSnackbarHost(
             modifier = Modifier.widthIn(max = 420.dp)
         ) { data ->
             Surface(
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(ZippestRadius.sm),
                 color = MaterialTheme.colorScheme.inverseSurface,
                 contentColor = MaterialTheme.colorScheme.inverseOnSurface,
                 shadowElevation = 8.dp

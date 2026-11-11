@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.decompress.app.ui.theme.ZippestRadius
 
 @Composable
 internal fun DeleteConfirmationDialog(
@@ -44,10 +45,10 @@ internal fun DeleteConfirmationDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp),
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(ZippestRadius.sheet),
             color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp,
-            shadowElevation = 14.dp
+            tonalElevation = 8.dp,
+            shadowElevation = 16.dp
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 28.dp),
@@ -67,7 +68,7 @@ internal fun DeleteConfirmationDialog(
                         )
                     }
                 }
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(20.dp))
                 Text(
                     if (itemCount == 1) "删除 1 项？" else "删除 $itemCount 项？",
                     style = MaterialTheme.typography.titleLarge,
@@ -162,9 +163,9 @@ internal fun TransferToolbar(
             ) {
                 if (busy) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(20.dp),
                         color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
+                        strokeWidth = 4.dp
                     )
                 } else {
                     Text(action)

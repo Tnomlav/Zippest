@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.decompress.app.data.TaskHistoryEntry
+import com.decompress.app.ui.theme.ZippestRadius
 
 @Composable
 internal fun TaskHistoryRow(
@@ -29,11 +30,11 @@ internal fun TaskHistoryRow(
     onDelete: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(ZippestRadius.sm),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
     ) {
         Column(
-            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 8.dp)
+            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 12.dp, bottom = 8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -54,7 +55,7 @@ internal fun TaskHistoryRow(
                     }
                 )
             }
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
                 entry.message,
                 style = MaterialTheme.typography.labelMedium,
@@ -89,7 +90,7 @@ internal fun TaskSectionLabel(title: String, subtitle: String) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(title, style = MaterialTheme.typography.titleSmall)
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.width(8.dp))
         Text(
             subtitle,
             style = MaterialTheme.typography.labelSmall,

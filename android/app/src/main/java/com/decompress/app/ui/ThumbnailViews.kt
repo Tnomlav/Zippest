@@ -8,12 +8,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.DataObject
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.InsertDriveFile
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.InstallMobile
+import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +42,10 @@ import com.decompress.app.data.BrowserEntry
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.decompress.app.ui.theme.FileKind
+import com.decompress.app.ui.theme.ZippestRadius
+import com.decompress.app.ui.theme.fileKindColors
+import com.decompress.app.ui.theme.fileKindOf
 
 @Composable
 internal fun EntryLeading(entry: BrowserEntry, showThumbnail: Boolean) {
@@ -44,23 +53,44 @@ internal fun EntryLeading(entry: BrowserEntry, showThumbnail: Boolean) {
         MediaThumbnail(entry)
         return
     }
+    FileKindIcon(kind = fileKindOf(entry.name, entry.isDirectory))
+}
 
-    val tint = when {
-        entry.isDirectory -> MaterialTheme.colorScheme.primary
-        entry.isArchive -> MaterialTheme.colorScheme.tertiary
-        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+/**
+ * 文件类型图标（8.4）：24dp 网格、1.5dp 描边线；底色按类型取语义色，
+ * 压缩包 / 图片 / 音频 / 文档 / 代码 / APK 各有自己的图标，不再统一用一个文件图标。
+ */
+@Composable
+internal fun FileKindIcon(
+    kind: FileKind,
+    size: Dp = 40.dp,
+    modifier: Modifier = Modifier
+) {
+    val colors = fileKindColors(kind, MaterialTheme.colorScheme)
+    val icon = when (kind) {
+        FileKind.FOLDER -> Icons.Outlined.Folder
+        FileKind.ARCHIVE -> Icons.Outlined.Folder
+        FileKind.IMAGE -> Icons.Outlined.Image
+        FileKind.VIDEO -> Icons.Outlined.PlayArrow
+        FileKind.AUDIO -> Icons.Outlined.MusicNote
+        FileKind.DOC -> Icons.Outlined.Description
+        FileKind.CODE -> Icons.Outlined.Code
+        FileKind.APK -> Icons.Outlined.InstallMobile
+        FileKind.OTHER -> Icons.Outlined.DataObject
     }
-    val icon = when {
-        entry.isDirectory -> Icons.Outlined.Folder
-        entry.isArchive -> Icons.Outlined.Archive
-        else -> Icons.Outlined.InsertDriveFile
-    }
-
     Box(
-        modifier = Modifier.size(44.dp),
+        modifier = modifier
+            .size(size)
+            .clip(RoundedCornerShape(ZippestRadius.sm))
+            .background(colors.container),
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(23.dp))
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = colors.content,
+            modifier = Modifier.size(22.dp)
+        )
     }
 }
 
@@ -83,7 +113,7 @@ internal fun MediaThumbnail(entry: BrowserEntry, size: Dp = 44.dp) {
     val context = LocalContext.current
     // 列表行用 96 px，宽屏预览栏用 320 px；缓存键带上尺寸，避免互相顶掉。
     val thumbPx = if (size.value >= 100f) 320 else 96
-    val corner = if (size.value >= 100f) 16.dp else 12.dp
+    val corner = ZippestRadius.sm
     val cacheKey = entry.uri.toString() + "@" + thumbPx
     var bitmap by remember(entry.uri, thumbPx) {
         mutableStateOf(ThumbnailCache.get(cacheKey)?.asImageBitmap())
@@ -148,14 +178,14 @@ internal fun MediaThumbnail(entry: BrowserEntry, size: Dp = 44.dp) {
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier
-                            .size(18.dp)
-                            .padding(2.dp)
+                            .size(20.dp)
+                            .padding(4.dp)
                     )
                 }
             }
         } else {
             Icon(
-                if (entry.isVideo) Icons.Outlined.PlayArrow else Icons.Outlined.InsertDriveFile,
+                if (entry.isVideo) Icons.Outlined.PlayArrow else Icons.Outlined.DataObject,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )

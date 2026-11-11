@@ -175,7 +175,7 @@ internal fun OpenSourceLicensesDialog(
                         }
                         Text(
                             item.name,
-                            modifier = Modifier.padding(top = if (index == 0) 14.dp else 0.dp),
+                            modifier = Modifier.padding(top = if (index == 0) 16.dp else 0.dp),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )

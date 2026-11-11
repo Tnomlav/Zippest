@@ -68,6 +68,7 @@ import com.decompress.app.data.CompressionOptions
 import com.decompress.app.data.archiveNameWithoutExtension
 import com.decompress.app.service.CompressionScheduler
 import com.decompress.app.service.CompressionTask
+import com.decompress.app.ui.theme.ZippestRadius
 
 data class CompressTarget(
     val entries: List<BrowserEntry>,
@@ -281,7 +282,7 @@ fun CompressionSheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(20.dp))
                 SectionLabel("压缩格式")
                 Row(
                     modifier = Modifier
@@ -317,7 +318,7 @@ fun CompressionSheet(
                     }
                 }
 
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     if (ResumableTarWriter.supports(format)) {
                         "TAR 系列支持断点续传：进程被系统中断后会自动接着压"
@@ -328,7 +329,7 @@ fun CompressionSheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
                 SectionLabel("文件名")
                 OutlinedTextField(
                     value = fileName,
@@ -338,7 +339,7 @@ fun CompressionSheet(
                     placeholder = { Text("压缩包${format.extension}") }
                 )
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
                 SectionLabel("压缩级别")
                 Row(
                     modifier = Modifier
@@ -371,7 +372,7 @@ fun CompressionSheet(
                     )
                 }
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
                 SectionLabel("排除规则")
                 Row(
                     modifier = Modifier
@@ -397,7 +398,7 @@ fun CompressionSheet(
                 }
 
                 if (format.supportsPassword) {
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(16.dp))
                     SectionLabel("密码（可选）")
                     OutlinedTextField(
                         value = password,
@@ -462,7 +463,7 @@ fun CompressionSheet(
                     }
                 }
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
                 SectionLabel("分卷大小")
                 Row(
                     modifier = Modifier
@@ -479,7 +480,7 @@ fun CompressionSheet(
                     }
                 }
                 if (splitOption.bytes != null) {
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     val effectiveName = if (
                         fileName.trim().lowercase().endsWith(format.extension)
                     ) {
@@ -499,7 +500,7 @@ fun CompressionSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         "分卷 = 把大包切成 .001 / .002… 几个小文件，方便发送；解压时打开第一个即可",
                         style = MaterialTheme.typography.labelSmall,
@@ -537,8 +538,8 @@ fun CompressionSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
                     Text("取消")
@@ -561,7 +562,7 @@ private fun SectionLabel(text: String) {
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(8.dp))
 }
 
 @Composable
@@ -575,7 +576,7 @@ private fun CompressionChoice(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(ZippestRadius.sm),
         color = if (selected) {
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
         } else {
@@ -583,7 +584,7 @@ private fun CompressionChoice(
         }
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -591,7 +592,7 @@ private fun CompressionChoice(
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary
             )
-            Column(modifier = Modifier.padding(start = 10.dp)) {
+            Column(modifier = Modifier.padding(start = 12.dp)) {
                 Text(title, style = MaterialTheme.typography.bodyMedium)
                 Text(
                     detail,

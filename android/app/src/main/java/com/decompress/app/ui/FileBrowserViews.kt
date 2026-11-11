@@ -68,7 +68,7 @@ internal fun FileBrowserContent(
                 verticalArrangement = Arrangement.Center
             ) {
                 CircularProgressIndicator()
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 Text(
                     "正在搜索全部存储…",
                     style = MaterialTheme.typography.labelMedium,
@@ -156,7 +156,7 @@ internal fun FileBrowserContent(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 6.dp),
+                        .padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.Center
                 ) {
                     TextButton(onClick = onLoadMore) {

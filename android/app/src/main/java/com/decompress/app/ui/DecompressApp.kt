@@ -517,13 +517,13 @@ fun ZippestApp(
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(8.dp))
                         Text(
                             "这个压缩包的密码和前面几个不同，单独输入后继续解压。",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(12.dp))
                         OutlinedTextField(
                             value = pendingPasswordInput,
                             onValueChange = { pendingPasswordInput = it },

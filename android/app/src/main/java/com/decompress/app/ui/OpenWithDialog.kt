@@ -56,6 +56,7 @@ import com.decompress.app.data.localFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.decompress.app.ui.theme.ZippestRadius
 
 internal data class OpenWithOption(
     val label: String,
@@ -422,7 +423,7 @@ internal fun OpenWithDialog(
                         .fillMaxWidth()
                         .heightIn(max = 320.dp)
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     request.options.forEachIndexed { index, option ->
                         val previous = request.options.getOrNull(index - 1)
@@ -436,7 +437,7 @@ internal fun OpenWithDialog(
                                 modifier = Modifier.padding(
                                     start = 4.dp,
                                     top = if (index == 0) 0.dp else 8.dp,
-                                    bottom = 2.dp
+                                    bottom = 4.dp
                                 ),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -446,7 +447,7 @@ internal fun OpenWithDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { selectedIndex = index },
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(ZippestRadius.sm),
                             color = if (index == selectedIndex) {
                                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                             } else {
@@ -454,7 +455,7 @@ internal fun OpenWithDialog(
                             }
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 if (option.icon != null) {

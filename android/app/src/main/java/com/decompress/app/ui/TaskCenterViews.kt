@@ -68,6 +68,7 @@ import com.decompress.app.data.TaskHistoryEntry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import com.decompress.app.ui.theme.ZippestRadius
 
 @Composable
 internal fun TaskQueueDialog(onDismiss: () -> Unit) {
@@ -123,16 +124,25 @@ internal fun TaskQueueDialog(onDismiss: () -> Unit) {
                 ) {
                     CircularProgressIndicator()
                 }
-                sortedTasks.isEmpty() -> Text(
-                    "暂无后台任务",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                sortedTasks.isEmpty() -> Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    EmptyIllustration(EmptyArt.TASKS)
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "暂无后台任务",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 else -> Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = 440.dp)
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     sortedTasks.forEach { task ->
                         TaskQueueRow(
@@ -235,7 +245,7 @@ internal fun TaskCenterContent(
                 modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Text("还没有任务", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(4.dp))
             Text(
@@ -251,7 +261,7 @@ internal fun TaskCenterContent(
         LazyColumn(
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (activeTasks.isNotEmpty()) {
                 item { TaskSectionLabel("进行中", "${activeTasks.size} 项") }
@@ -354,7 +364,7 @@ internal fun TaskCenterContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.End
         ) {
             if (finishedTasks.isNotEmpty()) {
@@ -388,10 +398,10 @@ internal fun RecentExtractionStrip(
     entries: List<TaskHistoryEntry>,
     onOpen: (TaskHistoryEntry) -> Unit
 ) {
-    Column(modifier = Modifier.padding(bottom = 10.dp)) {
+    Column(modifier = Modifier.padding(bottom = 12.dp)) {
         Text(
             "最近解压",
-            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.SemiBold
@@ -401,13 +411,13 @@ internal fun RecentExtractionStrip(
         ) {
             items(entries, key = { it.id }) { entry ->
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(ZippestRadius.sm),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
                     modifier = Modifier
                         .width(190.dp)
                         .clickable { onOpen(entry) }
                 ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
+                    Column(modifier = Modifier.padding(12.dp)) {
                         Text(
                             entry.title,
                             style = MaterialTheme.typography.bodyMedium,
@@ -415,7 +425,7 @@ internal fun RecentExtractionStrip(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Spacer(Modifier.height(2.dp))
+                        Spacer(Modifier.height(4.dp))
                         Text(
                             entry.locationName.ifBlank { "结果文件夹" },
                             style = MaterialTheme.typography.labelSmall,
@@ -482,15 +492,15 @@ internal fun ActiveArchiveTaskBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(ZippestRadius.md),
             color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 10.dp,
+            shadowElevation = 12.dp,
             tonalElevation = 3.dp
         ) {
-            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 11.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Surface(
                         shape = CircleShape,
@@ -543,7 +553,7 @@ internal fun ActiveArchiveTaskBar(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(5.dp)
-                            .clip(RoundedCornerShape(99.dp)),
+                            .clip(RoundedCornerShape(ZippestRadius.pill)),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
@@ -552,7 +562,7 @@ internal fun ActiveArchiveTaskBar(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(5.dp)
-                            .clip(RoundedCornerShape(99.dp)),
+                            .clip(RoundedCornerShape(ZippestRadius.pill)),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
@@ -621,7 +631,7 @@ internal fun TaskQueueRow(
         task.state == WorkInfo.State.BLOCKED
 
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(ZippestRadius.sm),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -693,7 +703,7 @@ internal fun TaskQueueRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(4.dp)
-                        .clip(RoundedCornerShape(99.dp))
+                        .clip(RoundedCornerShape(ZippestRadius.pill))
                 )
             }
         }

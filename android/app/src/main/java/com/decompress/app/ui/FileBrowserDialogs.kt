@@ -236,7 +236,7 @@ internal fun FileBrowserDialogs(
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         "{name} 原名 · {n} 1/2 · {001} 补零 · {ext} 后缀 · {date} 年月日 · {time} 时分秒",
                         style = MaterialTheme.typography.labelSmall,
@@ -319,7 +319,7 @@ internal fun FileBrowserDialogs(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     if (state.checksumBusy) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(20.dp))
@@ -345,7 +345,7 @@ internal fun FileBrowserDialogs(
                         }) {
                             Text("复制 SHA-256")
                         }
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(8.dp))
                         Text("MD5（更快）", style = MaterialTheme.typography.labelSmall)
                         Text(
                             md5,
@@ -496,7 +496,7 @@ internal fun FileBrowserDialogs(
                             }
                         }
                     )
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     Text(
                         "后缀",
                         style = MaterialTheme.typography.labelMedium,

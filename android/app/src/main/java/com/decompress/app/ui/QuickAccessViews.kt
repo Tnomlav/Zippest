@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import com.decompress.app.data.QuickLocation
 import com.decompress.app.data.QuickLocationIcon
 import java.io.File
+import com.decompress.app.ui.theme.ZippestRadius
 
 @Composable
 internal fun QuickAccessTopTitle(
@@ -70,7 +71,7 @@ internal fun QuickAccessTopTitle(
     Row(
         modifier = Modifier
             .clickable(enabled = directStorage, onClick = onClick)
-            .padding(end = 6.dp),
+            .padding(end = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -80,7 +81,7 @@ internal fun QuickAccessTopTitle(
             overflow = TextOverflow.Ellipsis
         )
         if (directStorage) {
-            Spacer(Modifier.size(2.dp))
+            Spacer(Modifier.size(4.dp))
             Icon(
                 Icons.Outlined.KeyboardArrowDown,
                 contentDescription = if (expanded) {
@@ -127,9 +128,9 @@ internal fun StorageQuickLocationPanel(
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp),
+            shape = RoundedCornerShape(bottomStart = ZippestRadius.xl, bottomEnd = ZippestRadius.xl),
             color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 14.dp,
+            shadowElevation = 16.dp,
             tonalElevation = 0.dp
         ) {
             Column(
@@ -137,14 +138,14 @@ internal fun StorageQuickLocationPanel(
                     start = 12.dp,
                     top = 12.dp,
                     end = 12.dp,
-                    bottom = 14.dp
+                    bottom = 16.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (locations.isEmpty()) {
                     Text(
                         "暂无快捷位置，可在设置中新建",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 14.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -193,7 +194,7 @@ internal fun StorageExternalQuickLocation(
 ) {
     Surface(
         modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(ZippestRadius.sm),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(
             alpha = if (selected) 0.9f else 0.55f
         ),
@@ -207,7 +208,7 @@ internal fun StorageExternalQuickLocation(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 52.dp)
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -251,7 +252,7 @@ internal fun StorageQuickLocationAdd(
 ) {
     Surface(
         modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(ZippestRadius.sm),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
         border = BorderStroke(
             1.dp,
@@ -262,7 +263,7 @@ internal fun StorageQuickLocationAdd(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -301,7 +302,7 @@ internal fun StorageQuickLocation(
     }
     Surface(
         modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(ZippestRadius.sm),
         color = if (selected) {
             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
         } else {
@@ -317,7 +318,7 @@ internal fun StorageQuickLocation(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -426,7 +427,7 @@ internal fun StorageBar(
             )
         },
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp
+        tonalElevation = 4.dp
     ) {
         Column(
             modifier = Modifier
@@ -450,13 +451,13 @@ internal fun StorageBar(
                     color = MaterialTheme.colorScheme.primary
                 )
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
                 progress = { fraction.coerceIn(0f, 1f) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(5.dp)
-                    .clip(RoundedCornerShape(999.dp)),
+                    .clip(RoundedCornerShape(ZippestRadius.pill)),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )

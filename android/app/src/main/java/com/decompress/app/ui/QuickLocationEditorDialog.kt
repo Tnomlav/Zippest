@@ -33,6 +33,7 @@ import com.decompress.app.data.QuickLocationRepository
 import com.decompress.app.data.normalizeQuickLocationPath
 import com.decompress.app.data.relativePathFromInternalTreeDocumentId
 import java.io.File
+import com.decompress.app.ui.theme.ZippestRadius
 
 @Composable
 internal fun QuickLocationEditorDialog(
@@ -119,7 +120,7 @@ internal fun QuickLocationEditorDialog(
                 )
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(ZippestRadius.sm),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
                 ) {
                     Text(
@@ -130,7 +131,7 @@ internal fun QuickLocationEditorDialog(
                         } else {
                             "内部存储 / $path"
                         },
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (error != null) {
                             MaterialTheme.colorScheme.error
@@ -147,7 +148,7 @@ internal fun QuickLocationEditorDialog(
                         Icon(
                             Icons.Outlined.FolderOpen,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                         Text(
                             if (hasSelectedPath) "重新选择文件夹" else "选择文件夹",

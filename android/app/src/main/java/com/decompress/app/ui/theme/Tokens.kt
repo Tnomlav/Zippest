@@ -11,7 +11,6 @@ import androidx.compose.ui.unit.dp
 
 /** 间距：4 dp 基线。`xl` 是页面版心，`lg` 是区块间距。 */
 object ZippestSpacing {
-    val xxs = 2.dp
     val xs = 4.dp
     val sm = 8.dp
     val md = 12.dp
