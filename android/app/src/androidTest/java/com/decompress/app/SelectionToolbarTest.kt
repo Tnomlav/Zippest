@@ -22,6 +22,7 @@ class SelectionToolbarTest {
         rule.setContent {
             ZippestTheme {
                 SelectionToolbar(
+                    onExtract = {},
                     onCopy = { copied = true },
                     onMove = {},
                     onRename = {},

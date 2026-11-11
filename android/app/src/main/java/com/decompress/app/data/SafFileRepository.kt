@@ -9,11 +9,19 @@ import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
 import android.webkit.MimeTypeMap
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.nio.channels.FileChannel
+import java.nio.file.StandardOpenOption
 
 enum class TransferOutcome {
     COMPLETED,
@@ -450,20 +458,68 @@ class SafFileRepository(private val context: Context) {
         TransferResult(TransferOutcome.COMPLETED)
     }
 
-    private fun copyDirectory(source: File, destination: File) {
+    private suspend fun copyDirectory(source: File, destination: File) {
         if (!destination.mkdirs()) {
             throw IllegalStateException("无法创建 ${destination.name}")
         }
-        source.listFiles().orEmpty().forEach { child ->
-            val target = File(destination, child.name)
-            if (child.isDirectory) {
-                copyDirectory(child, target)
-            } else {
-                child.copyTo(target, overwrite = false)
-                target.setLastModified(child.lastModified())
+        val children = source.listFiles().orEmpty()
+        if (children.size <= 1) {
+            children.forEach { child -> copyChild(child, destination) }
+        } else {
+            coroutineScope {
+                val permits = Semaphore(PARALLEL_COPY)
+                children.map { child ->
+                    async(Dispatchers.IO) {
+                        permits.withPermit { copyChild(child, destination) }
+                    }
+                }.awaitAll()
             }
         }
         destination.setLastModified(source.lastModified())
+    }
+
+    private suspend fun copyChild(child: File, parent: File) {
+        val target = File(parent, child.name)
+        if (child.isDirectory) {
+            copyDirectory(child, target)
+        } else {
+            copyFileFast(child, target)
+            target.setLastModified(child.lastModified())
+        }
+    }
+
+    /**
+     * 本地文件之间的复制走 FileChannel.transferTo，比 8KB 的 copyTo 快一个数量级；
+     * transferTo 在某些 FUSE / SD 卡上返回 0 时回退到 256KB 缓冲复制。
+     */
+    private fun copyFileFast(source: File, target: File) {
+        var copied = false
+        runCatching {
+            FileChannel.open(source.toPath(), StandardOpenOption.READ).use { input ->
+                FileChannel.open(
+                    target.toPath(),
+                    StandardOpenOption.CREATE_NEW,
+                    StandardOpenOption.WRITE
+                ).use { output ->
+                    var position = 0L
+                    val size = input.size()
+                    while (position < size) {
+                        val moved = input.transferTo(position, size - position, output)
+                        if (moved <= 0L) break
+                        position += moved
+                    }
+                    copied = position >= size
+                }
+            }
+        }
+        if (!copied) {
+            target.delete()
+            source.inputStream().use { input ->
+                FileOutputStream(target).use { output ->
+                    input.copyTo(output, BUFFER_SIZE)
+                }
+            }
+        }
     }
 
     private fun uniqueFile(directory: File, name: String): File {
@@ -616,6 +672,7 @@ class SafFileRepository(private val context: Context) {
     }
 
     companion object {
-        private const val BUFFER_SIZE = 64 * 1024
+        private const val BUFFER_SIZE = 256 * 1024
+        private const val PARALLEL_COPY = 4
     }
 }

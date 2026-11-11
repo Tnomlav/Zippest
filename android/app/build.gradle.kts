@@ -53,8 +53,8 @@ android {
         applicationId = "com.decompress.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 152
-        versionName = "1.29.0"
+        versionCode = 153
+        versionName = "1.30.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

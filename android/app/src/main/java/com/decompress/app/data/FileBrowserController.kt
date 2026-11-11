@@ -11,10 +11,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -481,25 +486,28 @@ class FileBrowserController(context: Context) {
     suspend fun commitDelete(targets: List<BrowserEntry>): Int = mutationMutex.withLock {
         val useTrash = AppSettingsRepository.read(appContext).useTrash
         val trash = TrashRepository(appContext)
-        var deleted = 0
-        targets.forEach { target ->
-            val uri = target.uri
-            val directFile = if (hasDirectStorageAccess()) {
-                repository.localFileForUri(uri)
-            } else {
-                null
-            }
-            val success = when {
-                useTrash && directFile != null ->
-                    trash.moveToTrash(directFile)
-                useTrash -> false
-                directFile != null ->
-                    repository.deleteDirect(Uri.fromFile(directFile))
-                storageMode == StorageMode.SAF ->
-                    repository.delete(uri)
-                else -> false
-            }
-            if (success) deleted++
+        val deleted = coroutineScope {
+            val permits = Semaphore(PARALLEL_DELETE)
+            targets.map { target ->
+                async(Dispatchers.IO) {
+                    permits.withPermit {
+                        val uri = target.uri
+                        val directFile = if (hasDirectStorageAccess()) {
+                            repository.localFileForUri(uri)
+                        } else {
+                            null
+                        }
+                        when {
+                            useTrash && directFile != null -> trash.moveToTrash(directFile)
+                            useTrash -> false
+                            directFile != null ->
+                                repository.deleteDirect(Uri.fromFile(directFile))
+                            storageMode == StorageMode.SAF -> repository.delete(uri)
+                            else -> false
+                        }
+                    }
+                }
+            }.awaitAll().count { it }
         }
         pendingRemovals -= targets.mapTo(mutableSetOf()) { it.uri }
         if (deleted < targets.size) loadCurrent()
@@ -603,38 +611,57 @@ class FileBrowserController(context: Context) {
                 firstError = "不能把文件移动到当前文件夹"
             )
         }
-        var completed = 0
-        var sourceRetained = 0
-        var failed = 0
-        var firstError: String? = null
         val hasDirectAccess = hasDirectStorageAccess()
         val directDestination = if (hasDirectAccess) {
             repository.localFileForUri(destinationDirectoryUri)
         } else {
             null
         }
-        for (source in sources) {
+        suspend fun transferOne(source: BrowserEntry): TransferResult {
             val directSource = if (hasDirectAccess) {
                 repository.localFileForUri(source.uri)
             } else {
                 null
             }
-            val result = when {
+            return when {
                 directSource != null && directDestination != null ->
                     repository.copyOrMoveDirect(
                         sourceUri = Uri.fromFile(directSource),
                         destinationDirectoryUri = Uri.fromFile(directDestination),
                         move = move
                     )
-                storageMode == StorageMode.SAF -> repository.copyOrMove(
-                    source = source,
-                    sourceTreeUri = treeUri ?: break,
-                    destinationTreeUri = destinationTreeUri,
-                    move = move,
-                    destinationDirectoryUri = destinationDirectoryUri
-                )
+                storageMode == StorageMode.SAF -> {
+                    val sourceTree = treeUri
+                    if (sourceTree == null) {
+                        TransferResult(TransferOutcome.FAILED, "存储位置不可用")
+                    } else {
+                        repository.copyOrMove(
+                            source = source,
+                            sourceTreeUri = sourceTree,
+                            destinationTreeUri = destinationTreeUri,
+                            move = move,
+                            destinationDirectoryUri = destinationDirectoryUri
+                        )
+                    }
+                }
                 else -> TransferResult(TransferOutcome.FAILED, "存储位置不可用")
             }
+        }
+        val results = if (hasDirectAccess && directDestination != null) {
+            coroutineScope {
+                val permits = Semaphore(PARALLEL_TRANSFER)
+                sources.map { source ->
+                    async(Dispatchers.IO) { permits.withPermit { transferOne(source) } }
+                }.awaitAll()
+            }
+        } else {
+            sources.map { transferOne(it) }
+        }
+        var completed = 0
+        var sourceRetained = 0
+        var failed = 0
+        var firstError: String? = null
+        results.forEach { result ->
             when (result.outcome) {
                 TransferOutcome.COMPLETED -> completed++
                 TransferOutcome.SOURCE_RETAINED -> sourceRetained++
@@ -688,6 +715,8 @@ class FileBrowserController(context: Context) {
         private const val KEY_TREE_URI = "tree_uri"
         private const val KEY_STORAGE_MODE = "storage_mode"
         private const val KEY_DIRECT_ROOT = "direct_root"
+        private const val PARALLEL_TRANSFER = 3
+        private const val PARALLEL_DELETE = 4
         private const val MAX_SEARCH_ENTRIES = 25_000
         private const val SKIP_SEARCH_PREFIX = "Android/"
     }
