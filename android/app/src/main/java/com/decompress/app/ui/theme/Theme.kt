@@ -28,6 +28,13 @@ private val LightColors = lightColorScheme(
     surfaceContainerHigh = Color(0xFFE5EAE6),
     surfaceContainerHighest = Color(0xFFDFE6E0),
     onSurfaceVariant = Color(0xFF59625D),
+    surfaceDim = Color(0xFFDDE4DE),
+    surfaceBright = Color(0xFFFFFFFF),
+    surfaceTint = Color(0xFF0F6B4F),
+    inverseSurface = Color(0xFF2F3531),
+    inverseOnSurface = Color(0xFFF1F4F1),
+    inversePrimary = Color(0xFF7FD6B6),
+    scrim = Color(0xFF000000),
     outline = Color(0xFF7D8C82),
     outlineVariant = Color(0xFFDDE4DE),
     secondary = Color(0xFF4F6B5E),
@@ -60,6 +67,13 @@ private val DarkColors = darkColorScheme(
     surfaceContainerHigh = Color(0xFF222B26),
     surfaceContainerHighest = Color(0xFF2C3630),
     onSurfaceVariant = Color(0xFFB8C4BB),
+    surfaceDim = Color(0xFF121815),
+    surfaceBright = Color(0xFF2C3630),
+    surfaceTint = Color(0xFF7FD6B6),
+    inverseSurface = Color(0xFFE8EEE9),
+    inverseOnSurface = Color(0xFF1B231E),
+    inversePrimary = Color(0xFF0F6B4F),
+    scrim = Color(0xFF000000),
     outline = Color(0xFF66766B),
     outlineVariant = Color(0xFF33403A),
     secondary = Color(0xFFA9C7B8),
@@ -106,12 +120,16 @@ fun ZippestTheme(
         primary = Color(accent.lightPrimary),
         onPrimary = Color.White,
         primaryContainer = Color(accent.lightContainer),
-        onPrimaryContainer = Color(accent.lightOnContainer)
+        onPrimaryContainer = Color(accent.lightOnContainer),
+        inversePrimary = Color(accent.darkPrimary),
+        surfaceTint = Color(accent.lightPrimary)
     )
     val dark = DarkColors.copy(
         primary = Color(accent.darkPrimary),
         onPrimary = Color(0xFF0B1512),
         primaryContainer = Color(accent.darkContainer),
+        inversePrimary = Color(accent.lightPrimary),
+        surfaceTint = Color(accent.darkPrimary),
         onPrimaryContainer = Color(accent.darkOnContainer)
     )
     MaterialTheme(

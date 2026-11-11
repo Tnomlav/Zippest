@@ -302,6 +302,24 @@ elif [ "$missing" -eq 0 ]; then
     fi
 fi
 
+color_hits="$(grep -rn 'Color(0x' android/app/src/main/java/com/decompress/app/ui --include='*.kt' | grep -v '/theme/' || true)"
+if [ -z "$color_hits" ]; then
+    pass 15 "UI 颜色全部走主题" "ui/ 下 Color(0x 只出现在 theme/"
+else
+    fail 15 "UI 颜色全部走主题" "写死颜色：$(printf '%s' "$color_hits" | head -n 3 | tr '\n' ' ')"
+fi
+
+theme_file="android/app/src/main/java/com/decompress/app/ui/theme/Theme.kt"
+missing_roles=""
+for role in surfaceDim surfaceBright surfaceTint inverseSurface inverseOnSurface inversePrimary scrim errorContainer; do
+    grep -q "$role = Color" "$theme_file" || missing_roles="$missing_roles $role"
+done
+if [ -z "$missing_roles" ]; then
+    pass 15 "M3 角色完整" "inverse* / scrim / surfaceTint / errorContainer 已显式声明"
+else
+    fail 15 "M3 角色完整" "缺：$missing_roles"
+fi
+
 if [ -f "release/SHA256SUMS-$VERSION.txt" ]; then
     checksum_ok=0
     for pair in \

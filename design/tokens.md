@@ -4,7 +4,7 @@
 > `android/app/src/main/java/com/decompress/app/ui/theme/Tokens.kt` 与 `Theme.kt`。
 > 改颜色 / 字阶 / 间距，先改这里，再改代码；不要在界面文件里写字面量。
 >
-> 最后更新：2026-11-09 · 对应 1.21.2
+> 最后更新：2026-11-12 · 对应 1.25.1
 
 ## 颜色
 
@@ -17,15 +17,23 @@ Material 角色（跟随深浅色与强调色）。`Light` / `Dark` 两套，强
 | `onBackground` / `onSurface` | 主文字 | `#1B211E` | `#E8EEE9` |
 | `surfaceVariant` | 次级块、输入框底 | `#E9EFEA` | `#2A342E` |
 | `onSurfaceVariant` | 次要文字、说明 | `#59625D` | `#B8C4BB` |
-| `outline` | 控件描边 | `#B8C4BB` | `#4E5D54` |
+| `outline` | 控件描边 | `#7D8C82` | `#66766B` |
 | `outlineVariant` | 分隔线、极轻描边 | `#DDE4DE` | `#33403A` |
-| `error` | 失败、加密、风险 | `#C4622D` | `#F0A07A` |
+| `error` | 失败、加密、风险 | `#A24617` | `#F0A07A` |
+| `errorContainer` | 错误提示底 | `#FBE7DC` | `#6B2A0F` |
 | `primary`（默认森林绿） | 主按钮、进度、可操作 | `#0F6B4F` | `#7FD6B6` |
 | `primaryContainer` | 选中态、轻量强调 | `#D9F2E7` | `#1D4B3A` |
 | `secondary` | 次强调控件 | `#4F6B5E` | `#A9C7B8` |
 | `secondaryContainer` | **FilterChip 选中态**、提示条底色 | `#DCE9E2` | `#2A3B34` |
 | `tertiary` | 压缩包/格式图标的专属色 | `#41586A` | `#A8C0D4` |
+| `surfaceDim` / `surfaceBright` | 深色层次两端 | `#DDE4DE` / `#FFFFFF` | `#121815` / `#2C3630` |
+| `surfaceTint` | 高度染色 | 跟随主色 | 跟随主色 |
+| `inverseSurface` / `inverseOnSurface` | Snackbar、反色提示 | `#2F3531` / `#F1F4F1` | `#E8EEE9` / `#1B231E` |
+| `inversePrimary` | 反色主色 | 深色主色 | 浅色主色 |
+| `scrim` | 弹层遮罩 | `#000000` | `#000000` |
 
+> 2026-11-12 补：`error` 由 `#C4622D`（4.09:1）改为 `#A24617`（6.1:1），`outline` 由 `#B8C4BB`（1.80:1）改为 `#7D8C82`（3.5:1），并补齐 `inverse*` / `scrim` / `surfaceTint` / `errorContainer`；这几个角色之前走 Material 基线，Snackbar 的反色底色和弹层遮罩并不受控。
+>
 > 2026-11-09 补：`secondary` / `tertiary` 之前没定义，走了 Material 默认的紫色系，真机上表现为「选中的格式 chip 是淡紫、压缩包图标是暗紫」。现改为上面这组绿灰 / 蓝灰，与品牌色不打架。
 >
 > 同日补：`surfaceContainer*` 五个层级之前也没定义，`AlertDialog`、菜单、底部面板因此是淡紫底（`surfaceContainerHigh` 默认值）。现补齐：
