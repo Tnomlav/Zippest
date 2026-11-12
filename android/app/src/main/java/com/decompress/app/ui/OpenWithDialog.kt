@@ -404,18 +404,31 @@ internal fun OpenWithDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 320.dp)
+                        .heightIn(max = 420.dp)
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    if (request.options.isEmpty()) {
+                        Text(
+                            UiStrings.get(R.string.browser_no_app),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     request.options.forEachIndexed { index, option ->
                         val previous = request.options.getOrNull(index - 1)
                         if (index == 0 || previous?.category != option.category) {
                             Text(
                                 if (option.category == OpenWithCategory.DIRECT) {
-                                    UiStrings.get(R.string.open_direct)
+                                    UiStrings.get(R.string.open_direct) + " · " +
+                                        request.options.count {
+                                            it.category == OpenWithCategory.DIRECT
+                                        }
                                 } else {
-                                    UiStrings.get(R.string.share_send)
+                                    UiStrings.get(R.string.share_send) + " · " +
+                                        request.options.count {
+                                            it.category == OpenWithCategory.SHARE
+                                        }
                                 },
                                 modifier = Modifier.padding(
                                     start = 4.dp,
@@ -450,20 +463,34 @@ internal fun OpenWithDialog(
                                 } else {
                                     Spacer(Modifier.size(32.dp))
                                 }
-                                Text(
-                                    option.label,
+                                Column(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .padding(start = 12.dp),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = if (index == selectedIndex) {
-                                        FontWeight.Medium
-                                    } else {
-                                        FontWeight.Normal
-                                    },
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                        .padding(start = 12.dp)
+                                ) {
+                                    Text(
+                                        option.label,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = if (index == selectedIndex) {
+                                            FontWeight.Medium
+                                        } else {
+                                            FontWeight.Normal
+                                        },
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        when (option.action) {
+                                            Intent.ACTION_EDIT ->
+                                                UiStrings.get(R.string.edit)
+                                            Intent.ACTION_SEND ->
+                                                UiStrings.get(R.string.share)
+                                            else -> UiStrings.get(R.string.open)
+                                        },
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                                 RadioButton(
                                     selected = index == selectedIndex,
                                     onClick = { selectedIndex = index }
@@ -488,7 +515,10 @@ internal fun OpenWithDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { onLaunch(selected, rememberChoice) }) {
+            Button(
+                enabled = request.options.isNotEmpty(),
+                onClick = { onLaunch(selected, rememberChoice) }
+            ) {
                 Text(UiStrings.get(R.string.open))
             }
         },
