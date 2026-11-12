@@ -804,7 +804,7 @@ private fun ArchiveBottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .height(64.dp),
+                .heightIn(min = 64.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (selectionCount > 0) {

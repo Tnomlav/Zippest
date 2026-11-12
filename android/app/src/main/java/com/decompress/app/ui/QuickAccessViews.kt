@@ -437,10 +437,9 @@ internal fun StorageBar(
                 .navigationBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+            // 竖排而不是左右 SpaceBetween：200% 字号时两个长句会互相挤压，
+            // 右侧状态会被压成每行一个字母。
+            Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     UiStrings.get(
                         R.string.qa_storage,

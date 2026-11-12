@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -1170,7 +1171,7 @@ private fun ExtractLayoutEditor(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(64.dp)
+                        .heightIn(min = 64.dp)
                         .offset { IntOffset(0, offset.roundToInt()) }
                         .clip(RoundedCornerShape(ZippestRadius.sm))
                         .background(MaterialTheme.colorScheme.surface)

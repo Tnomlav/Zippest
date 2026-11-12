@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -49,7 +50,7 @@ internal fun SelectionToolbar(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .height(64.dp),
+                .heightIn(min = 64.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             SelectionAction(Icons.Outlined.Archive, UiStrings.get(R.string.toolbar_extract), onExtract)
