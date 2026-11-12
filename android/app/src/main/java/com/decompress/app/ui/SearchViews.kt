@@ -20,7 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.decompress.app.R
 import com.decompress.app.data.GlobalSearchHit
 
 @Composable
@@ -62,7 +64,7 @@ internal fun GlobalSearchRow(hit: GlobalSearchHit, onClick: () -> Unit) {
         Spacer(Modifier.width(8.dp))
         Text(
             if (hit.entry.isDirectory) {
-                "文件夹"
+                stringResource(R.string.browser_folder)
             } else {
                 Formatter.formatShortFileSize(context, hit.entry.size)
             },

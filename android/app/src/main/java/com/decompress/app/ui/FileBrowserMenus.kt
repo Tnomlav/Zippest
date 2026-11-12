@@ -1,3 +1,5 @@
+@file:Suppress("LocalContextGetResourceValueCall")
+
 package com.decompress.app.ui
 
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.decompress.app.R
 import com.decompress.app.data.AppSettings
 import com.decompress.app.data.AppSettingsRepository
 import com.decompress.app.data.BrowserEntry
@@ -102,7 +105,7 @@ internal fun FileBrowserMenus(
             onDismissRequest = { state.moreExpanded = false }
         ) {
             ZippestMenuItem(
-                text = { Text("排序") },
+                text = { Text(context.getString(R.string.browser_sort)) },
                 leadingIcon = { Icon(Icons.Outlined.Sort, null) },
                 onClick = {
                     state.moreExpanded = false
@@ -110,7 +113,7 @@ internal fun FileBrowserMenus(
                 }
             )
             ZippestMenuItem(
-                text = { Text("设置") },
+                text = { Text(context.getString(R.string.browser_settings)) },
                 leadingIcon = { Icon(Icons.Outlined.Tune, null) },
                 onClick = {
                     state.moreExpanded = false
@@ -118,7 +121,7 @@ internal fun FileBrowserMenus(
                 }
             )
             ZippestMenuItem(
-                text = { Text("后台任务") },
+                text = { Text(context.getString(R.string.browser_tasks)) },
                 leadingIcon = { Icon(Icons.Outlined.Schedule, null) },
                 onClick = {
                     state.moreExpanded = false
@@ -128,7 +131,7 @@ internal fun FileBrowserMenus(
                 }
             )
             ZippestMenuItem(
-                text = { Text("回收站") },
+                text = { Text(context.getString(R.string.browser_trash)) },
                 leadingIcon = { Icon(Icons.Outlined.Delete, null) },
                 onClick = {
                     state.moreExpanded = false
@@ -152,7 +155,7 @@ internal fun FileBrowserMenus(
             selectedEntries.singleOrNull()?.takeIf { it.isArchive && !it.isDirectory }
                 ?.let { candidate ->
                     ZippestMenuItem(
-                        text = { Text("预览") },
+                        text = { Text(context.getString(R.string.browser_preview)) },
                         leadingIcon = { Icon(Icons.Outlined.Visibility, null) },
                         onClick = {
                             state.selectionMenuExpanded = false
@@ -162,7 +165,7 @@ internal fun FileBrowserMenus(
                     )
                 }
             ZippestMenuItem(
-                text = { Text("压缩") },
+                text = { Text(context.getString(R.string.browser_compress)) },
                 leadingIcon = { Icon(Icons.Outlined.Unarchive, null) },
                 onClick = {
                     state.selectionMenuExpanded = false
@@ -170,7 +173,7 @@ internal fun FileBrowserMenus(
                 }
             )
             ZippestMenuItem(
-                text = { Text("回收站") },
+                text = { Text(context.getString(R.string.browser_trash)) },
                 leadingIcon = { Icon(Icons.Outlined.Delete, null) },
                 onClick = {
                     state.selectionMenuExpanded = false
@@ -180,7 +183,7 @@ internal fun FileBrowserMenus(
             )
             selectedEntries.singleOrNull()?.takeIf { !it.isDirectory }?.let { candidate ->
                 ZippestMenuItem(
-                    text = { Text("检查完整性") },
+                    text = { Text(context.getString(R.string.browser_verify)) },
                     leadingIcon = { Icon(Icons.Outlined.CheckCircle, null) },
                     onClick = {
                         state.selectionMenuExpanded = false
@@ -201,15 +204,15 @@ internal fun FileBrowserMenus(
             }
             if (repairCandidate != null) {
                 ZippestMenuItem(
-                    text = { Text("修复压缩包") },
+                    text = { Text(context.getString(R.string.browser_repair)) },
                     leadingIcon = { Icon(Icons.Outlined.Archive, null) },
                     onClick = {
                         state.selectionMenuExpanded = false
                         val source = repairCandidate.uri.path?.let(::File)
                         if (source == null || !source.exists()) {
-                            onNotify("无法访问该文件")
+                            onNotify(context.getString(R.string.browser_unavailable))
                         } else {
-                            onNotify("正在修复，完成后会提示")
+                            onNotify(context.getString(R.string.browser_repairing))
                             scope.launch {
                                 val result = withContext(Dispatchers.IO) {
                                     val output = File(
@@ -219,11 +222,11 @@ internal fun FileBrowserMenus(
                                     com.decompress.app.data.ZipRepair.repair(source, output)
                                 }
                                 state.repairMessage = when {
-                                    result == null -> "修复失败：没有找到可恢复的条目"
+                                    result == null -> context.getString(R.string.browser_repair_nothing)
                                     result.skipped > 0 ->
-                                        "已恢复 ${result.entries} 个条目，跳过 ${result.skipped} 段；保存为 ${result.file.name}"
+                                        context.getString(R.string.browser_restored_entries, result.entries, result.skipped, result.file.name)
                                     else ->
-                                        "已恢复 ${result.entries} 个条目；保存为 ${result.file.name}"
+                                        context.getString(R.string.browser_restored_entries_simple, result.entries, result.file.name)
                                 }
                                 controller.refresh()
                             }
@@ -235,7 +238,7 @@ internal fun FileBrowserMenus(
                 !it.isDirectory && !it.isArchive
             } == true
             ZippestMenuItem(
-                text = { Text("打开方式") },
+                text = { Text(context.getString(R.string.browser_open_with)) },
                 leadingIcon = { Icon(Icons.Outlined.OpenInNew, null) },
                 enabled = canOpenWith,
                 onClick = {
@@ -248,12 +251,12 @@ internal fun FileBrowserMenus(
                 }
             )
             ZippestMenuItem(
-                text = { Text("分享") },
+                text = { Text(context.getString(R.string.browser_share)) },
                 leadingIcon = { Icon(Icons.Outlined.Share, null) },
                 onClick = {
                     state.selectionMenuExpanded = false
                     val shared = shareEntries(context, selectedEntries)
-                    if (!shared) onNotify("系统中没有可用的分享应用")
+                    if (!shared) onNotify(context.getString(R.string.browser_no_share_app))
                 }
             )
         }

@@ -22,8 +22,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.decompress.app.R
 import com.decompress.app.data.AppSettings
 import com.decompress.app.data.BrowserEntry
 import com.decompress.app.data.FileBrowserController
@@ -70,7 +73,7 @@ internal fun FileBrowserContent(
                 CircularProgressIndicator()
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    "正在搜索全部存储…",
+                    stringResource(R.string.browser_searching_all),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -160,7 +163,7 @@ internal fun FileBrowserContent(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     TextButton(onClick = onLoadMore) {
-                        Text("再显示 300 项（剩余 ${visibleEntries.size - pageSize}）")
+                        Text(stringResource(R.string.browser_show_more, visibleEntries.size - pageSize))
                     }
                 }
             }

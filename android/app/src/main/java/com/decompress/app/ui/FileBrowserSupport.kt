@@ -145,6 +145,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
@@ -155,6 +156,7 @@ import androidx.work.WorkManager
 import com.decompress.app.IncomingArchive
 import com.decompress.app.OpenLocationRequest
 import com.decompress.app.MainActivity
+import com.decompress.app.R
 import com.decompress.app.data.AppSettingsRepository
 import com.decompress.app.data.BrowserSortMode
 import com.decompress.app.data.BrowserEntry
@@ -216,16 +218,16 @@ internal fun EmptyState(
     if (filtered) {
         EmptyStateView(
             art = EmptyArt.SEARCH,
-            title = "没有匹配的文件",
-            description = "换个关键词试试",
+            title = stringResource(R.string.browser_no_match),
+            description = stringResource(R.string.browser_try_keyword),
             modifier = modifier
         )
     } else {
         EmptyStateView(
             art = EmptyArt.FOLDER,
-            title = "此文件夹为空",
-            description = "通过顶部的新建按钮创建文件夹，或去下载目录看看",
-            actionLabel = if (onBrowseDownloads != null) "去下载目录看看" else null,
+            title = stringResource(R.string.browser_empty_folder),
+            description = stringResource(R.string.browser_empty_folder_hint),
+            actionLabel = if (onBrowseDownloads != null) stringResource(R.string.browser_browse_downloads) else null,
             onAction = onBrowseDownloads,
             modifier = modifier
         )
@@ -242,7 +244,7 @@ internal fun ErrorState(
     ErrorTemplate(
         message = message,
         onRetry = onRetry,
-        secondaryLabel = "重新选择文件夹",
+        secondaryLabel = stringResource(R.string.browser_choose_folder),
         onSecondary = onChooseFolder,
         modifier = modifier
     )
@@ -335,7 +337,7 @@ internal fun describeIncomingFile(
     }
     return BrowserEntry(
         uri = uri,
-        name = displayName ?: uri.lastPathSegment ?: "已打开的压缩包",
+        name = displayName ?: uri.lastPathSegment ?: context.getString(R.string.browser_opened_archive),
         isDirectory = false,
         size = size,
         lastModified = 0L,
@@ -349,7 +351,7 @@ internal fun shareEntries(context: Context, entries: List<BrowserEntry>): Boolea
         val uris = ArrayList<Uri>(entries.size)
         for (entry in entries) {
             val shareUri = if (entry.uri.scheme == ContentResolver.SCHEME_FILE) {
-                val path = entry.uri.path ?: error("本地文件路径无效")
+                val path = entry.uri.path ?: error(context.getString(R.string.browser_invalid_path))
                 FileProvider.getUriForFile(
                     context,
                     "${context.packageName}.fileprovider",
@@ -376,13 +378,13 @@ internal fun shareEntries(context: Context, entries: List<BrowserEntry>): Boolea
         }.apply {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             clipData = ClipData.newRawUri(
-                "解压文件",
+                context.getString(R.string.browser_extract_file),
                 uris.first()
             ).also { clip ->
                 uris.drop(1).forEach { clip.addItem(ClipData.Item(it)) }
             }
         }
-        context.startActivity(Intent.createChooser(intent, "分享所选文件"))
+        context.startActivity(Intent.createChooser(intent, context.getString(R.string.browser_share_selected)))
     }.isSuccess
 }
 
