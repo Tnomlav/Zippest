@@ -1,3 +1,5 @@
+@file:Suppress("LocalContextGetResourceValueCall")
+
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
 package com.decompress.app.ui
@@ -81,6 +83,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.draw.clip
+import com.decompress.app.R
 import com.decompress.app.data.ExtractSection
 import kotlin.math.roundToInt
 import androidx.compose.ui.unit.IntOffset
@@ -91,6 +94,7 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.annotation.StringRes
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -130,14 +134,14 @@ private enum class SettingsPopup {
     FEEDBACK
 }
 
-private enum class SettingsCategory(val title: String) {
-    APPEARANCE("外观"),
-    BROWSING("文件浏览"),
-    QUICK_ACCESS("快速访问"),
-    EXTRACT_DEFAULTS("默认解压设置"),
-    PERMISSIONS("通知与权限"),
-    FILES_TASKS("文件与任务"),
-    ABOUT("关于")
+private enum class SettingsCategory(@StringRes val titleRes: Int) {
+    APPEARANCE(R.string.settings_appearance),
+    BROWSING(R.string.settings_file_browsing),
+    QUICK_ACCESS(R.string.settings_quick_access),
+    EXTRACT_DEFAULTS(R.string.settings_default_extraction),
+    PERMISSIONS(R.string.settings_notifications_permissions),
+    FILES_TASKS(R.string.settings_files_tasks),
+    ABOUT(R.string.settings_about)
 }
 
 @Composable
@@ -219,7 +223,7 @@ fun SettingsScreen(
                 customDestinationTreeUri = uri.toString(),
                 customDestinationRootUri = root?.toString(),
                 customDestinationName = root?.let { queryFolderName(context, it) }
-                    ?: "已选择位置"
+                    ?: context.getString(R.string.settings_selected_location)
             )
         }
     }
@@ -233,7 +237,7 @@ fun SettingsScreen(
         runCatching {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         }.onFailure {
-            onNotify("没有可打开此链接的应用")
+            onNotify(context.getString(R.string.settings_no_app_for_link))
         }
     }
 
@@ -262,10 +266,13 @@ fun SettingsScreen(
                     IconButton(onClick = {
                         if (activeCategory != null) activeCategory = null else onBack()
                     }) {
-                        Icon(Icons.Outlined.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.Outlined.ArrowBack, contentDescription = context.getString(R.string.settings_back))
                     }
                 },
-                title = { Text(activeCategory?.title ?: "设置") },
+                title = { Text(
+                    activeCategory?.let { context.getString(it.titleRes) }
+                        ?: context.getString(R.string.settings_settings)
+                ) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -290,28 +297,28 @@ fun SettingsScreen(
         ) {
             if (activeCategory == null) {
                 item {
-                    SettingsSection("分类", showHeader = false) {
-                        SettingsAction(title = "外观", detail = "主题、隐藏文件、缩略图") { activeCategory = SettingsCategory.APPEARANCE }
+                    SettingsSection(context.getString(R.string.settings_categories), showHeader = false) {
+                        SettingsAction(title = context.getString(R.string.settings_appearance), detail = context.getString(R.string.settings_theme_hidden_thumbnails)) { activeCategory = SettingsCategory.APPEARANCE }
                         SettingsDivider()
-                        SettingsAction(title = "文件浏览", detail = "排序、显示、打开方式") { activeCategory = SettingsCategory.BROWSING }
+                        SettingsAction(title = context.getString(R.string.settings_file_browsing), detail = context.getString(R.string.settings_sort_display_open_with)) { activeCategory = SettingsCategory.BROWSING }
                         SettingsDivider()
-                        SettingsAction(title = "快速访问", detail = "侧边栏的固定位置") { activeCategory = SettingsCategory.QUICK_ACCESS }
+                        SettingsAction(title = context.getString(R.string.settings_quick_access), detail = context.getString(R.string.settings_sidebar_pins)) { activeCategory = SettingsCategory.QUICK_ACCESS }
                         SettingsDivider()
-                        SettingsAction(title = "默认解压设置", detail = "位置、同名文件、文件名编码") { activeCategory = SettingsCategory.EXTRACT_DEFAULTS }
+                        SettingsAction(title = context.getString(R.string.settings_default_extraction), detail = context.getString(R.string.settings_destination_conflict_encoding)) { activeCategory = SettingsCategory.EXTRACT_DEFAULTS }
                         SettingsDivider()
-                        SettingsAction(title = "通知与权限", detail = "所有文件访问、通知、电池") { activeCategory = SettingsCategory.PERMISSIONS }
+                        SettingsAction(title = context.getString(R.string.settings_notifications_permissions), detail = context.getString(R.string.settings_all_files_notifications_battery)) { activeCategory = SettingsCategory.PERMISSIONS }
                         SettingsDivider()
-                        SettingsAction(title = "文件与任务", detail = "回收站、清理与容量") { activeCategory = SettingsCategory.FILES_TASKS }
+                        SettingsAction(title = context.getString(R.string.settings_files_tasks), detail = context.getString(R.string.settings_trash_cleanup_quota)) { activeCategory = SettingsCategory.FILES_TASKS }
                         SettingsDivider()
-                        SettingsAction(title = "关于", detail = "版本、隐私与许可") { activeCategory = SettingsCategory.ABOUT }
+                        SettingsAction(title = context.getString(R.string.settings_about), detail = context.getString(R.string.settings_version_privacy_license)) { activeCategory = SettingsCategory.ABOUT }
                     }
                 }
             }
             if (activeCategory == SettingsCategory.APPEARANCE) {
             item {
-                SettingsSection("外观", showHeader = false) {
+                SettingsSection(context.getString(R.string.settings_appearance), showHeader = false) {
                     SettingsChoice(
-                        title = "主题",
+                        title = context.getString(R.string.settings_theme),
                         options = ThemeMode.entries.map { it.label() },
                         selectedIndex = ThemeMode.entries.indexOf(settings.themeMode),
                         onSelected = { index ->
@@ -322,7 +329,7 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsChoice(
-                        title = "语言",
+                        title = context.getString(R.string.settings_language),
                         options = AppLanguage.entries.map { it.label() },
                         selectedIndex = AppLanguage.entries.indexOf(settings.language),
                         onSelected = { index ->
@@ -348,7 +355,7 @@ fun SettingsScreen(
                     SettingsDivider()
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
                         Text(
-                            "主题色",
+                            context.getString(R.string.settings_accent_color),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )
@@ -380,10 +387,10 @@ fun SettingsScreen(
             }
             if (activeCategory == SettingsCategory.BROWSING) {
             item {
-                SettingsSection("文件浏览", showHeader = false) {
+                SettingsSection(context.getString(R.string.settings_file_browsing), showHeader = false) {
                     SettingsSwitch(
-                        title = "显示隐藏文件",
-                        detail = "显示名称以点号开头的文件和文件夹",
+                        title = context.getString(R.string.settings_show_hidden),
+                        detail = context.getString(R.string.settings_show_hidden_desc),
                         checked = settings.showHiddenFiles,
                         onCheckedChange = {
                             repository.update { current ->
@@ -393,13 +400,13 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsStatus(
-                        title = "熄屏继续运行",
+                        title = context.getString(R.string.settings_keep_running),
                         detail = if (batteryUnrestricted) {
-                            "已开启，后台任务不受电池优化限制"
+                            context.getString(R.string.settings_keep_running_on)
                         } else {
-                            "可能被系统节电策略暂停"
+                            context.getString(R.string.settings_keep_running_off)
                         },
-                        action = if (batteryUnrestricted) "管理" else "允许",
+                        action = if (batteryUnrestricted) context.getString(R.string.settings_manage) else context.getString(R.string.settings_allow),
                         enabled = true,
                         onClick = {
                             runCatching {
@@ -424,9 +431,9 @@ fun SettingsScreen(
                     ) {
                         SettingsDivider()
                         SettingsStatus(
-                            title = "后台运行权限",
-                            detail = "在系统的自启动 / 后台运行设置里允许 Zippest，避免熄屏后任务被冻结",
-                            action = "打开",
+                            title = context.getString(R.string.settings_background_permission),
+                            detail = context.getString(R.string.settings_background_permission_desc),
+                            action = context.getString(R.string.settings_open),
                             enabled = true,
                             onClick = {
                                 val vendorIntents = listOf(
@@ -452,8 +459,8 @@ fun SettingsScreen(
                     }
                     SettingsDivider()
                     SettingsSwitch(
-                        title = "显示图片和视频缩略图",
-                        detail = "关闭后使用统一文件图标，减少缩略图加载",
+                        title = context.getString(R.string.settings_show_thumbnails),
+                        detail = context.getString(R.string.settings_show_thumbnails_desc),
                         checked = settings.showThumbnails,
                         onCheckedChange = {
                             repository.update { current ->
@@ -463,8 +470,8 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsSwitch(
-                        title = "显示最近解压",
-                        detail = "在文件页顶部显示最近解压的压缩包，点按跳回结果目录",
+                        title = context.getString(R.string.settings_show_recent),
+                        detail = context.getString(R.string.settings_show_recent_desc),
                         checked = settings.showRecentExtractions,
                         onCheckedChange = {
                             repository.update { current ->
@@ -474,7 +481,7 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsChoice(
-                        title = "默认排序",
+                        title = context.getString(R.string.settings_default_sort),
                         options = BrowserSortMode.entries.map { it.label() },
                         selectedIndex =
                             BrowserSortMode.entries.indexOf(settings.defaultSortMode),
@@ -491,8 +498,8 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsAction(
-                        title = "文件浏览位置",
-                        detail = browserPath.ifBlank { "尚未选择" },
+                        title = context.getString(R.string.settings_browser_location),
+                        detail = browserPath.ifBlank { context.getString(R.string.settings_not_selected) },
                         onClick = onChooseBrowserFolder
                     )
                 }
@@ -500,7 +507,7 @@ fun SettingsScreen(
             }
             if (activeCategory == SettingsCategory.QUICK_ACCESS) {
             item {
-                SettingsSection("快速访问", showHeader = false) {
+                SettingsSection(context.getString(R.string.settings_quick_access), showHeader = false) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -508,7 +515,7 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "${quickLocationRepository.locations.size} 个位置",
+                            context.getString(R.string.settings_quick_locations_count, quickLocationRepository.locations.size),
                             modifier = Modifier.weight(1f),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -519,12 +526,12 @@ fun SettingsScreen(
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp)
                             )
-                            Text("新建", modifier = Modifier.padding(start = 4.dp))
+                            Text(context.getString(R.string.settings_new), modifier = Modifier.padding(start = 4.dp))
                         }
                     }
                     if (quickLocationRepository.locations.isEmpty()) {
                         Text(
-                            "暂无快捷位置",
+                            context.getString(R.string.settings_no_quick_locations),
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -544,11 +551,11 @@ fun SettingsScreen(
                     }
                     SettingsDivider()
                     SettingsAction(
-                        title = "恢复默认快速访问",
-                        detail = "恢复内部存储、下载、相册、相机等默认入口",
+                        title = context.getString(R.string.settings_restore_quick_access),
+                        detail = context.getString(R.string.settings_restore_quick_access_desc),
                         onClick = {
                             quickLocationRepository.reset()
-                            onNotify("已恢复默认快捷位置")
+                            onNotify(context.getString(R.string.settings_quick_access_restored))
                         }
                     )
                 }
@@ -556,9 +563,9 @@ fun SettingsScreen(
             }
             if (activeCategory == SettingsCategory.EXTRACT_DEFAULTS) {
             item {
-                SettingsSection("默认解压设置", showHeader = false) {
+                SettingsSection(context.getString(R.string.settings_default_extraction), showHeader = false) {
                     SettingsChoice(
-                        title = "默认位置",
+                        title = context.getString(R.string.settings_default_destination),
                         options = DefaultDestinationMode.entries.map { it.label() },
                         selectedIndex = DefaultDestinationMode.entries.indexOf(
                             settings.defaultDestinationMode
@@ -575,14 +582,14 @@ fun SettingsScreen(
                     if (settings.defaultDestinationMode == DefaultDestinationMode.CUSTOM) {
                         SettingsDivider()
                         SettingsAction(
-                            title = "固定解压位置",
-                            detail = settings.customDestinationName ?: "选择手机中的任意文件夹",
+                            title = context.getString(R.string.settings_fixed_destination),
+                            detail = settings.customDestinationName ?: context.getString(R.string.settings_choose_folder),
                             onClick = { customDestinationLauncher.launch(null) }
                         )
                     }
                     SettingsDivider()
                     SettingsChoice(
-                        title = "遇到同名文件",
+                        title = context.getString(R.string.settings_conflict),
                         options = ConflictPolicy.entries.map { it.label() },
                         selectedIndex = ConflictPolicy.entries.indexOf(
                             settings.defaultConflictPolicy
@@ -597,7 +604,7 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsChoice(
-                        title = "文件名编码",
+                        title = context.getString(R.string.settings_filename_encoding),
                         options = FileNameEncoding.entries.map { it.label() },
                         selectedIndex = FileNameEncoding.entries.indexOf(
                             settings.defaultEncoding
@@ -610,8 +617,8 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsSwitch(
-                        title = "从剪贴板填充密码",
-                        detail = "打开解压面板时自动读取剪贴板文字",
+                        title = context.getString(R.string.settings_fill_password_clipboard),
+                        detail = context.getString(R.string.settings_fill_password_clipboard_desc),
                         checked = settings.fillPasswordFromClipboard,
                         onCheckedChange = {
                             repository.update { current ->
@@ -621,8 +628,8 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsAction(
-                        title = "自定义解压面板",
-                        detail = "拖动排序、隐藏或恢复组件",
+                        title = context.getString(R.string.settings_customize_extract_sheet),
+                        detail = context.getString(R.string.settings_customize_extract_sheet_desc),
                         onClick = { editingExtractLayout = true }
                     )
                 }
@@ -630,11 +637,11 @@ fun SettingsScreen(
             }
             if (activeCategory == SettingsCategory.PERMISSIONS) {
             item {
-                SettingsSection("通知与权限", showHeader = false) {
+                SettingsSection(context.getString(R.string.settings_notifications_permissions), showHeader = false) {
                     SettingsStatus(
-                        title = "所有文件访问",
-                        detail = if (storageGranted) "已授权" else "未授权",
-                        action = if (storageGranted) "管理" else "授权",
+                        title = context.getString(R.string.settings_all_files_access),
+                        detail = if (storageGranted) context.getString(R.string.settings_granted) else context.getString(R.string.settings_not_granted),
+                        action = if (storageGranted) context.getString(R.string.settings_manage) else context.getString(R.string.settings_grant),
                         enabled = true,
                         onClick = {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -661,9 +668,9 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsStatus(
-                        title = "系统通知",
-                        detail = if (notificationsEnabled) "已开启" else "未开启",
-                        action = if (notificationsEnabled) "管理" else "开启",
+                        title = context.getString(R.string.settings_notifications),
+                        detail = if (notificationsEnabled) context.getString(R.string.settings_enabled) else context.getString(R.string.settings_disabled),
+                        action = if (notificationsEnabled) context.getString(R.string.settings_manage) else context.getString(R.string.settings_enable),
                         enabled = true,
                         onClick = {
                             if (
@@ -689,8 +696,8 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsSwitch(
-                        title = "任务完成通知",
-                        detail = "后台压缩或解压结束后发送系统通知",
+                        title = context.getString(R.string.settings_task_notifications),
+                        detail = context.getString(R.string.settings_task_notifications_desc),
                         checked = settings.notifyOnComplete,
                         onCheckedChange = {
                             repository.update { current ->
@@ -703,10 +710,10 @@ fun SettingsScreen(
             }
             if (activeCategory == SettingsCategory.FILES_TASKS) {
             item {
-                SettingsSection("文件与任务", showHeader = false) {
+                SettingsSection(context.getString(R.string.settings_files_tasks), showHeader = false) {
                     SettingsSwitch(
-                        title = "删除时移入回收站",
-                        detail = "关闭后删除会直接永久移除文件",
+                        title = context.getString(R.string.settings_delete_to_trash),
+                        detail = context.getString(R.string.settings_delete_to_trash_desc),
                         checked = settings.useTrash,
                         onCheckedChange = {
                             repository.update { current ->
@@ -716,7 +723,7 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsChoice(
-                        title = "回收站保留时间",
+                        title = context.getString(R.string.settings_trash_retention),
                         options = TrashRetention.entries.map { it.label() },
                         selectedIndex = TrashRetention.entries.indexOf(
                             settings.trashRetention
@@ -732,14 +739,14 @@ fun SettingsScreen(
                                         .purgeExpired(retention.days)
                                 }
                                 if (cleaned > 0) {
-                                    onNotify("已清理 $cleaned 项过期文件")
+                                    onNotify(context.getString(R.string.settings_trash_cleaned, cleaned))
                                 }
                             }
                         }
                     )
                     SettingsDivider()
                     SettingsChoice(
-                        title = "回收站容量上限",
+                        title = context.getString(R.string.settings_trash_quota),
                         options = TrashQuota.entries.map { it.label() },
                         selectedIndex = TrashQuota.entries.indexOf(settings.trashQuota),
                         onSelected = { index ->
@@ -750,7 +757,7 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsChoice(
-                        title = "恢复同名文件",
+                        title = context.getString(R.string.settings_restore_conflict),
                         options = RestoreConflictPolicy.entries.map { it.label() },
                         selectedIndex = RestoreConflictPolicy.entries.indexOf(
                             settings.restoreConflictPolicy
@@ -766,42 +773,42 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsAction(
-                        title = "只浏览某个文件夹…",
+                        title = context.getString(R.string.settings_browse_one_folder),
                         detail = if (browserPath.isBlank()) {
-                            "当前：全部文件"
+                            context.getString(R.string.settings_current_all_files)
                         } else {
-                            "当前：$browserPath"
+                            context.getString(R.string.settings_current_path, browserPath)
                         },
                         onClick = onChooseBrowserFolder
                     )
                     SettingsDivider()
                     SettingsAction(
-                        title = "回收站",
-                        detail = "查看、恢复或永久删除已移除的文件",
+                        title = context.getString(R.string.settings_trash),
+                        detail = context.getString(R.string.settings_trash_desc),
                         onClick = { activePopup = SettingsPopup.TRASH }
                     )
                     SettingsDivider()
                     SettingsAction(
-                        title = "清空密码库",
-                        detail = "删除已保存的压缩包密码（Keystore 加密保存）",
+                        title = context.getString(R.string.settings_clear_vault),
+                        detail = context.getString(R.string.settings_clear_vault_desc),
                         onClick = {
                             com.decompress.app.data.PasswordVault.clear(context)
-                            onNotify("已清空密码库")
+                            onNotify(context.getString(R.string.settings_vault_cleared))
                         }
                     )
                     SettingsDivider()
                     SettingsAction(
-                        title = "清除打开方式偏好",
-                        detail = "下次打开文件时重新选择应用",
+                        title = context.getString(R.string.settings_clear_open_with),
+                        detail = context.getString(R.string.settings_clear_open_with_desc),
                         onClick = {
                             OpenWithPreferences.clear(context)
-                            onNotify("已清除打开方式偏好")
+                            onNotify(context.getString(R.string.settings_open_with_cleared))
                         }
                     )
                     SettingsDivider()
                     SettingsAction(
-                        title = "文件关联",
-                        detail = "在系统应用设置中管理“用 Zippest 打开”",
+                        title = context.getString(R.string.settings_file_association),
+                        detail = context.getString(R.string.settings_file_association_desc),
                         onClick = {
                             context.startActivity(
                                 Intent(
@@ -813,40 +820,40 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsAction(
-                        title = "后台任务",
-                        detail = "查看正在运行、等待和已结束的压缩、解压任务",
+                        title = context.getString(R.string.settings_background_tasks),
+                        detail = context.getString(R.string.settings_background_tasks_desc),
                         onClick = { activePopup = SettingsPopup.TASK_QUEUE }
                     )
                     SettingsDivider()
                     SettingsAction(
-                        title = "清理已结束任务",
-                        detail = "删除任务中心里已完成、失败和取消的记录",
+                        title = context.getString(R.string.settings_clear_finished_tasks),
+                        detail = context.getString(R.string.settings_clear_finished_tasks_desc),
                         onClick = {
                             scope.launch {
                                 withContext(Dispatchers.IO) {
                                     WorkManager.getInstance(context).pruneWork()
                                 }
-                                onNotify("已清理任务历史")
+                                onNotify(context.getString(R.string.settings_task_history_cleared))
                             }
                         }
                     )
                     SettingsDivider()
                     SettingsAction(
-                        title = "取消全部后台任务",
-                        detail = "立即停止当前任务和等待中的任务",
+                        title = context.getString(R.string.settings_cancel_all_tasks),
+                        detail = context.getString(R.string.settings_cancel_all_tasks_desc),
                         destructive = true,
                         onClick = {
                             WorkManager.getInstance(context).apply {
                                 cancelAllWorkByTag(ExtractionScheduler.TAG_ALL_TASKS)
                                 cancelAllWorkByTag(CompressionScheduler.TAG_ALL_TASKS)
                             }
-                            onNotify("已取消全部任务")
+                            onNotify(context.getString(R.string.settings_tasks_cancelled))
                         }
                     )
                     SettingsDivider()
                     SettingsAction(
-                        title = "恢复默认设置",
-                        detail = "主题、浏览、压缩和解压偏好恢复到初始值",
+                        title = context.getString(R.string.settings_reset_settings),
+                        detail = context.getString(R.string.settings_reset_settings_desc),
                         destructive = true,
                         onClick = {
                             repository.reset()
@@ -854,7 +861,7 @@ fun SettingsScreen(
                             notificationsEnabled =
                                 NotificationManagerCompat.from(context)
                                     .areNotificationsEnabled()
-                            onNotify("已恢复默认设置")
+                            onNotify(context.getString(R.string.settings_settings_reset))
                         }
                     )
                 }
@@ -862,7 +869,7 @@ fun SettingsScreen(
             }
             if (activeCategory == SettingsCategory.ABOUT) {
             item {
-                SettingsSection("关于", showHeader = false) {
+                SettingsSection(context.getString(R.string.settings_about), showHeader = false) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -870,27 +877,39 @@ fun SettingsScreen(
                                 if (checkingUpdate) return@clickable
                                 checkingUpdate = true
                                 scope.launch {
-                                    onNotify("正在检查更新…")
+                                    onNotify(context.getString(R.string.settings_checking_update))
                                     UpdateChecker.check(versionName)
                                         .onSuccess { info ->
                                             if (info == null) {
-                                                onNotify("已是最新版本 $versionName")
+                                                onNotify(context.getString(R.string.settings_latest_version, versionName))
                                             } else {
-                                                onNotify("发现 ${info.version}，正在下载…")
+                                                onNotify(context.getString(R.string.settings_update_found, info.version))
                                                 runCatching {
                                                     UpdateChecker.download(context, info)
                                                 }.onSuccess { file ->
-                                                    onNotify("下载完成，正在打开安装器")
+                                                    onNotify(
+                                                    context.getString(
+                                                        R.string.settings_download_done
+                                                    )
+                                                )
                                                     UpdateChecker.install(context, file)
                                                 }.onFailure {
                                                     onNotify(
-                                                        "下载失败：${it.message ?: "网络异常"}"
+                                                        context.getString(
+                                                        R.string.settings_download_failed,
+                                                        it.message
+                                                            ?: context.getString(R.string.settings_network_error)
+                                                    )
                                                     )
                                                 }
                                             }
                                         }
                                         .onFailure {
-                                            onNotify("检查失败：${it.message ?: "网络不可用"}")
+                                            onNotify(context.getString(
+                                                R.string.settings_check_failed,
+                                                it.message
+                                                    ?: context.getString(R.string.settings_network_unavailable)
+                                            ))
                                         }
                                     checkingUpdate = false
                                 }
@@ -904,44 +923,44 @@ fun SettingsScreen(
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "压缩包工具 · 解压 / 压缩 / 分卷",
+                            context.getString(R.string.settings_tagline),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "点按版本号检查 GitHub 更新",
+                            context.getString(R.string.settings_check_updates_hint),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     SettingsDivider()
                     SettingsAction(
-                        title = "应用信息",
-                        detail = "版本、包名、系统要求与项目地址",
+                        title = context.getString(R.string.settings_app_info),
+                        detail = context.getString(R.string.settings_app_info_desc),
                         onClick = { activePopup = SettingsPopup.ABOUT_INFO }
                     )
                     SettingsDivider()
                     SettingsAction(
-                        title = "隐私政策",
-                        detail = "数据收集、本地处理、权限与剪贴板说明",
+                        title = context.getString(R.string.settings_privacy_policy),
+                        detail = context.getString(R.string.settings_privacy_policy_desc),
                         onClick = { activePopup = SettingsPopup.PRIVACY_POLICY }
                     )
                     SettingsDivider()
                     SettingsAction(
-                        title = "第三方开源许可",
-                        detail = "查看压缩引擎、界面框架等组件许可证",
+                        title = context.getString(R.string.settings_third_party),
+                        detail = context.getString(R.string.settings_third_party_desc),
                         onClick = { activePopup = SettingsPopup.OPEN_SOURCE_LICENSES }
                     )
                     SettingsDivider()
                     SettingsAction(
-                        title = "反馈问题",
-                        detail = "带上版本与机型复制，提到 GitHub Issue",
+                        title = context.getString(R.string.settings_feedback),
+                        detail = context.getString(R.string.settings_feedback_desc),
                         onClick = { activePopup = SettingsPopup.FEEDBACK }
                     )
                     SettingsDivider()
                     SettingsAction(
-                        title = "GitHub 项目",
+                        title = context.getString(R.string.settings_github_project),
                         detail = ZIPPEST_GITHUB_URL,
                         onClick = { openExternalLink(ZIPPEST_GITHUB_URL) }
                     )
@@ -969,7 +988,7 @@ fun SettingsScreen(
             onDismiss = { activePopup = null }
         )
         SettingsPopup.PROJECT_LICENSE -> LegalTextDialog(
-            title = "项目许可证（Apache-2.0）",
+            title = context.getString(R.string.settings_license_desc),
             assetName = "legal/LICENSE",
             onDismiss = { activePopup = null }
         )
@@ -997,11 +1016,14 @@ fun SettingsScreen(
         )
         SettingsPopup.QUICK_LOCATION_DELETE -> AlertDialog(
             onDismissRequest = { activePopup = null },
-            title = { Text("删除快捷位置") },
+            title = { Text(context.getString(R.string.settings_delete_location_title)) },
             text = {
                 Text(
-                    "确定删除“${deletingQuickLocation?.label.orEmpty()}”？" +
-                        "这不会删除对应文件夹或其中的文件。"
+                    context.getString(
+                        R.string.settings_delete_location_question,
+                        deletingQuickLocation?.label.orEmpty()
+                    ) +
+                        context.getString(R.string.settings_delete_location_body)
                 )
             },
             confirmButton = {
@@ -1012,15 +1034,15 @@ fun SettingsScreen(
                         }
                         deletingQuickLocation = null
                         activePopup = null
-                        onNotify("已删除快捷位置")
+                        onNotify(context.getString(R.string.settings_location_deleted))
                     }
                 ) {
-                    Text("删除", color = MaterialTheme.colorScheme.error)
+                    Text(context.getString(R.string.settings_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { activePopup = null }) {
-                    Text("取消")
+                    Text(context.getString(R.string.settings_cancel))
                 }
             }
         )
@@ -1048,6 +1070,7 @@ private fun QuickLocationSettingsRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1067,9 +1090,9 @@ private fun QuickLocationSettingsRow(
             )
             Text(
                 if (location.path.isBlank()) {
-                    "内部存储"
+                    context.getString(R.string.settings_internal_storage)
                 } else {
-                    "内部存储 / ${location.path}"
+                    context.getString(R.string.settings_internal_path, location.path)
                 },
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1079,14 +1102,14 @@ private fun QuickLocationSettingsRow(
         IconButton(onClick = onEdit) {
             Icon(
                 Icons.Outlined.Edit,
-                contentDescription = "更换地址",
+                contentDescription = context.getString(R.string.settings_change_path),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         IconButton(onClick = onDelete) {
             Icon(
                 Icons.Outlined.Delete,
-                contentDescription = "删除快捷位置",
+                contentDescription = context.getString(R.string.settings_delete_location_title),
                 tint = MaterialTheme.colorScheme.error
             )
         }
@@ -1101,6 +1124,7 @@ private fun ExtractLayoutEditor(
     onHiddenChange: (Set<ExtractSection>) -> Unit,
     onClose: () -> Unit
 ) {
+    val context = LocalContext.current
     val density = LocalDensity.current
     val rowHeightPx = with(density) { 64.dp.toPx() }
     var dragging by remember { mutableStateOf<ExtractSection?>(null) }
@@ -1111,10 +1135,10 @@ private fun ExtractLayoutEditor(
             TopAppBar(
                 navigationIcon = {
                     IconButton(onClick = onClose) {
-                        Icon(Icons.Outlined.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.Outlined.ArrowBack, contentDescription = context.getString(R.string.settings_back))
                     }
                 },
-                title = { Text("解压面板") },
+                title = { Text(context.getString(R.string.settings_extract_sheet)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -1128,7 +1152,7 @@ private fun ExtractLayoutEditor(
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
             Text(
-                "按住 ≡ 拖动排序；点眼睛隐藏，隐藏的组件可在下方加回来。",
+                context.getString(R.string.settings_extract_sheet_desc),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1200,7 +1224,7 @@ private fun ExtractLayoutEditor(
                     IconButton(onClick = { onHiddenChange(hidden + section) }) {
                         Icon(
                             Icons.Outlined.VisibilityOff,
-                            contentDescription = "隐藏 ${section.label()}"
+                            contentDescription = context.getString(R.string.settings_hide_section, section.label())
                         )
                     }
                 }
@@ -1209,7 +1233,7 @@ private fun ExtractLayoutEditor(
             if (hidden.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "已隐藏",
+                    context.getString(R.string.settings_hidden),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1235,7 +1259,7 @@ private fun ExtractLayoutEditor(
                         IconButton(onClick = { onHiddenChange(hidden - section) }) {
                             Icon(
                                 Icons.Outlined.Add,
-                                contentDescription = "恢复 ${section.label()}"
+                                contentDescription = context.getString(R.string.settings_restore_section, section.label())
                             )
                         }
                     }
@@ -1279,6 +1303,7 @@ private fun SettingsChoice(
     selectedIndex: Int,
     onSelected: (Int) -> Unit
 ) {
+    val context = LocalContext.current
     var dialogOpen by remember { mutableStateOf(false) }
     var pendingIndex by remember(selectedIndex) { mutableIntStateOf(selectedIndex) }
     Row(
@@ -1334,7 +1359,7 @@ private fun SettingsChoice(
                     ) {
                         TextButton(onClick = { dialogOpen = false }) {
                             Text(
-                                "取消",
+                                context.getString(R.string.settings_cancel),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -1345,7 +1370,7 @@ private fun SettingsChoice(
                                 dialogOpen = false
                             }
                         ) {
-                            Text("确定")
+                            Text(context.getString(R.string.settings_confirm))
                         }
                     }
                 }
@@ -1504,6 +1529,7 @@ private fun SettingsStatus(
     enabled: Boolean,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1519,7 +1545,7 @@ private fun SettingsStatus(
             Text(
                 detail,
                 style = MaterialTheme.typography.labelMedium,
-                color = if (detail == "已授权" || detail == "已开启") {
+                color = if (detail == context.getString(R.string.settings_granted) || detail == context.getString(R.string.settings_enabled)) {
                     MaterialTheme.colorScheme.primary
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
