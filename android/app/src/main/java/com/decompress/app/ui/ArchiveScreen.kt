@@ -108,6 +108,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -183,8 +184,7 @@ fun ArchiveScreen(
         error = null
         items = emptyList()
         if (!engine.supports(target.archive.name)) {
-            error = "暂不支持此格式。已接入 ZIP / 7Z / RAR / TAR / ZST / BR / " +
-                "GZ / BZ2 / XZ / LZMA / LZ4 / CPIO"
+            error = UiStrings.get(R.string.archive_unsupported_format)
             loading = false
             return@LaunchedEffect
         }
@@ -204,7 +204,7 @@ fun ArchiveScreen(
             )
         }
             .onSuccess { items = it }
-            .onFailure { error = it.message ?: "无法读取压缩包" }
+            .onFailure { error = it.message ?: UiStrings.get(R.string.archive_unreadable) }
         loading = false
     }
 
@@ -254,7 +254,7 @@ fun ArchiveScreen(
                     )
                     workDir.walkTopDown()
                         .firstOrNull { it.isFile && it.name == node.name }
-                        ?: throw IllegalStateException("未能取出该文件")
+                        ?: throw IllegalStateException(UiStrings.get(R.string.archive_extract_failed))
                 }
             }.onSuccess { extracted ->
                 val uri = FileProvider.getUriForFile(
@@ -272,8 +272,8 @@ fun ArchiveScreen(
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
                     )
-                }.onFailure { notify("没有可以打开该类型的应用") }
-            }.onFailure { notify(it.message ?: "无法打开该文件") }
+                }.onFailure { notify(UiStrings.get(R.string.archive_no_app_for_type)) }
+            }.onFailure { notify(it.message ?: UiStrings.get(R.string.archive_cannot_open)) }
             openingEntry = false
         }
     }
@@ -292,9 +292,9 @@ fun ArchiveScreen(
                     archiveParentUri = target.parentUri
                 )
             }.onSuccess { count ->
-                notify("压缩包测试通过 · $count 项")
+                notify(UiStrings.get(R.string.archive_test_passed, count))
             }.onFailure {
-                notify(it.message ?: "压缩包测试失败")
+                notify(it.message ?: UiStrings.get(R.string.archive_test_failed))
             }
             testing = false
         }
@@ -346,7 +346,7 @@ fun ArchiveScreen(
                             onBack()
                         }
                     }) {
-                        Icon(Icons.Outlined.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.Outlined.ArrowBack, contentDescription = UiStrings.get(R.string.archive_back))
                     }
                 },
                 title = {
@@ -358,7 +358,7 @@ fun ArchiveScreen(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            if (currentPath.isEmpty()) "压缩包根目录" else currentPath.trimEnd('/'),
+                            if (currentPath.isEmpty()) UiStrings.get(R.string.archive_root_folder) else currentPath.trimEnd('/'),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -378,14 +378,14 @@ fun ArchiveScreen(
                             } else {
                                 Icons.Outlined.LockOpen
                             },
-                            contentDescription = "压缩包密码"
+                            contentDescription = UiStrings.get(R.string.archive_archive_password)
                         )
                     }
                     IconButton(onClick = { showEncodingDialog = true }) {
-                        Icon(Icons.Outlined.MoreVert, contentDescription = "更多")
+                        Icon(Icons.Outlined.MoreVert, contentDescription = UiStrings.get(R.string.archive_more))
                     }
                     IconButton(onClick = { searchOpen = !searchOpen }) {
-                        Icon(Icons.Outlined.Search, contentDescription = "搜索压缩包内容")
+                        Icon(Icons.Outlined.Search, contentDescription = UiStrings.get(R.string.archive_search_inside))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -413,8 +413,12 @@ fun ArchiveScreen(
                     testing = testing,
                     onInfo = {
                         notify(
-                            "${target.archive.extension.uppercase()} · ${items.size} 项 · " +
+                            UiStrings.get(
+                                R.string.archive_summary,
+                                target.archive.extension.uppercase(),
+                                items.size,
                                 Formatter.formatShortFileSize(context, target.archive.size)
+                            )
                         )
                     }
                 )
@@ -448,11 +452,11 @@ fun ArchiveScreen(
                         onValueChange = { archiveQuery = it },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        placeholder = { Text("搜索包内文件") },
+                        placeholder = { Text(UiStrings.get(R.string.archive_search_inside_files)) },
                         trailingIcon = {
                             if (archiveQuery.isNotEmpty()) {
                                 IconButton(onClick = { archiveQuery = "" }) {
-                                    Icon(Icons.Outlined.Close, contentDescription = "清空")
+                                    Icon(Icons.Outlined.Close, contentDescription = UiStrings.get(R.string.archive_clear))
                                 }
                             }
                         }
@@ -460,12 +464,12 @@ fun ArchiveScreen(
                     Spacer(Modifier.height(8.dp))
                     when {
                         archiveQuery.isBlank() -> Text(
-                            "输入关键字，搜索整个压缩包",
+                            UiStrings.get(R.string.archive_search_hint),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         searchResults.isEmpty() -> Text(
-                            "没有匹配的文件",
+                            UiStrings.get(R.string.archive_no_match),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -515,14 +519,14 @@ fun ArchiveScreen(
                         passwordVisible = false
                         showPasswordDialog = true
                     }) {
-                        Text("输入密码")
+                        Text(UiStrings.get(R.string.archive_enter_password))
                     }
                 }
                 nodes.isEmpty() -> EmptyStateView(
                     art = EmptyArt.FOLDER,
-                    title = "压缩包是空的",
-                    description = "换一个包，或先确认下载是否完整",
-                    actionLabel = "返回",
+                    title = UiStrings.get(R.string.archive_archive_empty),
+                    description = UiStrings.get(R.string.archive_archive_empty_hint),
+                    actionLabel = UiStrings.get(R.string.archive_back),
                     onAction = onBack,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -542,7 +546,7 @@ fun ArchiveScreen(
                                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                                 Spacer(Modifier.height(8.dp))
                                 Text(
-                                    "正在读取… 已读取 ${items.size} 项",
+                                    UiStrings.get(R.string.archive_reading_count, items.size),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -611,9 +615,9 @@ fun ArchiveScreen(
                     )
                     Text(
                         if (selectedPaths.isEmpty()) {
-                            "点按文件直接打开 · 长按可多选解压"
+                            UiStrings.get(R.string.archive_tap_hint)
                         } else {
-                            "已选 ${selectedPaths.size} 项 · 点按继续选择"
+                            UiStrings.get(R.string.archive_selected_hint, selectedPaths.size)
                         },
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -629,11 +633,11 @@ fun ArchiveScreen(
     if (showEncodingDialog) {
         AlertDialog(
             onDismissRequest = { showEncodingDialog = false },
-            title = { Text("文件名编码") },
+            title = { Text(UiStrings.get(R.string.archive_filename_encoding)) },
             text = {
                 Column {
                     Text(
-                        "预览里文件名乱码时换一个编码试试；只影响显示和解压后的文件名，不改文件内容。",
+                        UiStrings.get(R.string.archive_encoding_hint),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -666,7 +670,7 @@ fun ArchiveScreen(
             },
             confirmButton = {
                 Button(onClick = { showEncodingDialog = false }) {
-                    Text("关闭")
+                    Text(UiStrings.get(R.string.archive_close))
                 }
             }
         )
@@ -675,7 +679,7 @@ fun ArchiveScreen(
     if (showPasswordDialog) {
         AlertDialog(
             onDismissRequest = { showPasswordDialog = false },
-            title = { Text("输入压缩包密码") },
+            title = { Text(UiStrings.get(R.string.archive_enter_archive_password)) },
             text = {
                 Column {
                     Text(
@@ -691,7 +695,7 @@ fun ArchiveScreen(
                         onValueChange = { passwordInput = it },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        label = { Text("密码") },
+                        label = { Text(UiStrings.get(R.string.archive_password)) },
                         visualTransformation = if (passwordVisible) {
                             VisualTransformation.None
                         } else {
@@ -705,7 +709,7 @@ fun ArchiveScreen(
                                     if (passwordVisible) Icons.Outlined.VisibilityOff
                                     else Icons.Outlined.Visibility,
                                     contentDescription =
-                                        if (passwordVisible) "隐藏密码" else "显示密码"
+                                        if (passwordVisible) UiStrings.get(R.string.archive_hide_password) else UiStrings.get(R.string.archive_show_password)
                                 )
                             }
                         }
@@ -719,12 +723,12 @@ fun ArchiveScreen(
                         showPasswordDialog = false
                     }
                 ) {
-                    Text("解锁")
+                    Text(UiStrings.get(R.string.archive_unlock))
                 }
             },
             dismissButton = {
                 TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { showPasswordDialog = false }) {
-                    Text("取消")
+                    Text(UiStrings.get(R.string.archive_cancel))
                 }
             }
         )
@@ -758,13 +762,13 @@ private fun ArchiveSkeleton() {
             .padding(horizontal = 16.dp, vertical = 20.dp)
     ) {
         Text(
-            "正在读取压缩包目录…",
+            UiStrings.get(R.string.archive_reading),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            "条目多的大包会先显示前面的部分",
+            UiStrings.get(R.string.archive_reading_hint),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -804,23 +808,33 @@ private fun ArchiveBottomBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (selectionCount > 0) {
-                ArchiveAction(Icons.Outlined.Close, "取消", false, onClearSelection)
+                ArchiveAction(
+                    Icons.Outlined.Close,
+                    UiStrings.get(R.string.archive_cancel),
+                    false,
+                    onClearSelection
+                )
                 ArchiveAction(
                     Icons.Outlined.Archive,
-                    "解压所选 $selectionCount",
+                    UiStrings.get(R.string.archive_extract_selected, selectionCount),
                     true,
                     onExtractSelected
                 )
             } else {
-                ArchiveAction(Icons.Outlined.Archive, "全部解压", true, onExtractAll)
+                ArchiveAction(
+                    Icons.Outlined.Archive,
+                    UiStrings.get(R.string.archive_extract_all),
+                    true,
+                    onExtractAll
+                )
                 ArchiveAction(
                     Icons.Outlined.CheckCircle,
-                    if (testing) "测试中" else "测试",
+                    if (testing) UiStrings.get(R.string.archive_testing) else UiStrings.get(R.string.archive_test),
                     false,
                     onTest,
                     enabled = !testing
                 )
-                ArchiveAction(Icons.Outlined.Info, "信息", false, onInfo)
+                ArchiveAction(Icons.Outlined.Info, UiStrings.get(R.string.archive_info), false, onInfo)
             }
         }
     }
@@ -887,12 +901,12 @@ private fun ArchiveRow(
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .semantics(mergeDescendants = true) {
                 val kind = if (node.isDirectory) {
-                    "文件夹"
+                    UiStrings.get(R.string.archive_folder)
                 } else {
                     Formatter.formatShortFileSize(context, node.size)
                 }
                 contentDescription = "${node.name}，$kind"
-                if (selected) stateDescription = "已选中"
+                if (selected) stateDescription = UiStrings.get(R.string.archive_state_selected)
             }
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -928,7 +942,7 @@ private fun ArchiveRow(
         if (selected) {
             Icon(
                 Icons.Outlined.CheckCircle,
-                contentDescription = "已选择",
+                contentDescription = UiStrings.get(R.string.archive_selected),
                 tint = MaterialTheme.colorScheme.primary
             )
         } else if (node.isDirectory) {
@@ -1042,15 +1056,22 @@ fun ExtractSheet(
     var archives by remember(target.archives) { mutableStateOf(target.archives) }
     val destinationHint = when (destinationMode) {
         DestinationMode.CURRENT_FOLDER ->
-            "将解压到 ${target.parentPath.ifBlank { target.parentName }}"
+            UiStrings.get(
+                R.string.archive_destination_current,
+                target.parentPath.ifBlank { target.parentName }
+            )
         DestinationMode.NEW_FOLDER -> if (archives.size > 1) {
-            "将解压到 ${target.parentPath} 下，每个压缩包建同名文件夹"
+            UiStrings.get(R.string.archive_destination_multi, target.parentPath)
         } else {
-            val folder = archives.firstOrNull()?.name?.substringBeforeLast('.') ?: "新文件夹"
-            "将解压到 ${target.parentPath} / $folder"
+            val folder = archives.firstOrNull()?.name?.substringBeforeLast('.') ?: UiStrings.get(R.string.archive_new_folder)
+            UiStrings.get(R.string.archive_destination_folder, target.parentPath, folder)
         }
         DestinationMode.CUSTOM ->
-            "将解压到 ${customName?.ifBlank { "自定义位置" } ?: "自定义位置"}"
+            UiStrings.get(
+                R.string.archive_destination_custom,
+                customName?.ifBlank { UiStrings.get(R.string.archive_custom_location) }
+                    ?: UiStrings.get(R.string.archive_custom_location)
+            )
     }
     var archiveNameValue by remember(target.archives) {
         mutableStateOf(
@@ -1085,11 +1106,11 @@ fun ExtractSheet(
 
     val launchExtraction: (List<BrowserEntry>, List<String>) -> Unit = { selectedArchives, passwords ->
         if (destinationMode == DestinationMode.CUSTOM && customTreeUri == null) {
-            error = "请先选择自定义位置"
+            error = UiStrings.get(R.string.archive_choose_custom_first)
         } else {
             val unsupported = selectedArchives.firstOrNull { !engine.supports(it.name) }
             if (unsupported != null) {
-                error = "暂不支持 ${unsupported.name}"
+                error = UiStrings.get(R.string.archive_unsupported_named, unsupported.name)
             } else {
                 error = null
                 val parentUri = if (destinationMode == DestinationMode.CUSTOM) {
@@ -1103,7 +1124,7 @@ fun ExtractSheet(
                     target.parentTreeUri
                 }
                 if (parentUri == null || treeUri == null) {
-                    error = "目标位置不可用"
+                    error = UiStrings.get(R.string.archive_destination_unavailable)
                 } else {
                     runCatching {
                         ExtractionScheduler.enqueue(
@@ -1128,7 +1149,7 @@ fun ExtractSheet(
                         )
                         onExtractionStarted()
                     }.onFailure {
-                        error = it.message ?: "无法创建后台任务"
+                        error = it.message ?: UiStrings.get(R.string.archive_cannot_queue)
                     }
                 }
             }
@@ -1168,7 +1189,7 @@ fun ExtractSheet(
     fun continueExtraction(selectedArchives: List<BrowserEntry>) {
         val unsupported = selectedArchives.firstOrNull { !engine.supports(it.name) }
         if (unsupported != null) {
-            error = "暂不支持 ${unsupported.name}"
+            error = UiStrings.get(R.string.archive_unsupported_named, unsupported.name)
             return
         }
         error = null
@@ -1205,7 +1226,7 @@ fun ExtractSheet(
 
     fun startExtraction() {
         if (destinationMode == DestinationMode.CUSTOM && customTreeUri == null) {
-            error = "请先选择自定义位置"
+            error = UiStrings.get(R.string.archive_choose_custom_first)
             return
         }
         val entry = archives.singleOrNull()
@@ -1216,7 +1237,7 @@ fun ExtractSheet(
             requestedName != entry.name &&
             !engine.supports(requestedName)
         ) {
-            error = "新名称需要使用受支持的压缩包后缀"
+            error = UiStrings.get(R.string.archive_bad_extension)
             return
         }
         if (
@@ -1230,7 +1251,7 @@ fun ExtractSheet(
                 val renamed = onRenameArchive(entry, requestedName)
                 renamingArchive = false
                 if (renamed == null) {
-                    error = "重命名失败，名称无效或已存在"
+                    error = UiStrings.get(R.string.archive_rename_failed)
                 } else {
                     archives = listOf(renamed)
                     archiveNameValue = fileNameWithSuffixSelected(renamed.name)
@@ -1260,7 +1281,7 @@ fun ExtractSheet(
             ) {
                 val blockPassword: @Composable () -> Unit = {
                 Text(
-                    "密码",
+                    UiStrings.get(R.string.archive_password),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1270,7 +1291,7 @@ fun ExtractSheet(
                     onValueChange = { password = it },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    placeholder = { Text("压缩包加密时填写") },
+                    placeholder = { Text(UiStrings.get(R.string.archive_encrypted_hint)) },
                     visualTransformation = if (passwordVisible) {
                         VisualTransformation.None
                     } else {
@@ -1285,7 +1306,7 @@ fun ExtractSheet(
                             Icon(
                                 if (passwordVisible) Icons.Outlined.VisibilityOff
                                 else Icons.Outlined.Visibility,
-                                contentDescription = if (passwordVisible) "隐藏密码" else "显示密码"
+                                contentDescription = if (passwordVisible) UiStrings.get(R.string.archive_hide_password) else UiStrings.get(R.string.archive_show_password)
                             )
                         }
                     }
@@ -1303,7 +1324,7 @@ fun ExtractSheet(
                             onCheckedChange = { savePassword = it }
                         )
                         Text(
-                            "保存密码到本机（Keystore 加密）",
+                            UiStrings.get(R.string.archive_save_password),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1340,7 +1361,7 @@ fun ExtractSheet(
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
-                                    clipboardText ?: "剪贴板为空",
+                                    clipboardText ?: UiStrings.get(R.string.archive_clipboard_empty),
                                     modifier = Modifier
                                         .weight(1f)
                                         .padding(start = 8.dp),
@@ -1360,7 +1381,7 @@ fun ExtractSheet(
                             ) {
                                 Icon(
                                     Icons.Outlined.KeyboardArrowDown,
-                                    contentDescription = "打开剪贴板",
+                                    contentDescription = UiStrings.get(R.string.archive_open_clipboard),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -1372,7 +1393,7 @@ fun ExtractSheet(
                 val blockName: @Composable () -> Unit = {
                     Spacer(Modifier.height(20.dp))
                     Text(
-                        "压缩包名称",
+                        UiStrings.get(R.string.archive_archive_name),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1382,7 +1403,7 @@ fun ExtractSheet(
                         onValueChange = { archiveNameValue = it },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        label = { Text("文件名") },
+                        label = { Text(UiStrings.get(R.string.archive_file_name)) },
                         trailingIcon = {
                             if (archiveNameValue.text.isNotEmpty()) {
                                 IconButton(
@@ -1392,7 +1413,7 @@ fun ExtractSheet(
                                 ) {
                                     Icon(
                                         Icons.Outlined.Close,
-                                        contentDescription = "清空文件名"
+                                        contentDescription = UiStrings.get(R.string.archive_clear_name)
                                     )
                                 }
                             }
@@ -1425,11 +1446,11 @@ fun ExtractSheet(
                                 showCustomSuffixDialog = true
                             },
                             modifier = Modifier.weight(1f),
-                            label = { Text("自定义", maxLines = 1) }
+                            label = { Text(UiStrings.get(R.string.archive_custom), maxLines = 1) }
                         )
                     }
                     Text(
-                        "点击“开始解压”时会先保存新名称",
+                        UiStrings.get(R.string.archive_save_name_hint),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1438,29 +1459,29 @@ fun ExtractSheet(
                 val blockDestination: @Composable () -> Unit = {
                 Spacer(Modifier.height(20.dp))
                 Text(
-                    "解压到",
+                    UiStrings.get(R.string.archive_extract_to),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
                 DestinationChoice(
-                    title = "当前文件夹",
+                    title = UiStrings.get(R.string.archive_current_folder),
                     detail = target.parentPath.ifBlank {
-                        "请先通过“选择其他位置”授权保存目录"
+                        UiStrings.get(R.string.archive_authorize_folder)
                     },
                     selected = destinationMode == DestinationMode.CURRENT_FOLDER,
                     onClick = { destinationMode = DestinationMode.CURRENT_FOLDER }
                 )
                 Spacer(Modifier.height(8.dp))
                 DestinationChoice(
-                    title = "新建同名文件夹",
+                    title = UiStrings.get(R.string.archive_new_same_folder),
                     detail = if (archives.size == 1) {
                         listOf(
                             target.parentPath,
                             archiveBaseName(archives.first().name)
                         ).filter { it.isNotBlank() }.joinToString(" / ")
                     } else {
-                        listOf(target.parentPath, "每个压缩包同名文件夹")
+                        listOf(target.parentPath, UiStrings.get(R.string.archive_each_same_folder))
                             .filter { it.isNotBlank() }
                             .joinToString(" / ")
                     },
@@ -1469,8 +1490,8 @@ fun ExtractSheet(
                 )
                 Spacer(Modifier.height(8.dp))
                 DestinationChoice(
-                    title = "选择其他位置",
-                    detail = customName ?: "选择手机中的任意文件夹",
+                    title = UiStrings.get(R.string.archive_choose_other),
+                    detail = customName ?: UiStrings.get(R.string.archive_choose_folder),
                     selected = destinationMode == DestinationMode.CUSTOM && customTreeUri != null,
                     onClick = { customPicker.launch(null) }
                 )
@@ -1479,7 +1500,7 @@ fun ExtractSheet(
                 val blockConflict: @Composable () -> Unit = {
                 Spacer(Modifier.height(20.dp))
                 Text(
-                    "遇到同名文件",
+                    UiStrings.get(R.string.archive_existing_files),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1499,7 +1520,7 @@ fun ExtractSheet(
                 val blockEncoding: @Composable () -> Unit = {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "文件名编码",
+                    UiStrings.get(R.string.archive_filename_encoding),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1525,12 +1546,13 @@ fun ExtractSheet(
                         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
                     ) {
                         Text(
-                            "压缩包约 " +
+                            UiStrings.get(
+                                R.string.archive_size_hint,
                                 android.text.format.Formatter.formatShortFileSize(
                                     context,
                                     totalBytes
-                                ) +
-                                "，解压时建议保持应用在前台；系统会限制后台运行时长，超时后任务可能被暂停。",
+                                )
+                            ),
                             modifier = Modifier.padding(12.dp),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -1587,14 +1609,14 @@ fun ExtractSheet(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("取消")
+                    Text(UiStrings.get(R.string.archive_cancel))
                 }
                 Button(
                     onClick = { startExtraction() },
                     enabled = !renamingArchive,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(if (renamingArchive) "正在重命名…" else "开始解压")
+                    Text(if (renamingArchive) UiStrings.get(R.string.archive_renaming) else UiStrings.get(R.string.archive_start_extract))
                 }
             }
         }
@@ -1603,16 +1625,16 @@ fun ExtractSheet(
     if (clipboardExpanded) {
         AlertDialog(
             onDismissRequest = { clipboardExpanded = false },
-            title = { Text("剪贴板") },
+            title = { Text(UiStrings.get(R.string.archive_clipboard)) },
             text = {
                 val text = clipboardText
                 if (text == null) {
                     Column {
-                        Text("系统剪贴板为空")
+                        Text(UiStrings.get(R.string.archive_system_clipboard_empty))
                         Spacer(Modifier.height(5.dp))
                         Text(
-                            "可以直接长按密码框，或使用输入法顶部的剪贴板/粘贴按钮。" +
-                                "应用无法读取输入法私有的剪贴板历史。",
+                            UiStrings.get(R.string.archive_clipboard_hint) +
+                                UiStrings.get(R.string.archive_clipboard_private),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1641,12 +1663,12 @@ fun ExtractSheet(
                         clipboardExpanded = false
                     }
                 ) {
-                    Text("使用")
+                    Text(UiStrings.get(R.string.archive_use))
                 }
             },
             dismissButton = {
                 TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { clipboardExpanded = false }) {
-                    Text("关闭")
+                    Text(UiStrings.get(R.string.archive_close))
                 }
             }
         )
@@ -1655,14 +1677,14 @@ fun ExtractSheet(
     if (showCustomSuffixDialog) {
         AlertDialog(
             onDismissRequest = { showCustomSuffixDialog = false },
-            title = { Text("自定义后缀") },
+            title = { Text(UiStrings.get(R.string.archive_custom_suffix)) },
             text = {
                 OutlinedTextField(
                     value = customSuffix,
                     onValueChange = { customSuffix = it },
                     singleLine = true,
-                    label = { Text("后缀") },
-                    supportingText = { Text("使用一个前导点，如 .tar.gz") }
+                    label = { Text(UiStrings.get(R.string.archive_suffix)) },
+                    supportingText = { Text(UiStrings.get(R.string.archive_suffix_hint)) }
                 )
             },
             confirmButton = {
@@ -1676,12 +1698,12 @@ fun ExtractSheet(
                         showCustomSuffixDialog = false
                     }
                 ) {
-                    Text("应用")
+                    Text(UiStrings.get(R.string.archive_apply))
                 }
             },
             dismissButton = {
                 TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { showCustomSuffixDialog = false }) {
-                    Text("取消")
+                    Text(UiStrings.get(R.string.archive_cancel))
                 }
             }
         )
@@ -1692,7 +1714,7 @@ fun ExtractSheet(
         if (archive != null) {
             AlertDialog(
                 onDismissRequest = { passwordDialogIndex = null },
-                title = { Text("「" + archive.name + "」的密码") },
+                title = { Text(UiStrings.get(R.string.archive_password_title, archive.name)) },
                 text = {
                     Column {
                         Text(
@@ -1704,8 +1726,7 @@ fun ExtractSheet(
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "第 " + (index + 1) + "/" + archives.size +
-                                " 个 · 压缩包没有密码时可留空。",
+                            UiStrings.get(R.string.archive_password_step, index + 1, archives.size),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1715,7 +1736,7 @@ fun ExtractSheet(
                             onValueChange = { passwordDialogValue = it },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            label = { Text("密码") },
+                            label = { Text(UiStrings.get(R.string.archive_password)) },
                             visualTransformation = PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Text,
@@ -1744,12 +1765,12 @@ fun ExtractSheet(
                             }
                         }
                     ) {
-                        Text(if (index + 1 == archives.size) "开始解压" else "下一个")
+                        Text(if (index + 1 == archives.size) UiStrings.get(R.string.archive_start_extract) else UiStrings.get(R.string.archive_next))
                     }
                 },
                 dismissButton = {
                     TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { passwordDialogIndex = null }) {
-                        Text("取消")
+                        Text(UiStrings.get(R.string.archive_cancel))
                     }
                 }
             )
@@ -1875,10 +1896,10 @@ internal fun queryDisplayName(context: Context, treeUri: Uri): String {
         null
     )?.use { cursor ->
         if (cursor.moveToFirst()) {
-            return cursor.getString(0) ?: "所选文件夹"
+            return cursor.getString(0) ?: UiStrings.get(R.string.archive_selected_folder)
         }
     }
-    return "所选文件夹"
+    return UiStrings.get(R.string.archive_selected_folder)
 }
 
 /** 宽屏（≥600dp）时显示在左侧的包内位置栏：面包屑式，点一下跳到该层。 */
@@ -1900,12 +1921,12 @@ private fun ArchivePathPane(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
-            "包内位置",
+            UiStrings.get(R.string.archive_path_pane),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(ZippestSpacing.sm))
-        ArchivePathEntry("根目录", currentPath.isBlank()) { onOpen("") }
+        ArchivePathEntry(UiStrings.get(R.string.archive_root), currentPath.isBlank()) { onOpen("") }
         segments.forEachIndexed { index, name ->
             val path = segments.take(index + 1).joinToString("/")
             ArchivePathEntry(name, path == currentPath) { onOpen(path) }
