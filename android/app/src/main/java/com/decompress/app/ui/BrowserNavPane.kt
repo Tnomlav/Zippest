@@ -1,3 +1,5 @@
+@file:Suppress("LocalContextGetResourceValueCall")
+
 package com.decompress.app.ui
 
 import androidx.compose.foundation.background
@@ -22,9 +24,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.decompress.app.R
 import com.decompress.app.data.BrowserEntry
 import com.decompress.app.ui.theme.ZippestRadius
 import com.decompress.app.ui.theme.ZippestSpacing
@@ -41,6 +45,7 @@ internal fun BrowserNavPane(
     onOpenFolder: (BrowserEntry) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
@@ -52,7 +57,7 @@ internal fun BrowserNavPane(
         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp)
     ) {
         Text(
-            "位置",
+            context.getString(R.string.browser_nav_locations),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -90,7 +95,7 @@ internal fun BrowserNavPane(
                 )
                 Spacer(Modifier.width(ZippestSpacing.sm))
                 Text(
-                    name.ifBlank { "内部存储" },
+                    name.ifBlank { context.getString(R.string.browser_nav_internal) },
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
                     maxLines = 1,
@@ -107,7 +112,7 @@ internal fun BrowserNavPane(
         if (folders.isNotEmpty()) {
             Spacer(Modifier.height(ZippestSpacing.lg))
             Text(
-                "子文件夹",
+                context.getString(R.string.browser_nav_subfolders),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

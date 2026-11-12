@@ -1,3 +1,5 @@
+@file:Suppress("LocalContextGetResourceValueCall")
+
 package com.decompress.app.ui
 
 import androidx.compose.foundation.layout.Column
@@ -24,6 +26,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -58,6 +62,7 @@ internal fun FileBrowserTopBar(
     onMore: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
+    val context = LocalContext.current
     when {
         selectionMode -> {
             TopAppBar(
@@ -134,7 +139,7 @@ internal fun FileBrowserTopBar(
             TopAppBar(
                 navigationIcon = {
                     IconButton(onClick = onGoUp, enabled = canGoUp) {
-                        Icon(Icons.Outlined.ArrowBack, contentDescription = "返回上一级")
+                        Icon(Icons.Outlined.ArrowBack, contentDescription = context.getString(R.string.browser_top_back))
                     }
                 },
                 title = {
@@ -156,13 +161,13 @@ internal fun FileBrowserTopBar(
                         }
                     } else if (hasTree) {
                         IconButton(onClick = onSearch) {
-                            Icon(Icons.Outlined.Search, contentDescription = "搜索")
+                            Icon(Icons.Outlined.Search, contentDescription = context.getString(R.string.browser_top_search))
                         }
                         IconButton(onClick = onNewFolder) {
-                            Icon(Icons.Outlined.Add, contentDescription = "新建文件夹")
+                            Icon(Icons.Outlined.Add, contentDescription = context.getString(R.string.browser_top_new))
                         }
                         IconButton(onClick = onMore) {
-                            Icon(Icons.Outlined.MoreVert, contentDescription = "更多")
+                            Icon(Icons.Outlined.MoreVert, contentDescription = context.getString(R.string.browser_top_more))
                         }
                     } else {
                         IconButton(onClick = onOpenSettings) {

@@ -1,3 +1,5 @@
+@file:Suppress("LocalContextGetResourceValueCall")
+
 @file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 
 package com.decompress.app.ui
@@ -50,6 +52,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.core.content.ContextCompat
+import com.decompress.app.R
 import com.decompress.app.data.AppSettingsRepository
 import com.decompress.app.data.BrowserSortMode
 import com.decompress.app.data.BrowserEntry
@@ -139,7 +142,7 @@ internal fun FileBrowserScreen(
             scope.launch { controller.openInternalStorage() }
         } else {
             onboardingDenied = true
-            onNotify("尚未获得所有文件访问权限")
+            onNotify(context.getString(R.string.browser_no_access))
         }
     }
 
@@ -151,7 +154,7 @@ internal fun FileBrowserScreen(
             scope.launch { controller.openInternalStorage() }
         } else {
             onboardingDenied = true
-            onNotify("存储权限被拒绝，可改为选择一个文件夹")
+            onNotify(context.getString(R.string.browser_denied))
         }
     }
 
@@ -165,7 +168,7 @@ internal fun FileBrowserScreen(
         if (!hints.getBoolean("long_press_shown", false)) {
             hints.edit().putBoolean("long_press_shown", true).apply()
             delay(900)
-            notify("长按文件可以多选，点按直接打开")
+            notify(context.getString(R.string.browser_hint))
         }
     }
 
@@ -181,7 +184,7 @@ internal fun FileBrowserScreen(
                 )
             }.getOrDefault(false)
             if (!opened) {
-                notify("文件夹已不存在，可能已被删除或移动")
+                notify(context.getString(R.string.browser_folder_gone))
             }
         }
     }
@@ -250,7 +253,7 @@ internal fun FileBrowserScreen(
                     openWithRequest = request
                 }
             } else {
-                notify("没有可打开此文件的应用")
+                notify(context.getString(R.string.browser_no_app))
             }
         }
     }
@@ -371,12 +374,12 @@ internal fun FileBrowserScreen(
 
     fun startTransfer(move: Boolean) {
         if (selectedEntries.isEmpty()) {
-            notify(if (move) "请选择要移动的文件" else "请选择要复制的文件")
+            notify(if (move) context.getString(R.string.browser_pick_move) else context.getString(R.string.browser_pick_copy))
             return
         }
         val sourceLocation = controller.captureLocation()
         if (sourceLocation == null) {
-            notify("当前存储位置不可用")
+            notify(context.getString(R.string.browser_location_unavailable))
             return
         }
         closePanelPopups()
@@ -404,24 +407,29 @@ internal fun FileBrowserScreen(
         val destinationUri = controller.currentUri
         val destinationTreeUri = controller.treeUri
         if (destinationUri == null || destinationTreeUri == null) {
-            notify("目标位置不可用")
+            notify(context.getString(R.string.browser_destination_unavailable))
             return
         }
         if (
             session.move &&
             destinationUri == session.sourceLocation.currentUri
         ) {
-            notify("请选择其他文件夹")
+            notify(context.getString(R.string.browser_pick_folder))
             return
         }
         transferSession = null
         transferBusy = false
+        val action = context.getString(
+            if (session.move) R.string.browser_action_move else R.string.browser_action_copy
+        )
+        val actionPast = context.getString(
+            if (session.move) R.string.browser_action_move_past
+            else R.string.browser_action_copy_past
+        )
         notify(
-            "正在${if (session.move) "移动" else "复制"} " +
-                "${session.sources.size} 项…"
+            context.getString(R.string.browser_transferring, action, session.sources.size)
         )
         scope.launch {
-            val action = if (session.move) "移动" else "复制"
             val summary = runCatching {
                 controller.transferEntriesToDirectory(
                     sources = session.sources,
@@ -432,19 +440,22 @@ internal fun FileBrowserScreen(
                 )
             }.getOrNull()
             val message = when {
-                summary == null -> "${action}失败"
+                summary == null -> context.getString(R.string.browser_action_failed, action)
                 summary.completed > 0 &&
                     summary.sourceRetained == 0 &&
                     summary.failed == 0 ->
-                    "已${action} ${summary.completed} 项"
+                    context.getString(R.string.browser_action_done, actionPast, summary.completed)
                 summary.completed + summary.sourceRetained > 0 ->
-                    "已复制 ${summary.completed + summary.sourceRetained} 项" +
-                        if (summary.sourceRetained > 0) {
-                            "，${summary.sourceRetained} 项源文件未能删除"
-                        } else {
-                            "，${summary.failed} 项失败"
-                        }
-                else -> summary.firstError ?: "${action}失败"
+                    if (summary.sourceRetained > 0) {
+                        context.getString(
+                            R.string.browser_retained,
+                            summary.completed + summary.sourceRetained,
+                            summary.sourceRetained
+                        )
+                    } else {
+                        context.getString(R.string.browser_failed_count, summary.failed)
+                    }
+                else -> summary.firstError ?: context.getString(R.string.browser_action_failed, action)
             }
             notify(message)
             controller.refresh()
@@ -489,7 +500,7 @@ internal fun FileBrowserScreen(
         val parentUri = controller.currentUri
         val parentTreeUri = controller.treeUri
         if (selectedFiles.isEmpty()) {
-            notify("请选择文件")
+            notify(context.getString(R.string.browser_pick_files))
         } else if (parentUri != null && parentTreeUri != null) {
             onExtract(
                 selectedFiles,
@@ -507,7 +518,7 @@ internal fun FileBrowserScreen(
         val parentUri = controller.currentUri
         val parentTreeUri = controller.treeUri
         if (parentUri == null || parentTreeUri == null) {
-            notify("当前存储位置不可用")
+            notify(context.getString(R.string.browser_location_unavailable))
             return
         }
         onExtract(
@@ -525,7 +536,7 @@ internal fun FileBrowserScreen(
         val parentUri = controller.currentUri
         val treeUri = controller.treeUri
         if (selectedEntries.isEmpty()) {
-            notify("请选择要压缩的文件")
+            notify(context.getString(R.string.browser_pick_compress))
         } else if (parentUri != null && treeUri != null) {
             compressTarget = CompressTarget(
                 entries = selectedEntries,
@@ -581,7 +592,7 @@ internal fun FileBrowserScreen(
                 onQueryChange = { query = it },
                 onToggleGlobalSearch = {
                     if (!directStorage) {
-                        notify("全局搜索需要「所有文件访问」权限")
+                        notify(context.getString(R.string.browser_need_all_files))
                     } else {
                         globalSearch = !globalSearch
                     }

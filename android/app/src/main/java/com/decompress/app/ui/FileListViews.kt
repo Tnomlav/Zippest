@@ -1,3 +1,5 @@
+@file:Suppress("LocalContextGetResourceValueCall")
+
 @file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 
 package com.decompress.app.ui
@@ -34,6 +36,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.decompress.app.R
 import com.decompress.app.data.BrowserEntry
 import com.decompress.app.data.NameText
 
@@ -67,7 +70,7 @@ internal fun EntryRow(
             .semantics(mergeDescendants = true) {
                 contentDescription = "${entry.name}，${entryMeta(context, entry)}"
                 if (selectionMode) {
-                    stateDescription = if (selected) "已选中" else "未选中"
+                    stateDescription = if (selected) context.getString(R.string.browser_list_selected) else context.getString(R.string.browser_list_unselected)
                 }
             }
             .padding(horizontal = 12.dp, vertical = 8.dp),
@@ -122,7 +125,7 @@ internal fun EntryRow(
             ) {
                 Icon(
                     Icons.Outlined.ChevronRight,
-                    contentDescription = "预览压缩包",
+                    contentDescription = context.getString(R.string.browser_preview_archive),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -130,7 +133,7 @@ internal fun EntryRow(
             IconButton(onClick = onExtractFile) {
                 Icon(
                     Icons.Outlined.Archive,
-                    contentDescription = "解压 ${entry.name}",
+                    contentDescription = context.getString(R.string.browser_extract_named, entry.name),
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
@@ -149,7 +152,7 @@ internal fun entryMeta(context: Context, entry: BrowserEntry): String {
         ""
     }
     return if (entry.isDirectory) {
-        listOf("文件夹", date).filter { it.isNotBlank() }.joinToString(" · ")
+        listOf(context.getString(R.string.browser_folder), date).filter { it.isNotBlank() }.joinToString(" · ")
     } else {
         listOf(
             Formatter.formatShortFileSize(context, entry.size),
