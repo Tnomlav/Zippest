@@ -207,7 +207,7 @@ class ExtractionWorker(
             .getOrElse { error ->
                 if (shouldNotifyFinished()) {
                     notifyFinished(
-                        title = "解压失败",
+                        title = applicationContext.getString(R.string.notif_extract_failed),
                         text = error.message ?: "任务数据损坏",
                         successful = false
                     )
@@ -254,7 +254,7 @@ class ExtractionWorker(
             var lastUpdate = 0L
             var currentProgress = 0
             val checkpoint = {
-                if (isStopped) throw CancellationException("解压已取消")
+                if (isStopped) throw CancellationException(applicationContext.getString(R.string.notif_extract_cancelled))
                 val wasPaused = ArchiveTaskControl.isPaused(applicationContext, id)
                 val pauseHandled = ArchiveTaskControl.waitWhilePaused(
                     applicationContext,
@@ -281,7 +281,7 @@ class ExtractionWorker(
                         )
                     }
                 )
-                if (!pauseHandled) throw CancellationException("解压已取消")
+                if (!pauseHandled) throw CancellationException(applicationContext.getString(R.string.notif_extract_cancelled))
                 if (wasPaused) {
                     notificationManager.notify(
                         notificationId,
@@ -335,7 +335,7 @@ class ExtractionWorker(
                         )
                     }
                 )
-                if (!pauseHandled) throw CancellationException("解压已取消")
+                if (!pauseHandled) throw CancellationException(applicationContext.getString(R.string.notif_extract_cancelled))
                 notificationManager.notify(
                     notificationId,
                     buildProgressNotification(
@@ -373,7 +373,7 @@ class ExtractionWorker(
             }
             if (shouldNotifyFinished()) {
                 notifyFinished(
-                    title = "解压完成",
+                    title = applicationContext.getString(R.string.notif_extract_completed),
                     text = outcome.message,
                     successful = true,
                     location = outcome.locationUri,
@@ -406,16 +406,16 @@ class ExtractionWorker(
             )
         } catch (error: CancellationException) {
             if (shouldNotifyFinished()) {
-                notifyFinished("解压已取消", effectiveTask.displayName, successful = false)
+                notifyFinished(applicationContext.getString(R.string.notif_extract_cancelled), effectiveTask.displayName, successful = false)
             }
-            broadcastFinished(false, "解压已取消")
+            broadcastFinished(false, applicationContext.getString(R.string.notif_extract_cancelled))
             ExtractionCheckpointStore.clear(applicationContext, id)
             throw error
         } catch (error: Exception) {
             // TAR / ZIP 的写入异常会带出 ENOSPC 这类系统原文；统一走人话映射。
-            val message = error.archiveMessage()
+            val message = error.archiveMessage(applicationContext)
             if (shouldNotifyFinished()) {
-                notifyFinished("解压失败", message, successful = false)
+                notifyFinished(applicationContext.getString(R.string.notif_extract_failed), message, successful = false)
             }
             broadcastFinished(false, message)
             recordHistory(
@@ -690,10 +690,10 @@ class ExtractionWorker(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Zippest 后台任务",
+                applicationContext.getString(R.string.notif_channel_extract),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "显示可恢复的后台解压进度与完成状态"
+                description = applicationContext.getString(R.string.notif_channel_extract_desc)
                 setShowBadge(false)
             }
             notificationManager.createNotificationChannel(channel)

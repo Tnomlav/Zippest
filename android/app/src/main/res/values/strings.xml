@@ -676,4 +676,23 @@
     <string name="archive_size_hint">The archive is about %1$s. Keep the app in the foreground while extracting; the system limits background runtime and long tasks may be paused.</string>
     <string name="archive_password_title">Password for “%1$s”</string>
     <string name="archive_password_step">%1$d of %2$d · leave empty if the archive has no password.</string>
+    <string name="error_password">Wrong password. ZIP passwords are case-sensitive; 7Z / RAR header encryption must be unlocked first.</string>
+    <string name="error_corrupt">The archive may be damaged or incomplete. Download it again, or try repairing a ZIP.</string>
+    <string name="error_no_space">Not enough storage. Free some space or extract to a larger location such as an SD card.</string>
+    <string name="error_volume">A split part is missing. Put the other parts (.001 / .z01 / .part2.rar…) in the same folder and try again.</string>
+    <string name="error_not_found">The file was moved or deleted; refresh and try again.</string>
+    <string name="error_unsupported">This archive format or encryption is not supported yet.</string>
+    <string name="error_permission">No write permission. Choose another folder or grant all files access.</string>
+    <string name="error_too_large">The extracted size exceeds the safety limit; stopped.</string>
+    <string name="error_rar5">This RAR5 archive is not supported</string>
+    <string name="notif_extract_completed">Extraction complete</string>
+    <string name="notif_extract_failed">Extraction failed</string>
+    <string name="notif_extract_cancelled">Extraction cancelled</string>
+    <string name="notif_compress_completed">Compression complete</string>
+    <string name="notif_compress_failed">Compression failed</string>
+    <string name="notif_compress_cancelled">Compression cancelled</string>
+    <string name="notif_channel_extract">Zippest background tasks</string>
+    <string name="notif_channel_extract_desc">Background extraction progress and status</string>
+    <string name="notif_channel_compress">Zippest compression</string>
+    <string name="notif_channel_compress_desc">Background compression and split progress</string>
 </resources>

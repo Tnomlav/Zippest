@@ -1,7 +1,9 @@
 package com.decompress.app.data
 
-import android.content.ContentResolver
 import android.content.Context
+import com.decompress.app.R
+
+import android.content.ContentResolver
 import android.net.Uri
 import android.os.Environment
 import android.os.StatFs
@@ -201,63 +203,64 @@ internal fun reportFraction(
     )
 }
 
-internal fun Throwable.archiveMessage(): String {
-    val detail = message?.trim().orEmpty()
-    if (this is ArchiveException && kind != ArchiveErrorKind.OTHER) {
-        return when (kind) {
-            ArchiveErrorKind.PASSWORD ->
-                "密码错误。加密 ZIP 注意大小写；7Z / RAR 头加密需要先解锁。"
-            ArchiveErrorKind.CORRUPT ->
-                "压缩包可能损坏或没下载完整。可以重新下载后再试，ZIP 还能试试修复。"
-            ArchiveErrorKind.NO_SPACE ->
-                "存储空间不足。清理一些文件，或换到空间更大的位置（比如 SD 卡）再解压。"
-            ArchiveErrorKind.MISSING_VOLUME ->
-                "缺少分卷。把同一目录下的其他分卷（.001 / .z01 / .part2.rar 等）补齐后再试。"
-            ArchiveErrorKind.NOT_FOUND -> "文件已被移动或删除，刷新后再试。"
-            ArchiveErrorKind.UNSUPPORTED -> "暂不支持这个压缩格式或加密方式。"
-            ArchiveErrorKind.PERMISSION -> "没有写入权限。换一个文件夹，或先授予所有文件访问权限。"
-            ArchiveErrorKind.TOO_LARGE -> "解压后体积超过安全上限，已停止。"
-            ArchiveErrorKind.OTHER -> detail
-        }
-    }
-    val lower = detail.lowercase()
-    val mapped = when {
+internal fun Throwable.archiveErrorKind(): ArchiveErrorKind {
+    if (this is ArchiveException && kind != ArchiveErrorKind.OTHER) return kind
+    val lower = message?.trim().orEmpty().lowercase()
+    return when {
         "without a password" in lower ||
             "missing password" in lower ||
             "wrong password" in lower ||
             "password" in lower && "invalid" in lower ||
-            javaClass.simpleName == "WrongPasswordException" ->
-            "密码错误。加密 ZIP 注意大小写；7Z / RAR 头加密需要先解锁。"
+            javaClass.simpleName == "WrongPasswordException" -> ArchiveErrorKind.PASSWORD
         "crc" in lower ||
             "corrupt" in lower ||
             "unexpected end" in lower ||
             "truncated" in lower ||
-            "damaged" in lower ->
-            "压缩包可能损坏或没下载完整。可以重新下载后再试，ZIP 还能试试修复。"
+            "damaged" in lower -> ArchiveErrorKind.CORRUPT
         "enospc" in lower ||
             "no space" in lower ||
-            "space" in lower && "insufficient" in lower ->
-            "存储空间不足。清理一些文件，或换到空间更大的位置（比如 SD 卡）再解压。"
+            "space" in lower && "insufficient" in lower -> ArchiveErrorKind.NO_SPACE
         "volume" in lower && ("missing" in lower || "not found" in lower) ||
             "part" in lower && ("missing" in lower || "cannot" in lower) ->
-            "缺少分卷。把同一目录下的其他分卷（.001 / .z01 / .part2.rar 等）补齐后再试。"
+            ArchiveErrorKind.MISSING_VOLUME
         "enoent" in lower ||
             "no such file" in lower ||
-            "not found" in lower ->
-            "文件已被移动或删除，刷新后再试。"
+            "not found" in lower -> ArchiveErrorKind.NOT_FOUND
         "unsupported" in lower ||
-            "not supported" in lower ->
-            "暂不支持这个压缩格式或加密方式。"
+            "not supported" in lower -> ArchiveErrorKind.UNSUPPORTED
         "permission" in lower ||
-            "eacces" in lower ->
-            "没有写入权限。换一个文件夹，或先授予所有文件访问权限。"
-        detail.isNotEmpty() -> detail
-        else -> when (javaClass.simpleName) {
-            "UnsupportedRarV5Exception" -> "当前 RAR5 压缩包不受支持"
-            else -> javaClass.simpleName
-        }
+            "eacces" in lower -> ArchiveErrorKind.PERMISSION
+        else -> ArchiveErrorKind.OTHER
     }
-    return mapped
+}
+
+internal fun ArchiveErrorKind.messageRes(): Int? = when (this) {
+    ArchiveErrorKind.PASSWORD -> R.string.error_password
+    ArchiveErrorKind.CORRUPT -> R.string.error_corrupt
+    ArchiveErrorKind.NO_SPACE -> R.string.error_no_space
+    ArchiveErrorKind.MISSING_VOLUME -> R.string.error_volume
+    ArchiveErrorKind.NOT_FOUND -> R.string.error_not_found
+    ArchiveErrorKind.UNSUPPORTED -> R.string.error_unsupported
+    ArchiveErrorKind.PERMISSION -> R.string.error_permission
+    ArchiveErrorKind.TOO_LARGE -> R.string.error_too_large
+    ArchiveErrorKind.OTHER -> null
+}
+
+internal fun Throwable.archiveMessage(context: Context): String {
+    messageResFor()?.let { return context.getString(it) }
+    val detail = message?.trim().orEmpty()
+    if (detail.isNotEmpty()) return detail
+    return when (javaClass.simpleName) {
+        "UnsupportedRarV5Exception" -> context.getString(R.string.error_rar5)
+        else -> javaClass.simpleName
+    }
+}
+
+private fun Throwable.messageResFor(): Int? {
+    if (this is ArchiveException) {
+        kind.messageRes()?.let { return it }
+    }
+    return archiveErrorKind().messageRes()
 }
 
 internal object DiscardOutputStream : OutputStream() {
@@ -629,7 +632,7 @@ class ZipArchiveEngine(private val context: Context) {
             }.getOrElse { error ->
                 if (error is ArchiveException) throw error
                 throw ArchiveException(
-                    "ZIP 测试失败：${error.archiveMessage()}",
+                    "ZIP 测试失败：${error.archiveMessage(context)}",
                     error
                 )
             }
@@ -710,7 +713,7 @@ class ZipArchiveEngine(private val context: Context) {
                 rollbackOutput?.rollback()
                 if (error is ArchiveException) throw error
                 throw ArchiveException(
-                    "ZIP 解压失败：${error.archiveMessage()}",
+                    "ZIP 解压失败：${error.archiveMessage(context)}",
                     error
                 )
             }

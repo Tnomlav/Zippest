@@ -1,31 +1,38 @@
 package com.decompress.app.data
 
-import org.junit.Assert.assertTrue
+import com.decompress.app.R
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ArchiveErrorKindTest {
 
     @Test
-    fun passwordKindMapsWithoutChineseKeyword() {
-        val message = ArchiveException("whatever", kind = ArchiveErrorKind.PASSWORD).archiveMessage()
-        assertTrue(message, message.contains("密码错误"))
+    fun passwordKindHasResource() {
+        assertEquals(
+            R.string.error_password,
+            ArchiveException("whatever", kind = ArchiveErrorKind.PASSWORD).archiveErrorKind().messageRes()
+        )
     }
 
     @Test
-    fun tooLargeKindMaps() {
-        val message = ArchiveException("whatever", kind = ArchiveErrorKind.TOO_LARGE).archiveMessage()
-        assertTrue(message, message.contains("安全上限"))
+    fun tooLargeKindHasResource() {
+        assertEquals(
+            R.string.error_too_large,
+            ArchiveException("whatever", kind = ArchiveErrorKind.TOO_LARGE).archiveErrorKind().messageRes()
+        )
     }
 
     @Test
-    fun noSpaceKindMaps() {
-        val message = ArchiveException("whatever", kind = ArchiveErrorKind.NO_SPACE).archiveMessage()
-        assertTrue(message, message.contains("存储空间不足"))
+    fun noSpaceKindHasResource() {
+        assertEquals(
+            R.string.error_no_space,
+            ArchiveErrorKind.NO_SPACE.messageRes()
+        )
     }
 
     @Test
-    fun otherKindFallsBackToDetail() {
-        val message = ArchiveException("boom").archiveMessage()
-        assertTrue(message, message.contains("boom"))
+    fun otherKindHasNoResource() {
+        assertNull(ArchiveErrorKind.OTHER.messageRes())
     }
 }

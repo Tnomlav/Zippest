@@ -676,4 +676,23 @@
     <string name="archive_size_hint">压缩包约 %1$s，解压时建议保持应用在前台；系统会限制后台运行时长，超时后任务可能被暂停。</string>
     <string name="archive_password_title">「%1$s」的密码</string>
     <string name="archive_password_step">第 %1$d/%2$d 个 · 压缩包没有密码时可留空。</string>
+    <string name="error_password">密码错误。加密 ZIP 注意大小写；7Z / RAR 头加密需要先解锁。</string>
+    <string name="error_corrupt">压缩包可能损坏或没下载完整。可以重新下载后再试，ZIP 还能试试修复。</string>
+    <string name="error_no_space">存储空间不足。清理一些文件，或换到空间更大的位置（比如 SD 卡）再解压。</string>
+    <string name="error_volume">缺少分卷。把同一目录下的其他分卷（.001 / .z01 / .part2.rar 等）补齐后再试。</string>
+    <string name="error_not_found">文件已被移动或删除，刷新后再试。</string>
+    <string name="error_unsupported">暂不支持这个压缩格式或加密方式。</string>
+    <string name="error_permission">没有写入权限。换一个文件夹，或先授予所有文件访问权限。</string>
+    <string name="error_too_large">解压后体积超过安全上限，已停止。</string>
+    <string name="error_rar5">当前 RAR5 压缩包不受支持</string>
+    <string name="notif_extract_completed">解压完成</string>
+    <string name="notif_extract_failed">解压失败</string>
+    <string name="notif_extract_cancelled">解压已取消</string>
+    <string name="notif_compress_completed">压缩完成</string>
+    <string name="notif_compress_failed">压缩失败</string>
+    <string name="notif_compress_cancelled">压缩已取消</string>
+    <string name="notif_channel_extract">Zippest 后台任务</string>
+    <string name="notif_channel_extract_desc">显示可恢复的后台解压进度与完成状态</string>
+    <string name="notif_channel_compress">Zippest 压缩任务</string>
+    <string name="notif_channel_compress_desc">显示后台压缩与分卷任务进度</string>
 </resources>

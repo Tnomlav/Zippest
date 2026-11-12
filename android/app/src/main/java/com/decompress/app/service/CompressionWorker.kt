@@ -259,7 +259,7 @@ class CompressionWorker(
             val checkpoint = {
                 // 用户从通知栏取消时，WorkManager 只会标记取消；这里必须主动检查，
                 // 否则阻塞的 copy 循环会一直跑完。
-                if (isStopped) throw CancellationException("压缩已取消")
+                if (isStopped) throw CancellationException(applicationContext.getString(R.string.notif_compress_cancelled))
                 val wasPaused = ArchiveTaskControl.isPaused(applicationContext, id)
                 val pauseHandled = ArchiveTaskControl.waitWhilePaused(
                     applicationContext,
@@ -285,7 +285,7 @@ class CompressionWorker(
                         )
                     }
                 )
-                if (!pauseHandled) throw CancellationException("压缩已取消")
+                if (!pauseHandled) throw CancellationException(applicationContext.getString(R.string.notif_compress_cancelled))
                 if (wasPaused) {
                     notificationManager.notify(
                         notificationId,
@@ -363,7 +363,7 @@ class CompressionWorker(
                         )
                     }
                 )
-                if (!pauseHandled) throw CancellationException("压缩已取消")
+                if (!pauseHandled) throw CancellationException(applicationContext.getString(R.string.notif_compress_cancelled))
                 val progress = if (total > 0) {
                     (processed * 100f / total).toInt().coerceIn(0, 99)
                 } else {
@@ -420,7 +420,7 @@ class CompressionWorker(
                 workDataOf(ExtractionScheduler.KEY_MESSAGE to message)
             )
         } catch (error: CancellationException) {
-            finish(false, "压缩已取消")
+            finish(false, applicationContext.getString(R.string.notif_compress_cancelled))
             throw error
         } catch (error: Exception) {
             val message = error.message ?: "无法完成压缩"
@@ -502,7 +502,7 @@ class CompressionWorker(
             ensureChannel()
             val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(if (successful) "压缩完成" else "压缩失败")
+                .setContentTitle(if (successful) applicationContext.getString(R.string.notif_compress_completed) else applicationContext.getString(R.string.notif_compress_failed))
                 .setContentText(message)
                 .setContentIntent(openAppIntent(location, locationName, treeUri, path))
                 .setAutoCancel(true)
@@ -610,10 +610,10 @@ class CompressionWorker(
             notificationManager.createNotificationChannel(
                 NotificationChannel(
                     CHANNEL_ID,
-                    "Zippest 压缩任务",
+                    applicationContext.getString(R.string.notif_channel_compress),
                     NotificationManager.IMPORTANCE_LOW
                 ).apply {
-                    description = "显示后台压缩与分卷任务进度"
+                    description = applicationContext.getString(R.string.notif_channel_compress_desc)
                     setShowBadge(false)
                 }
             )
