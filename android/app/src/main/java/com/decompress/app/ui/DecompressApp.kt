@@ -244,7 +244,7 @@ fun ZippestApp(
     var extractTarget by remember { mutableStateOf<ExtractTarget?>(null) }
     var pendingPasswordRequest by remember { mutableStateOf<PendingPasswordRequest?>(null) }
     var pendingPasswordInput by remember { mutableStateOf("") }
-    var showSettings by remember { mutableStateOf(false) }
+    var showSettings by rememberSaveable { mutableStateOf(false) }
     var archiveTasks by remember { mutableStateOf<List<WorkInfo>>(emptyList()) }
     var showGlobalTaskQueue by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
