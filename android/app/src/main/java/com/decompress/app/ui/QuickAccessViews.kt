@@ -48,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -75,7 +76,7 @@ internal fun QuickAccessTopTitle(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            if (directStorage) "快速访问" else folderName.ifBlank { "文件" },
+            if (directStorage) UiStrings.get(R.string.qa_title) else folderName.ifBlank { UiStrings.get(R.string.qa_files) },
             style = MaterialTheme.typography.titleMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -85,9 +86,9 @@ internal fun QuickAccessTopTitle(
             Icon(
                 Icons.Outlined.KeyboardArrowDown,
                 contentDescription = if (expanded) {
-                    "收起固定位置"
+                    UiStrings.get(R.string.qa_collapse)
                 } else {
-                    "展开固定位置"
+                    UiStrings.get(R.string.qa_expand)
                 },
                 tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(20.dp)
@@ -144,7 +145,7 @@ internal fun StorageQuickLocationPanel(
             ) {
                 if (locations.isEmpty()) {
                     Text(
-                        "暂无快捷位置，可在设置中新建",
+                        UiStrings.get(R.string.qa_empty),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -273,7 +274,7 @@ internal fun StorageQuickLocationAdd(
                 modifier = Modifier.size(20.dp)
             )
             Text(
-                "新增",
+                UiStrings.get(R.string.qa_add),
                 modifier = Modifier.padding(start = 8.dp),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
@@ -358,7 +359,7 @@ internal fun discoverExternalStorageLocations(
         val canonical = runCatching { directory.canonicalPath }
             .getOrDefault(directory.absolutePath)
         if (canonical == internalRoot || roots.containsKey(canonical)) return
-        val baseLabel = label.ifBlank { "外部存储" }
+        val baseLabel = label.ifBlank { UiStrings.get(R.string.qa_external) }
         var uniqueLabel = baseLabel
         var index = 2
         while (!usedLabels.add(uniqueLabel)) {
@@ -392,7 +393,8 @@ internal fun discoverExternalStorageLocations(
         if (androidMarker <= 0) return@forEachIndexed
         addRoot(
             appPath.substring(0, androidMarker),
-            if (index == 0) "外部存储" else "外部存储 $index"
+            if (index == 0) UiStrings.get(R.string.qa_external)
+            else UiStrings.get(R.string.qa_external_index, index)
         )
     }
     return roots.entries
@@ -446,7 +448,7 @@ internal fun StorageBar(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    if (hasFullAccess) "所有文件访问已授权" else "只访问已授权目录",
+                    if (hasFullAccess) UiStrings.get(R.string.qa_all_granted) else UiStrings.get(R.string.qa_scoped),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )

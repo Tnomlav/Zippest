@@ -53,6 +53,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -113,7 +114,7 @@ internal fun TaskQueueDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("后台任务") },
+        title = { Text(UiStrings.get(R.string.task_title)) },
         text = {
             when {
                 loading -> LoadingSkeleton(
@@ -125,9 +126,9 @@ internal fun TaskQueueDialog(onDismiss: () -> Unit) {
                 )
                 sortedTasks.isEmpty() -> EmptyStateView(
                     art = EmptyArt.TASKS,
-                    title = "暂无后台任务",
-                    description = "解压、压缩任务会出现在这里，熄屏也会继续",
-                    actionLabel = "关闭",
+                    title = UiStrings.get(R.string.task_empty),
+                    description = UiStrings.get(R.string.task_empty_hint),
+                    actionLabel = UiStrings.get(R.string.close),
                     onAction = onDismiss
                 )
                 else -> Column(
@@ -160,7 +161,7 @@ internal fun TaskQueueDialog(onDismiss: () -> Unit) {
                             },
                             modifier = Modifier.align(Alignment.End)
                         ) {
-                            Text("清理历史")
+                            Text(UiStrings.get(R.string.clear_history))
                         }
                     }
                 }
@@ -176,12 +177,12 @@ internal fun TaskQueueDialog(onDismiss: () -> Unit) {
                         }
                     }
                 ) {
-                    Text("取消全部", color = MaterialTheme.colorScheme.error)
+                    Text(UiStrings.get(R.string.cancel_all), color = MaterialTheme.colorScheme.error)
                 }
             }
         },
         dismissButton = {
-            TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = onDismiss) { Text("关闭") }
+            TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = onDismiss) { Text(UiStrings.get(R.string.close)) }
         }
     )
 }
@@ -239,10 +240,10 @@ internal fun TaskCenterContent(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(12.dp))
-            Text("还没有任务", style = MaterialTheme.typography.titleMedium)
+            Text(UiStrings.get(R.string.no_tasks), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(4.dp))
             Text(
-                "压缩或解压后会出现在这里，可以暂停、继续或取消",
+                UiStrings.get(R.string.no_tasks_hint),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -257,7 +258,7 @@ internal fun TaskCenterContent(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (activeTasks.isNotEmpty()) {
-                item { TaskSectionLabel("进行中", "${activeTasks.size} 项") }
+                item { TaskSectionLabel(UiStrings.get(R.string.in_progress), UiStrings.get(R.string.active_count, activeTasks.size)) }
                 items(activeTasks, key = { "active-${it.id}" }) { task ->
                     TaskQueueRow(
                         task = task,
@@ -275,13 +276,13 @@ internal fun TaskCenterContent(
                             ArchiveTaskControl.clear(context, task.id)
                             WorkManager.getInstance(context.applicationContext)
                                 .cancelWorkById(task.id)
-                            onNotify("已取消任务")
+                            onNotify(UiStrings.get(R.string.cancelled_tasks))
                         }
                     )
                 }
             }
             if (finishedTasks.isNotEmpty()) {
-                item { TaskSectionLabel("已结束", "${finishedTasks.size} 项") }
+                item { TaskSectionLabel(UiStrings.get(R.string.finished), UiStrings.get(R.string.finished_count, finishedTasks.size)) }
                 items(finishedTasks, key = { "done-${it.id}" }) { task ->
                     TaskQueueRow(
                         task = task,
@@ -291,16 +292,16 @@ internal fun TaskCenterContent(
                             val remembered = ExtractionTaskRegistry.find(task.id)
                             if (remembered != null) {
                                 ExtractionScheduler.enqueue(context.applicationContext, remembered)
-                                onNotify("已重新加入队列")
+                                onNotify(UiStrings.get(R.string.requeued))
                             } else {
-                                onNotify("任务参数已释放，请重新选择文件解压")
+                                onNotify(UiStrings.get(R.string.params_released))
                             }
                         }
                     )
                 }
             }
             if (history.isNotEmpty()) {
-                item { TaskSectionLabel("历史", "${history.size} 条") }
+                item { TaskSectionLabel(UiStrings.get(R.string.history), UiStrings.get(R.string.history_count, history.size)) }
                 items(history, key = { "history-${it.id}" }) { entry ->
                     TaskHistoryRow(
                         entry = entry,
@@ -341,9 +342,9 @@ internal fun TaskCenterContent(
                                 }
                             }
                             if (queued != null) {
-                                onNotify("已重新加入队列")
+                                onNotify(UiStrings.get(R.string.requeued))
                             } else {
-                                onNotify("任务参数已失效，请重新发起")
+                                onNotify(UiStrings.get(R.string.params_expired))
                             }
                         },
                         onDelete = {
@@ -366,7 +367,7 @@ internal fun TaskCenterContent(
                         WorkManager.getInstance(context.applicationContext).pruneWork()
                     }
                 ) {
-                    Text("清理历史")
+                    Text(UiStrings.get(R.string.clear_history))
                 }
             }
             if (activeTasks.isNotEmpty()) {
@@ -376,10 +377,10 @@ internal fun TaskCenterContent(
                             cancelUniqueWork(ExtractionScheduler.QUEUE_NAME)
                             cancelUniqueWork(CompressionScheduler.QUEUE_NAME)
                         }
-                        onNotify("已取消全部任务")
+                        onNotify(UiStrings.get(R.string.all_cancelled))
                     }
                 ) {
-                    Text("取消全部", color = MaterialTheme.colorScheme.error)
+                    Text(UiStrings.get(R.string.cancel_all), color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -393,7 +394,7 @@ internal fun RecentExtractionStrip(
 ) {
     Column(modifier = Modifier.padding(bottom = 12.dp)) {
         Text(
-            "最近解压",
+            UiStrings.get(R.string.recent),
             modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -420,7 +421,7 @@ internal fun RecentExtractionStrip(
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            entry.locationName.ifBlank { "结果文件夹" },
+                            entry.locationName.ifBlank { UiStrings.get(R.string.result_folder) },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -462,17 +463,17 @@ internal fun ActiveArchiveTaskBar(
     val title = task.tags
         .firstOrNull { it.startsWith(ExtractionScheduler.TAG_NAME_PREFIX) }
         ?.removePrefix(ExtractionScheduler.TAG_NAME_PREFIX)
-        ?: if (isCompression) "压缩任务" else "解压任务"
+        ?: if (isCompression) UiStrings.get(R.string.compression) else UiStrings.get(R.string.extraction)
     val running = task.state == WorkInfo.State.RUNNING
     val paused = task.progress.getBoolean(ExtractionScheduler.KEY_PAUSED, false)
     val progress = task.progress.getInt(ExtractionScheduler.KEY_PROGRESS, 0)
         .coerceIn(0, 100)
     val message = when {
-        paused -> "已暂停，点击任务队列继续"
+        paused -> UiStrings.get(R.string.paused_hint)
         running -> task.progress.getString(ExtractionScheduler.KEY_MESSAGE)
-            ?: if (isCompression) "正在压缩…" else "正在解压…"
-        task.state == WorkInfo.State.BLOCKED -> "等待前序任务完成"
-        else -> "等待后台任务开始"
+            ?: if (isCompression) UiStrings.get(R.string.compressing) else UiStrings.get(R.string.extracting)
+        task.state == WorkInfo.State.BLOCKED -> UiStrings.get(R.string.waiting_earlier)
+        else -> UiStrings.get(R.string.waiting_start)
     }
 
     Box(
@@ -514,7 +515,7 @@ internal fun ActiveArchiveTaskBar(
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            if (activeCount > 1) "$title · 另有 ${activeCount - 1} 项"
+                            if (activeCount > 1) UiStrings.get(R.string.title_more, title, activeCount - 1)
                             else title,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
@@ -531,9 +532,9 @@ internal fun ActiveArchiveTaskBar(
                     }
                     Text(
                         when {
-                            paused -> "暂停"
+                            paused -> UiStrings.get(R.string.pause)
                             running -> "$progress%"
-                            else -> "等待"
+                            else -> UiStrings.get(R.string.waiting)
                         },
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary
@@ -576,20 +577,20 @@ internal fun TaskQueueRow(
     val title = task.tags
         .firstOrNull { it.startsWith(ExtractionScheduler.TAG_NAME_PREFIX) }
         ?.removePrefix(ExtractionScheduler.TAG_NAME_PREFIX)
-        ?: "后台任务"
+        ?: UiStrings.get(R.string.task_title)
     val foregroundTimeout =
         task.stopReason == WorkInfo.STOP_REASON_FOREGROUND_SERVICE_TIMEOUT
     val message = when {
-        foregroundTimeout -> "系统限制了后台运行时长，点「继续」接着解压"
-        paused -> "已暂停"
+        foregroundTimeout -> UiStrings.get(R.string.limited)
+        paused -> UiStrings.get(R.string.paused)
         task.state == WorkInfo.State.SUCCEEDED ->
-            task.outputData.getString(ExtractionScheduler.KEY_MESSAGE) ?: "任务完成"
+            task.outputData.getString(ExtractionScheduler.KEY_MESSAGE) ?: UiStrings.get(R.string.completed)
         task.state == WorkInfo.State.FAILED ->
-            task.outputData.getString(ExtractionScheduler.KEY_MESSAGE) ?: "任务失败"
-        task.state == WorkInfo.State.CANCELLED -> "已取消"
-        task.state == WorkInfo.State.BLOCKED -> "等待前序任务"
-        task.state == WorkInfo.State.ENQUEUED -> "等待执行"
-        else -> task.progress.getString(ExtractionScheduler.KEY_MESSAGE) ?: "正在处理"
+            task.outputData.getString(ExtractionScheduler.KEY_MESSAGE) ?: UiStrings.get(R.string.failed)
+        task.state == WorkInfo.State.CANCELLED -> UiStrings.get(R.string.cancelled)
+        task.state == WorkInfo.State.BLOCKED -> UiStrings.get(R.string.waiting_earlier)
+        task.state == WorkInfo.State.ENQUEUED -> UiStrings.get(R.string.queued)
+        else -> task.progress.getString(ExtractionScheduler.KEY_MESSAGE) ?: UiStrings.get(R.string.processing)
     }
     val progress = when {
         task.state == WorkInfo.State.SUCCEEDED -> 100
@@ -650,7 +651,7 @@ internal fun TaskQueueRow(
                 )
                 if (foregroundTimeout && onResumeTimedOut != null) {
                     TextButton(onClick = onResumeTimedOut) {
-                        Text("继续")
+                        Text(UiStrings.get(R.string.resume))
                     }
                 }
                 if (active) {
@@ -658,7 +659,7 @@ internal fun TaskQueueRow(
                         IconButton(onClick = onCancel, modifier = Modifier.size(48.dp)) {
                             Icon(
                                 Icons.Outlined.Close,
-                                contentDescription = "取消任务",
+                                contentDescription = UiStrings.get(R.string.cancel_task),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -670,7 +671,7 @@ internal fun TaskQueueRow(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(Modifier.width(4.dp))
-                        Text(if (paused) "继续" else "暂停")
+                        Text(if (paused) UiStrings.get(R.string.resume) else UiStrings.get(R.string.pause))
                     }
                 }
             }
@@ -678,11 +679,15 @@ internal fun TaskQueueRow(
                 Text(
                     buildString {
                         percentPerSecond?.let {
-                            append("速度 " + String.format(java.util.Locale.ROOT, "%.1f", it) + "%/秒")
+                            append(
+                                UiStrings.get(
+                                    R.string.speed_prefix
+                                ) + String.format(java.util.Locale.ROOT, "%.1f", it) + "%/s"
+                            )
                         }
                         etaSeconds?.let {
                             if (isNotEmpty()) append(" · ")
-                            append("约 ${formatEta(it)}")
+                            append(UiStrings.get(R.string.about_eta, formatEta(it)))
                         }
                     },
                     style = MaterialTheme.typography.labelSmall,
@@ -706,11 +711,11 @@ internal fun TaskQueueRow(
 internal fun formatEta(seconds: Int): String {
     val safeSeconds = seconds.coerceAtLeast(0)
     return if (safeSeconds < 60) {
-        "${safeSeconds} 秒"
+        UiStrings.get(R.string.eta_seconds, safeSeconds)
     } else if (safeSeconds < 3600) {
-        "${safeSeconds / 60} 分 ${safeSeconds % 60} 秒"
+        UiStrings.get(R.string.eta_minutes, safeSeconds / 60, safeSeconds % 60)
     } else {
-        "${safeSeconds / 3600} 小时 ${safeSeconds % 3600 / 60} 分"
+        UiStrings.get(R.string.eta_hours, safeSeconds / 3600, safeSeconds % 3600 / 60)
     }
 }
 

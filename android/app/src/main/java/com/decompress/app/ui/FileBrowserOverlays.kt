@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -57,7 +58,7 @@ internal fun BoxScope.FileBrowserOverlays(
                 state.storageExpanded = false
                 scope.launch {
                     val opened = controller.openFixedLocation(location.label, location.path)
-                    if (!opened) onNotify("${location.label}不可用")
+                    if (!opened) onNotify(UiStrings.get(R.string.unavailable_named, location.label))
                 }
             },
             onOpenExternal = { storage ->
@@ -65,7 +66,7 @@ internal fun BoxScope.FileBrowserOverlays(
                 scope.launch {
                     val opened = controller.openStorageRoot(File(storage.path), storage.label)
                     if (!opened) {
-                        onNotify("${storage.label}不可用")
+                        onNotify(UiStrings.get(R.string.unavailable_named, storage.label))
                         onRefreshExternalStorages()
                     }
                 }

@@ -16,6 +16,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,7 +47,7 @@ internal fun TaskHistoryRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    if (entry.success) "完成" else "失败",
+                    if (entry.success) UiStrings.get(R.string.done) else UiStrings.get(R.string.failed),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (entry.success) {
                         MaterialTheme.colorScheme.primary
@@ -68,13 +69,13 @@ internal fun TaskHistoryRow(
                 horizontalArrangement = Arrangement.End
             ) {
                 if (entry.locationUri != null) {
-                    TextButton(onClick = onOpen) { Text("打开位置") }
+                    TextButton(onClick = onOpen) { Text(UiStrings.get(R.string.open_location)) }
                 }
                 if (entry.retryPayload != null) {
-                    TextButton(onClick = onRetry) { Text("重试") }
+                    TextButton(onClick = onRetry) { Text(UiStrings.get(R.string.retry)) }
                 }
                 TextButton(onClick = onDelete) {
-                    Text("删除", color = MaterialTheme.colorScheme.error)
+                    Text(UiStrings.get(R.string.toolbar_delete), color = MaterialTheme.colorScheme.error)
                 }
             }
         }

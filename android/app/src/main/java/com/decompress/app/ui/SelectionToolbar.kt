@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
@@ -51,11 +52,11 @@ internal fun SelectionToolbar(
                 .height(64.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SelectionAction(Icons.Outlined.Archive, "解压", onExtract)
-            SelectionAction(Icons.Outlined.ContentCopy, "复制", onCopy)
-            SelectionAction(Icons.Outlined.DriveFileMove, "移动", onMove)
-            SelectionAction(Icons.Outlined.Edit, "重命名", onRename)
-            SelectionAction(Icons.Outlined.Delete, "删除", onDelete)
+            SelectionAction(Icons.Outlined.Archive, UiStrings.get(R.string.toolbar_extract), onExtract)
+            SelectionAction(Icons.Outlined.ContentCopy, UiStrings.get(R.string.toolbar_copy), onCopy)
+            SelectionAction(Icons.Outlined.DriveFileMove, UiStrings.get(R.string.toolbar_move), onMove)
+            SelectionAction(Icons.Outlined.Edit, UiStrings.get(R.string.toolbar_rename), onRename)
+            SelectionAction(Icons.Outlined.Delete, UiStrings.get(R.string.toolbar_delete), onDelete)
             SelectionMenu(
                 expanded = menuExpanded,
                 onClick = { onMenuExpandedChange(true) }
@@ -82,13 +83,13 @@ private fun RowScope.SelectionMenu(
         ) {
             Icon(
                 Icons.Outlined.MoreVert,
-                contentDescription = "菜单",
+                contentDescription = UiStrings.get(R.string.toolbar_menu),
                 tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "菜单",
+                UiStrings.get(R.string.toolbar_menu),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )

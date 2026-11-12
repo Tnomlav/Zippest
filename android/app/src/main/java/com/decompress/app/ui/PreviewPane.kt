@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,7 +45,7 @@ internal fun BrowserPreviewPane(
         return
     }
     val context = LocalContext.current
-    InfoPaneScaffold(title = "预览", modifier = modifier) {
+    InfoPaneScaffold(title = UiStrings.get(R.string.preview_title), modifier = modifier) {
         if (entry.isImage || entry.isVideo) {
             Box(
                 modifier = Modifier
@@ -55,10 +56,10 @@ internal fun BrowserPreviewPane(
                 MediaThumbnail(entry, size = 160.dp)
             }
         }
-        InfoLine("名称", entry.name)
-        InfoLine("大小", if (entry.isDirectory) "—" else Formatter.formatShortFileSize(context, entry.size))
-        InfoLine("时间", modifiedLabel(entry))
-        InfoLine("类型", typeLabel(entry))
+        InfoLine(UiStrings.get(R.string.preview_name), entry.name)
+        InfoLine(UiStrings.get(R.string.preview_size), if (entry.isDirectory) "—" else Formatter.formatShortFileSize(context, entry.size))
+        InfoLine(UiStrings.get(R.string.preview_time), modifiedLabel(entry))
+        InfoLine(UiStrings.get(R.string.preview_type), typeLabel(entry))
         if (!entry.isDirectory && !entry.isImage && !entry.isVideo) {
             TextPreview(entry)
         }
@@ -80,14 +81,14 @@ internal fun ArchiveEntryPane(
         return
     }
     val context = LocalContext.current
-    InfoPaneScaffold(title = "选中条目", modifier = modifier) {
-        InfoLine("名称", entry.path.substringAfterLast('/'))
+    InfoPaneScaffold(title = UiStrings.get(R.string.preview_selected), modifier = modifier) {
+        InfoLine(UiStrings.get(R.string.preview_name), entry.path.substringAfterLast('/'))
         InfoLine(
-            "位置",
-            entry.path.substringBeforeLast('/', "/").let { if (it == "/") "根目录" else it }
+            UiStrings.get(R.string.preview_location),
+            entry.path.substringBeforeLast('/', "/").let { if (it == "/") UiStrings.get(R.string.preview_root) else it }
         )
-        InfoLine("大小", if (entry.isDirectory) "—" else Formatter.formatShortFileSize(context, entry.size))
-        InfoLine("类型", if (entry.isDirectory) "文件夹" else extensionLabel(entry.path))
+        InfoLine(UiStrings.get(R.string.preview_size), if (entry.isDirectory) "—" else Formatter.formatShortFileSize(context, entry.size))
+        InfoLine(UiStrings.get(R.string.preview_type), if (entry.isDirectory) UiStrings.get(R.string.preview_folder) else extensionLabel(entry.path))
     }
 }
 
@@ -103,16 +104,16 @@ private fun modifiedLabel(entry: BrowserEntry): String =
     }
 
 private fun typeLabel(entry: BrowserEntry): String = when {
-    entry.isDirectory -> "文件夹"
-    entry.isArchive -> "压缩包 · ${entry.extension.uppercase()}"
+    entry.isDirectory -> UiStrings.get(R.string.preview_folder)
+    entry.isArchive -> UiStrings.get(R.string.preview_archive_ext, entry.extension.uppercase())
     entry.extension.isNotBlank() -> entry.extension.uppercase()
     entry.mimeType?.isNotBlank() == true -> entry.mimeType.substringAfter('/').uppercase()
-    else -> "文件"
+    else -> UiStrings.get(R.string.preview_file)
 }
 
 private fun extensionLabel(path: String): String {
     val extension = path.substringAfterLast('.', "")
-    return if (extension.isBlank()) "文件" else extension.uppercase()
+    return if (extension.isBlank()) UiStrings.get(R.string.preview_file) else extension.uppercase()
 }
 
 private val TEXT_EXTENSIONS = setOf(
@@ -148,7 +149,7 @@ private fun TextPreview(entry: BrowserEntry) {
         verticalArrangement = Arrangement.spacedBy(ZippestSpacing.xs)
     ) {
         Text(
-            "内容开头",
+            UiStrings.get(R.string.preview_head),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

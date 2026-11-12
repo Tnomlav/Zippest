@@ -46,6 +46,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -81,7 +82,7 @@ data class CompressTarget(
 private data class SplitOption(val label: String, val bytes: Long?)
 
 private val splitOptions = listOf(
-    SplitOption("不分卷", null),
+    SplitOption(UiStrings.get(R.string.compress_no_split), null),
     SplitOption("10 MB", 10L * 1024 * 1024),
     SplitOption("100 MB", 100L * 1024 * 1024),
     SplitOption("500 MB", 500L * 1024 * 1024),
@@ -99,7 +100,7 @@ fun CompressionSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val initialBaseName = remember(target.entries) {
         when {
-            target.entries.size > 1 -> "压缩包"
+            target.entries.size > 1 -> UiStrings.get(R.string.compress_archive)
             target.entries.single().isDirectory -> target.entries.single().name
             else -> archiveNameWithoutExtension(target.entries.single().name)
         }
@@ -168,26 +169,26 @@ fun CompressionSheet(
 
     fun enqueue() {
         if (useCustomLocation && (customTreeUri == null || customRootUri == null)) {
-            error = "请先选择保存位置"
+            error = UiStrings.get(R.string.compress_choose_first)
             return
         }
         if (!format.acceptsMultipleSources &&
             (target.entries.size != 1 || target.entries.first().isDirectory)
         ) {
-            error = "${format.label} 只能压缩单个文件"
+            error = UiStrings.get(R.string.compress_single, format.label)
             return
         }
         if (password.isNotEmpty() && !format.supportsPassword) {
-            error = "${format.label} 不支持密码"
+            error = UiStrings.get(R.string.compress_no_password, format.label)
             return
         }
         if (password.isNotEmpty() && confirmPassword != password) {
-            error = "两次输入的密码不一致"
+            error = UiStrings.get(R.string.compress_mismatch)
             return
         }
         val normalizedName = fileName.trim()
         if (normalizedName.isBlank()) {
-            error = "请输入文件名"
+            error = UiStrings.get(R.string.compress_enter_name)
             return
         }
         val outputName = if (normalizedName.lowercase().endsWith(format.extension)) {
@@ -228,7 +229,7 @@ fun CompressionSheet(
             )
             onStarted()
         }.onFailure {
-            error = it.message ?: "无法创建压缩任务"
+            error = it.message ?: UiStrings.get(R.string.compress_cannot_create)
         }
     }
 
@@ -271,19 +272,19 @@ fun CompressionSheet(
                     .verticalScroll(rememberScrollState())
             ) {
                 Text(
-                    "压缩包",
+                    UiStrings.get(R.string.compress_archive),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "已选 ${target.entries.size} 项 · ${target.parentPath}",
+                    UiStrings.get(R.string.compress_selected, target.entries.size, target.parentPath),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(Modifier.height(20.dp))
-                SectionLabel("压缩格式")
+                SectionLabel(UiStrings.get(R.string.compress_format))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -321,26 +322,26 @@ fun CompressionSheet(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     if (ResumableTarWriter.supports(format)) {
-                        "TAR 系列支持断点续传：进程被系统中断后会自动接着压"
+                        UiStrings.get(R.string.compress_tar_resume)
                     } else {
-                        "中断后需要重新压缩（ZIP / 7Z 暂不支持续传）"
+                        UiStrings.get(R.string.compress_no_resume)
                     },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(Modifier.height(16.dp))
-                SectionLabel("文件名")
+                SectionLabel(UiStrings.get(R.string.compress_filename))
                 OutlinedTextField(
                     value = fileName,
                     onValueChange = { fileName = it },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    placeholder = { Text("压缩包${format.extension}") }
+                    placeholder = { Text(UiStrings.get(R.string.compress_archive_ext, format.extension)) }
                 )
 
                 Spacer(Modifier.height(16.dp))
-                SectionLabel("压缩级别")
+                SectionLabel(UiStrings.get(R.string.compress_level))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -365,15 +366,18 @@ fun CompressionSheet(
                     }
                     val estimate = (bytes * ratio).toLong()
                     Text(
-                        "原始 ${Formatter.formatShortFileSize(context, bytes)} · " +
-                            "预计约 ${Formatter.formatShortFileSize(context, estimate)}",
+                        UiStrings.get(
+                            R.string.compress_size_estimate,
+                            Formatter.formatShortFileSize(context, bytes),
+                            Formatter.formatShortFileSize(context, estimate)
+                        ),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
                 Spacer(Modifier.height(16.dp))
-                SectionLabel("排除规则")
+                SectionLabel(UiStrings.get(R.string.compress_excludes))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -383,29 +387,29 @@ fun CompressionSheet(
                     FilterChip(
                         selected = excludeGit,
                         onClick = { excludeGit = !excludeGit },
-                        label = { Text("跳过 .git") }
+                        label = { Text(UiStrings.get(R.string.compress_skip_git)) }
                     )
                     FilterChip(
                         selected = excludeNodeModules,
                         onClick = { excludeNodeModules = !excludeNodeModules },
-                        label = { Text("跳过 node_modules") }
+                        label = { Text(UiStrings.get(R.string.compress_skip_node)) }
                     )
                     FilterChip(
                         selected = excludeMac,
                         onClick = { excludeMac = !excludeMac },
-                        label = { Text("跳过 __MACOSX") }
+                        label = { Text(UiStrings.get(R.string.compress_skip_macos)) }
                     )
                 }
 
                 if (format.supportsPassword) {
                     Spacer(Modifier.height(16.dp))
-                    SectionLabel("密码（可选）")
+                    SectionLabel(UiStrings.get(R.string.compress_password_optional))
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        placeholder = { Text("不填写则不加密") },
+                        placeholder = { Text(UiStrings.get(R.string.compress_no_encrypt)) },
                         visualTransformation = if (passwordVisible) {
                             VisualTransformation.None
                         } else {
@@ -421,9 +425,9 @@ fun CompressionSheet(
                                     if (passwordVisible) Icons.Outlined.VisibilityOff
                                     else Icons.Outlined.Visibility,
                                     contentDescription = if (passwordVisible) {
-                                        "隐藏密码"
+                                        UiStrings.get(R.string.compress_hide)
                                     } else {
-                                        "显示密码"
+                                        UiStrings.get(R.string.compress_show)
                                     }
                                 )
                             }
@@ -436,7 +440,7 @@ fun CompressionSheet(
                             onValueChange = { confirmPassword = it },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            label = { Text("再输入一次") },
+                            label = { Text(UiStrings.get(R.string.compress_repeat)) },
                             isError = confirmPassword.isNotEmpty() &&
                                 confirmPassword != password,
                             visualTransformation = if (passwordVisible) {
@@ -448,14 +452,14 @@ fun CompressionSheet(
                         if (confirmPassword.isNotEmpty() && confirmPassword != password) {
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "两次输入不一致",
+                                UiStrings.get(R.string.compress_mismatch_short),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.error
                             )
                         } else if (password.length < 6) {
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "密码少于 6 位，容易被猜到",
+                                UiStrings.get(R.string.compress_weak),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -464,7 +468,7 @@ fun CompressionSheet(
                 }
 
                 Spacer(Modifier.height(16.dp))
-                SectionLabel("分卷大小")
+                SectionLabel(UiStrings.get(R.string.compress_split_size))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -490,9 +494,9 @@ fun CompressionSheet(
                     }
                     val splitDescription = if (format == CompressionFormat.ZIP) {
                         val baseName = effectiveName.removeSuffix(".zip")
-                        "$baseName.z01、$baseName.z02…$effectiveName；打开 .z01 或 .zip 均可解压"
+                        UiStrings.get(R.string.compress_split_zip, baseName, baseName, effectiveName)
                     } else {
-                        "$effectiveName.001、.002…；在 Zippest 中打开 .001 即可解压"
+                        UiStrings.get(R.string.compress_split_native, effectiveName)
                     }
                     Text(
                         splitDescription,
@@ -502,24 +506,24 @@ fun CompressionSheet(
                 } else {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "分卷 = 把大包切成 .001 / .002… 几个小文件，方便发送；解压时打开第一个即可",
+                        UiStrings.get(R.string.compress_split_explain),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
                 Spacer(Modifier.height(16.dp))
-                SectionLabel("保存到")
+                SectionLabel(UiStrings.get(R.string.compress_save_to))
                 CompressionChoice(
-                    title = "当前文件夹",
+                    title = UiStrings.get(R.string.compress_current),
                     detail = target.parentPath,
                     selected = !useCustomLocation,
                     onClick = { useCustomLocation = false }
                 )
                 Spacer(Modifier.height(8.dp))
                 CompressionChoice(
-                    title = "选择其他位置",
-                    detail = customName ?: "选择手机中的任意文件夹",
+                    title = UiStrings.get(R.string.compress_other),
+                    detail = customName ?: UiStrings.get(R.string.compress_choose_folder),
                     selected = useCustomLocation && customTreeUri != null,
                     onClick = { folderPicker.launch(null) }
                 )
@@ -542,13 +546,13 @@ fun CompressionSheet(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                    Text("取消")
+                    Text(UiStrings.get(R.string.compress_cancel))
                 }
                 Button(
                     onClick = { requestNotificationAndEnqueue() },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("开始压缩")
+                    Text(UiStrings.get(R.string.compress_start))
                 }
             }
         }

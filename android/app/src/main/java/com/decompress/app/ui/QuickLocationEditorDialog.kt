@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
 import androidx.compose.ui.unit.dp
 import com.decompress.app.data.QuickLocation
 import com.decompress.app.data.QuickLocationRepository
@@ -58,14 +59,14 @@ internal fun QuickLocationEditorDialog(
         }.getOrNull()
         val relativePath = documentId?.let(::relativePathFromInternalTreeDocumentId)
         if (relativePath == null) {
-            error = "快捷位置必须位于内部存储中"
+            error = UiStrings.get(R.string.quick_must_internal)
             return@rememberLauncherForActivityResult
         }
         val resolvedPath = resolveInternalDirectoryPath(relativePath)
         path = resolvedPath
         hasSelectedPath = true
         if (label.isBlank()) {
-            label = resolvedPath.substringAfterLast('/').ifBlank { "快捷位置" }
+            label = resolvedPath.substringAfterLast('/').ifBlank { UiStrings.get(R.string.quick_title) }
         }
     }
 
@@ -73,15 +74,15 @@ internal fun QuickLocationEditorDialog(
         val cleanLabel = label.trim()
         val normalizedPath = normalizeQuickLocationPath(path)
         if (cleanLabel.isEmpty()) {
-            error = "请输入快捷位置名称"
+            error = UiStrings.get(R.string.quick_enter_name)
             return
         }
         if (!hasSelectedPath) {
-            error = "请先通过文件管理器选择文件夹"
+            error = UiStrings.get(R.string.quick_pick_first)
             return
         }
         if (normalizedPath == null) {
-            error = "目录地址不能包含 . 或 .."
+            error = UiStrings.get(R.string.quick_invalid_path)
             return
         }
         val target = File(
@@ -89,22 +90,22 @@ internal fun QuickLocationEditorDialog(
             normalizedPath
         )
         if (!target.isDirectory) {
-            error = "目录不存在或无法访问"
+            error = UiStrings.get(R.string.quick_missing)
             return
         }
         if (location == null) {
             repository.add(cleanLabel, normalizedPath)
-            onSaved("已添加快捷位置")
+            onSaved(UiStrings.get(R.string.quick_added))
         } else {
             repository.update(location.copy(label = cleanLabel, path = normalizedPath))
-            onSaved("已更新快捷位置")
+            onSaved(UiStrings.get(R.string.quick_updated))
         }
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(if (location == null) "新建快捷位置" else "编辑快捷位置")
+            Text(if (location == null) UiStrings.get(R.string.quick_new) else UiStrings.get(R.string.quick_edit))
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -116,7 +117,7 @@ internal fun QuickLocationEditorDialog(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    label = { Text("名称") }
+                    label = { Text(UiStrings.get(R.string.name)) }
                 )
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -125,11 +126,11 @@ internal fun QuickLocationEditorDialog(
                 ) {
                     Text(
                         if (!hasSelectedPath) {
-                            "尚未选择文件夹"
+                            UiStrings.get(R.string.no_folder)
                         } else if (path.isBlank()) {
-                            "内部存储"
+                            UiStrings.get(R.string.internal)
                         } else {
-                            "内部存储 / $path"
+                            UiStrings.get(R.string.quick_path, path)
                         },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                         style = MaterialTheme.typography.bodyMedium,
@@ -151,7 +152,7 @@ internal fun QuickLocationEditorDialog(
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            if (hasSelectedPath) "重新选择文件夹" else "选择文件夹",
+                            if (hasSelectedPath) UiStrings.get(R.string.choose_again) else UiStrings.get(R.string.choose_folder),
                             modifier = Modifier.padding(start = 4.dp)
                         )
                     }
@@ -167,12 +168,12 @@ internal fun QuickLocationEditorDialog(
         },
         confirmButton = {
             Button(onClick = ::save) {
-                Text("保存")
+                Text(UiStrings.get(R.string.save))
             }
         },
         dismissButton = {
             TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = onDismiss) {
-                Text("取消")
+                Text(UiStrings.get(R.string.cancel))
             }
         }
     )
@@ -186,14 +187,14 @@ private fun resolveInternalDirectoryPath(relativePath: String): String {
     }
     val segments = normalized.split('/').toMutableList()
     val localizedAliases = mapOf(
-        "下载" to "Download",
-        "图片" to "Pictures",
-        "相册" to "Pictures",
-        "相机" to "DCIM",
-        "视频" to "Movies",
-        "电影" to "Movies",
-        "音乐" to "Music",
-        "文档" to "Documents"
+        UiStrings.get(R.string.downloads) to "Download",
+        UiStrings.get(R.string.pictures_short) to "Pictures",
+        UiStrings.get(R.string.gallery_short) to "Pictures",
+        UiStrings.get(R.string.camera) to "DCIM",
+        UiStrings.get(R.string.videos_short) to "Movies",
+        UiStrings.get(R.string.movies) to "Movies",
+        UiStrings.get(R.string.music_short) to "Music",
+        UiStrings.get(R.string.documents_short) to "Documents"
     )
     segments.firstOrNull()?.let { first ->
         localizedAliases[first]?.let { segments[0] = it }

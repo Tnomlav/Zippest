@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -25,10 +26,10 @@ internal fun BrowserInfoPane(
     itemCount: Int,
     modifier: Modifier = Modifier
 ) {
-    InfoPaneScaffold(title = "当前文件夹", modifier = modifier) {
-        InfoLine("名称", folderName.ifBlank { "内部存储" })
-        InfoLine("路径", path.joinToString(" / ").ifBlank { "内部存储" })
-        InfoLine("项目", "$itemCount 项")
+    InfoPaneScaffold(title = UiStrings.get(R.string.info_current), modifier = modifier) {
+        InfoLine(UiStrings.get(R.string.info_name), folderName.ifBlank { UiStrings.get(R.string.info_internal) })
+        InfoLine(UiStrings.get(R.string.info_path), path.joinToString(" / ").ifBlank { UiStrings.get(R.string.info_internal) })
+        InfoLine(UiStrings.get(R.string.info_items), UiStrings.get(R.string.info_count, itemCount))
     }
 }
 
@@ -41,11 +42,11 @@ internal fun ArchiveInfoPane(
     encodingLabel: String,
     modifier: Modifier = Modifier
 ) {
-    InfoPaneScaffold(title = "压缩包", modifier = modifier) {
-        InfoLine("名称", archiveName)
-        InfoLine("大小", sizeText)
-        InfoLine("条目", "$entryCount 项")
-        InfoLine("编码", encodingLabel)
+    InfoPaneScaffold(title = UiStrings.get(R.string.info_archive), modifier = modifier) {
+        InfoLine(UiStrings.get(R.string.info_name), archiveName)
+        InfoLine(UiStrings.get(R.string.info_size), sizeText)
+        InfoLine(UiStrings.get(R.string.info_entries), UiStrings.get(R.string.info_count, entryCount))
+        InfoLine(UiStrings.get(R.string.info_encoding), encodingLabel)
     }
 }
 

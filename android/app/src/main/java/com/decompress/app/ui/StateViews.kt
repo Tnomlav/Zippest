@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -116,7 +117,7 @@ internal fun ErrorTemplate(
     StatePanel(modifier) {
         EmptyIllustration(EmptyArt.TASKS)
         Text(
-            "这一步没走通",
+            UiStrings.get(R.string.state_failed_title),
             style = MaterialTheme.typography.titleMedium
         )
         Text(
@@ -128,7 +129,7 @@ internal fun ErrorTemplate(
         )
         if (message.length > 60) {
             Text(
-                if (detailOpen) "收起详情" else "查看详情",
+                if (detailOpen) UiStrings.get(R.string.hide_details) else UiStrings.get(R.string.show_details),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
@@ -137,7 +138,7 @@ internal fun ErrorTemplate(
             )
         }
         androidx.compose.material3.OutlinedButton(onClick = onRetry) {
-            Text("重试")
+            Text(UiStrings.get(R.string.retry))
         }
         if (secondaryLabel != null && onSecondary != null) {
             androidx.compose.material3.TextButton(onClick = onSecondary) {

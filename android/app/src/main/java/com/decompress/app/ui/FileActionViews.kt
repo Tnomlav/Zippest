@@ -26,6 +26,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -70,14 +71,14 @@ internal fun DeleteConfirmationDialog(
                 }
                 Spacer(Modifier.height(20.dp))
                 Text(
-                    if (itemCount == 1) "删除 1 项？" else "删除 $itemCount 项？",
+                    if (itemCount == 1) UiStrings.get(R.string.delete_one) else UiStrings.get(R.string.delete_many, itemCount),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    if (useTrash) "删除后可在回收站恢复" else "此操作无法撤销",
+                    if (useTrash) UiStrings.get(R.string.delete_trash_hint) else UiStrings.get(R.string.cannot_undo),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -93,7 +94,7 @@ internal fun DeleteConfirmationDialog(
                             .weight(1f)
                             .height(50.dp)
                     ) {
-                        Text("取消")
+                        Text(UiStrings.get(R.string.cancel))
                     }
                     Button(
                         onClick = onConfirm,
@@ -106,7 +107,7 @@ internal fun DeleteConfirmationDialog(
                             contentColor = MaterialTheme.colorScheme.onError
                         )
                     ) {
-                        Text("删除")
+                        Text(UiStrings.get(R.string.toolbar_delete))
                     }
                 }
             }
@@ -124,7 +125,7 @@ internal fun TransferToolbar(
     onCancel: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    val action = if (move) "移动" else "复制"
+    val action = if (move) UiStrings.get(R.string.move) else UiStrings.get(R.string.copy)
     Surface(
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 8.dp
@@ -139,7 +140,7 @@ internal fun TransferToolbar(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "$action $itemCount 项",
+                    UiStrings.get(R.string.action_count, action, itemCount),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
@@ -155,7 +156,7 @@ internal fun TransferToolbar(
                 onClick = onCancel,
                 enabled = !busy
             ) {
-                Text("取消")
+                Text(UiStrings.get(R.string.cancel))
             }
             Button(
                 onClick = onConfirm,

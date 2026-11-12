@@ -42,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -280,7 +281,7 @@ internal fun queryOpenWithOptions(context: Context, intent: Intent): List<OpenWi
                 component.className
             )
             OpenWithOption(
-                label = if (action == Intent.ACTION_EDIT) "$label（编辑）" else label,
+                label = if (action == Intent.ACTION_EDIT) UiStrings.get(R.string.edit_named, label) else label,
                 component = component,
                 icon = runCatching {
                     resolveInfo.loadIcon(packageManager)
@@ -312,10 +313,7 @@ internal fun openWithCategory(
         append(' ')
         append(className)
     }.lowercase()
-    return if (listOf(
-        "分享", "发送", "朋友圈", "好友", "聊天", "传输",
-        "share", "send", "moment", "friend", "message", "chat", "transfer"
-    ).any(searchable::contains)) {
+    return if (OPEN_WITH_SHARE_KEYWORDS.any(searchable::contains)) {
         OpenWithCategory.SHARE
     } else {
         OpenWithCategory.DIRECT
@@ -331,28 +329,13 @@ private fun directPriority(mimeType: String, option: OpenWithOption): Int {
         append(option.component.className)
     }.lowercase()
     val keywords = when {
-        mimeType.startsWith("image/") -> listOf(
-            "相册", "图库", "照片", "图片", "gallery", "photo", "image", "viewer"
-        )
-        mimeType.startsWith("video/") -> listOf(
-            "视频", "播放器", "影音", "video", "player", "movie"
-        )
-        mimeType.startsWith("audio/") -> listOf(
-            "音乐", "播放器", "音频", "music", "audio", "player"
-        )
-        mimeType == "application/pdf" -> listOf(
-            "pdf", "阅读器", "查看器", "wps", "office", "reader"
-        )
-        mimeType.startsWith("text/") -> listOf(
-            "文本", "笔记", "编辑器", "text", "editor", "notes", "reader"
-        )
-        mimeType == "application/vnd.android.package-archive" -> listOf(
-            "安装", "installer", "packageinstaller"
-        )
-        else -> listOf(
-            "文档", "阅读", "查看", "编辑", "office", "wps",
-            "viewer", "reader", "editor", "document"
-        )
+        mimeType.startsWith("image/") -> OPEN_WITH_IMAGE_KEYWORDS
+        mimeType.startsWith("video/") -> OPEN_WITH_VIDEO_KEYWORDS
+        mimeType.startsWith("audio/") -> OPEN_WITH_AUDIO_KEYWORDS
+        mimeType == "application/pdf" -> OPEN_WITH_PDF_KEYWORDS
+        mimeType.startsWith("text/") -> OPEN_WITH_TEXT_KEYWORDS
+        mimeType == "application/vnd.android.package-archive" -> OPEN_WITH_APK_KEYWORDS
+        else -> OPEN_WITH_DOCUMENT_KEYWORDS
     }
     return keywords.count(searchable::contains) * 100
 }
@@ -407,7 +390,7 @@ internal fun OpenWithDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("打开方式") },
+        title = { Text(UiStrings.get(R.string.open_with)) },
         text = {
             Column {
                 Text(
@@ -430,9 +413,9 @@ internal fun OpenWithDialog(
                         if (index == 0 || previous?.category != option.category) {
                             Text(
                                 if (option.category == OpenWithCategory.DIRECT) {
-                                    "直接打开"
+                                    UiStrings.get(R.string.open_direct)
                                 } else {
-                                    "分享或发送"
+                                    UiStrings.get(R.string.share_send)
                                 },
                                 modifier = Modifier.padding(
                                     start = 4.dp,
@@ -494,23 +477,40 @@ internal fun OpenWithDialog(
                     FilterChip(
                         selected = !rememberChoice,
                         onClick = { rememberChoice = false },
-                        label = { Text("仅一次") }
+                        label = { Text(UiStrings.get(R.string.just_once)) }
                     )
                     FilterChip(
                         selected = rememberChoice,
                         onClick = { rememberChoice = true },
-                        label = { Text("总是") }
+                        label = { Text(UiStrings.get(R.string.always)) }
                     )
                 }
             }
         },
         confirmButton = {
             Button(onClick = { onLaunch(selected, rememberChoice) }) {
-                Text("打开")
+                Text(UiStrings.get(R.string.open))
             }
         },
         dismissButton = {
-            TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = onDismiss) { Text("取消") }
+            TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = onDismiss) { Text(UiStrings.get(R.string.cancel)) }
         }
     )
 }
+
+private val OPEN_WITH_SHARE_KEYWORDS = listOf(
+    "分享", "发送", "朋友圈", "好友", "聊天", "传输",
+    "share", "send", "moment", "friend", "message", "chat", "transfer"
+)
+private val OPEN_WITH_IMAGE_KEYWORDS = listOf(
+    "相册", "图库", "照片", "图片", "gallery", "photo", "image", "viewer"
+)
+private val OPEN_WITH_VIDEO_KEYWORDS = listOf("视频", "播放器", "影音", "video", "player", "movie")
+private val OPEN_WITH_AUDIO_KEYWORDS = listOf("音乐", "播放器", "音频", "music", "audio", "player")
+private val OPEN_WITH_PDF_KEYWORDS = listOf("阅读器", "查看器", "pdf", "wps", "office", "reader")
+private val OPEN_WITH_TEXT_KEYWORDS = listOf("文本", "笔记", "编辑器", "text", "editor", "notes", "reader")
+private val OPEN_WITH_APK_KEYWORDS = listOf("安装", "installer", "packageinstaller")
+private val OPEN_WITH_DOCUMENT_KEYWORDS = listOf(
+    "文档", "阅读", "查看", "编辑", "office", "wps",
+    "viewer", "reader", "editor", "document"
+)

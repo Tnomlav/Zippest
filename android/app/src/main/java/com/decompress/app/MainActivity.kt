@@ -21,7 +21,9 @@ class MainActivity : ComponentActivity() {
 
     override fun attachBaseContext(newBase: Context) {
         val language = AppSettingsRepository.read(newBase).language
-        super.attachBaseContext(com.decompress.app.data.LanguageContext.wrap(newBase, language))
+        val wrapped = com.decompress.app.data.LanguageContext.wrap(newBase, language)
+        com.decompress.app.ui.UiStrings.install(wrapped)
+        super.attachBaseContext(wrapped)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

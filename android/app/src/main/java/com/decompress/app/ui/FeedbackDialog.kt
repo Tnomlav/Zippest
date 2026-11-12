@@ -19,6 +19,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.decompress.app.ui.theme.ZippestRadius
@@ -37,19 +38,19 @@ internal fun buildFeedbackText(
 ): String {
     val model = "${Build.MANUFACTURER} ${Build.MODEL}".trim()
     return buildString {
-        appendLine("版本：$versionName ($versionCode)")
-        appendLine("机型：$model")
+        appendLine(UiStrings.get(R.string.version_line, versionName, versionCode))
+        appendLine(UiStrings.get(R.string.device_line, model))
         appendLine("系统：Android ${Build.VERSION.RELEASE}（API ${Build.VERSION.SDK_INT}）")
         appendLine()
-        appendLine("做了什么：（解压 / 压缩 / 浏览；格式；是否加密或分卷；文件多大）")
-        appendLine("发生了什么：")
-        appendLine("期望怎样：")
+        appendLine(UiStrings.get(R.string.what_did))
+        appendLine(UiStrings.get(R.string.what_happened))
+        appendLine(UiStrings.get(R.string.what_expected))
     }
 }
 
 private fun copyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-    clipboard?.setPrimaryClip(ClipData.newPlainText("Zippest 反馈", text))
+    clipboard?.setPrimaryClip(ClipData.newPlainText(UiStrings.get(R.string.feedback_title), text))
 }
 
 @Composable
@@ -65,11 +66,11 @@ internal fun FeedbackDialog(
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("反馈问题") },
+        title = { Text(UiStrings.get(R.string.feedback_button)) },
         text = {
             Column {
                 Text(
-                    "版本、机型和系统已经填好。复制后贴到 GitHub Issue，再补两句“做了什么、发生了什么”就够了。",
+                    UiStrings.get(R.string.feedback_hint),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -101,11 +102,11 @@ internal fun FeedbackDialog(
                     onDismiss()
                 }
             ) {
-                Text("复制并打开 GitHub")
+                Text(UiStrings.get(R.string.copy_open_github))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("关闭") }
+            TextButton(onClick = onDismiss) { Text(UiStrings.get(R.string.close)) }
         }
     )
 }

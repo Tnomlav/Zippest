@@ -68,17 +68,17 @@ internal fun FileBrowserTopBar(
             TopAppBar(
                 navigationIcon = {
                     IconButton(onClick = onClearSelection) {
-                        Icon(Icons.Outlined.Close, contentDescription = "退出多选")
+                        Icon(Icons.Outlined.Close, contentDescription = UiStrings.get(R.string.exit_selection))
                     }
                 },
                 title = {
                     Column {
                         Text(
-                            "已选 $selectedCount 项",
+                            UiStrings.get(R.string.selected_count, selectedCount),
                             style = MaterialTheme.typography.titleMedium
                         )
                         Text(
-                            if (selectedCount == 0) "取消选择以返回" else "点击项目继续选择",
+                            if (selectedCount == 0) UiStrings.get(R.string.clear_to_back) else UiStrings.get(R.string.tap_to_select),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -101,7 +101,7 @@ internal fun FileBrowserTopBar(
             TopAppBar(
                 navigationIcon = {
                     IconButton(onClick = onExitSearch) {
-                        Icon(Icons.Outlined.ArrowBack, contentDescription = "退出搜索")
+                        Icon(Icons.Outlined.ArrowBack, contentDescription = UiStrings.get(R.string.exit_search))
                     }
                 },
                 title = {
@@ -113,7 +113,7 @@ internal fun FileBrowserTopBar(
                             .focusRequester(searchFocus),
                         singleLine = true,
                         placeholder = {
-                            Text(if (globalSearch) "搜索全部存储" else "搜索当前文件夹")
+                            Text(if (globalSearch) UiStrings.get(R.string.search_all) else UiStrings.get(R.string.search_current))
                         },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
@@ -125,11 +125,11 @@ internal fun FileBrowserTopBar(
                 },
                 actions = {
                     TextButton(onClick = onToggleGlobalSearch) {
-                        Text(if (globalSearch) "全部" else "当前")
+                        Text(if (globalSearch) UiStrings.get(R.string.all) else UiStrings.get(R.string.current))
                     }
                     if (query.isNotEmpty()) {
                         IconButton(onClick = { onQueryChange("") }) {
-                            Icon(Icons.Outlined.Close, contentDescription = "清除搜索")
+                            Icon(Icons.Outlined.Close, contentDescription = UiStrings.get(R.string.clear_search))
                         }
                     }
                 }
@@ -157,7 +157,7 @@ internal fun FileBrowserTopBar(
                 actions = {
                     if (transferActive) {
                         IconButton(onClick = onCancelTransfer) {
-                            Icon(Icons.Outlined.Close, contentDescription = "取消复制或移动")
+                            Icon(Icons.Outlined.Close, contentDescription = UiStrings.get(R.string.cancel_transfer))
                         }
                     } else if (hasTree) {
                         IconButton(onClick = onSearch) {
@@ -171,7 +171,7 @@ internal fun FileBrowserTopBar(
                         }
                     } else {
                         IconButton(onClick = onOpenSettings) {
-                            Icon(Icons.Outlined.Tune, contentDescription = "设置")
+                            Icon(Icons.Outlined.Tune, contentDescription = UiStrings.get(R.string.browser_settings))
                         }
                     }
                 },

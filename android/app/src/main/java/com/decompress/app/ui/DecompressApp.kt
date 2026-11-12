@@ -135,6 +135,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -306,8 +307,8 @@ fun ZippestApp(
             archive = entry,
             parentUri = null,
             parentTreeUri = null,
-            parentPath = "外部文件",
-            parentName = "外部文件",
+            parentPath = UiStrings.get(R.string.app_external),
+            parentName = UiStrings.get(R.string.app_external),
             requiresCustomDestination = true
         )
     }
@@ -358,7 +359,7 @@ fun ZippestApp(
                     },
                     false
                 ) == true
-                val message = finishedTaskName ?: if (successful) "后台任务完成" else "后台任务失败"
+                val message = finishedTaskName ?: if (successful) UiStrings.get(R.string.app_task_done) else UiStrings.get(R.string.app_task_failed)
                 val isCompression =
                     intent?.action == CompressionScheduler.ACTION_COMPRESSION_FINISHED
                 val location = intent?.getStringExtra(
@@ -399,7 +400,7 @@ fun ZippestApp(
                     controller.refresh()
                     val result = snackbarHostState.showSnackbar(
                         message = message,
-                        actionLabel = if (location != null) "打开" else null,
+                        actionLabel = if (location != null) UiStrings.get(R.string.app_open) else null,
                         duration = if (location != null) {
                             SnackbarDuration.Long
                         } else {
@@ -457,7 +458,7 @@ fun ZippestApp(
                     com.decompress.app.data.CrashLog.clear(context)
                     crashReport = null
                 },
-                title = { Text("上次运行异常退出") },
+                title = { Text(UiStrings.get(R.string.app_crashed)) },
                 text = {
                     Column(
                         modifier = Modifier
@@ -465,7 +466,7 @@ fun ZippestApp(
                             .verticalScroll(rememberScrollState())
                     ) {
                         Text(
-                            "崩溃信息只保存在本机，不会上传。可以复制给开发者排查。",
+                            UiStrings.get(R.string.app_crash_hint),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -482,13 +483,13 @@ fun ZippestApp(
                             android.content.ClipboardManager::class.java
                         )
                         clipboard?.setPrimaryClip(
-                            ClipData.newPlainText("崩溃信息", crashReport!!)
+                            ClipData.newPlainText(UiStrings.get(R.string.app_crash_info), crashReport!!)
                         )
                         com.decompress.app.data.CrashLog.clear(context)
                         crashReport = null
-                        scope.launch { snackbarHostState.showSnackbar("已复制崩溃信息") }
+                        scope.launch { snackbarHostState.showSnackbar(UiStrings.get(R.string.app_crash_copied)) }
                     }) {
-                        Text("复制详情")
+                        Text(UiStrings.get(R.string.app_copy_details))
                     }
                 },
                 dismissButton = {
@@ -497,7 +498,7 @@ fun ZippestApp(
                         crashReport = null
                     }) {
                         Text(
-                            "关闭",
+                            UiStrings.get(R.string.app_close),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -507,7 +508,7 @@ fun ZippestApp(
         pendingPasswordRequest?.let { request ->
             AlertDialog(
                 onDismissRequest = { pendingPasswordRequest = null },
-                title = { Text("需要密码") },
+                title = { Text(UiStrings.get(R.string.app_need_password)) },
                 text = {
                     Column {
                         Text(
@@ -519,7 +520,7 @@ fun ZippestApp(
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "这个压缩包的密码和前面几个不同，单独输入后继续解压。",
+                            UiStrings.get(R.string.app_need_password_hint),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -529,7 +530,7 @@ fun ZippestApp(
                             onValueChange = { pendingPasswordInput = it },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            label = { Text("密码") },
+                            label = { Text(UiStrings.get(R.string.app_password)) },
                             visualTransformation = PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Text,
@@ -548,7 +549,7 @@ fun ZippestApp(
                             pendingPasswordRequest = PendingPasswordStore.all(context).firstOrNull()
                         }
                     ) {
-                        Text("开始解压")
+                        Text(UiStrings.get(R.string.app_start_extract))
                     }
                 },
                 dismissButton = {
@@ -557,7 +558,7 @@ fun ZippestApp(
                         pendingPasswordRequest = null
                         pendingPasswordInput = ""
                     }) {
-                        Text("稍后再说")
+                        Text(UiStrings.get(R.string.app_later))
                     }
                 }
             )
@@ -675,7 +676,7 @@ fun ZippestApp(
                             extractTarget = null
                             archiveTarget = null
                             scope.launch {
-                                snackbarHostState.showSnackbar("已加入后台任务队列")
+                                snackbarHostState.showSnackbar(UiStrings.get(R.string.app_queued))
                             }
                         }
                     )

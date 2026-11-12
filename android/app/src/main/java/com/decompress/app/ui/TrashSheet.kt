@@ -45,6 +45,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.decompress.app.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -119,22 +120,25 @@ fun TrashContent(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "回收站",
+                    UiStrings.get(R.string.trash_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     if (items.isEmpty()) {
-                        "删除的文件会先放在这里"
+                        UiStrings.get(R.string.trash_subtitle)
                     } else {
                         val quotaLabel = if (settings.trashQuota.bytes <= 0L) {
-                            "不限"
+                            UiStrings.get(R.string.unlimited)
                         } else {
                             settings.trashQuota.label()
                         }
-                        "${items.size} 项 · 已用 " +
-                            Formatter.formatShortFileSize(context, usedBytes) +
-                            " / $quotaLabel"
+                        UiStrings.get(
+                            R.string.trash_usage,
+                            items.size,
+                            Formatter.formatShortFileSize(context, usedBytes),
+                            quotaLabel
+                        )
                     },
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -142,7 +146,7 @@ fun TrashContent(
             }
             if (items.isNotEmpty()) {
                 TextButton(onClick = { confirmEmpty = true }) {
-                    Text("清空", color = MaterialTheme.colorScheme.error)
+                    Text(UiStrings.get(R.string.empty), color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -173,9 +177,9 @@ fun TrashContent(
                     ) {
                         EmptyStateView(
                             art = EmptyArt.TRASH,
-                            title = "回收站是空的",
-                            description = "删除文件时默认先移到这里，保留期可在设置里调整",
-                            actionLabel = if (onClose != null) "关闭" else null,
+                            title = UiStrings.get(R.string.trash_empty),
+                            description = UiStrings.get(R.string.trash_empty_hint),
+                            actionLabel = if (onClose != null) UiStrings.get(R.string.close) else null,
                             onAction = onClose
                         )
                     }
@@ -189,14 +193,14 @@ fun TrashContent(
                                         val restoredName = repository.restore(item.id, policy)
                                         refresh(
                                             when {
-                                                restoredName == null -> "恢复失败"
+                                                restoredName == null -> UiStrings.get(R.string.restore_failed)
                                                 policy == com.decompress.app.data
                                                     .RestoreConflictPolicy.OVERWRITE ->
-                                                    "已恢复 ${item.name}（覆盖了同名文件）"
+                                                    UiStrings.get(R.string.restored_overwrite, item.name)
                                                 restoredName == item.name ->
-                                                    "已恢复 ${item.name}"
+                                                    UiStrings.get(R.string.restored, item.name)
                                                 else ->
-                                                    "原位置有同名文件，已恢复为 $restoredName"
+                                                    UiStrings.get(R.string.restored_renamed, restoredName)
                                             }
                                         )
                                     }
@@ -218,7 +222,7 @@ fun TrashContent(
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
             ) {
-                Text("关闭")
+                Text(UiStrings.get(R.string.close))
             }
         }
     }
@@ -226,24 +230,24 @@ fun TrashContent(
     if (confirmEmpty) {
         AlertDialog(
             onDismissRequest = { confirmEmpty = false },
-            title = { Text("清空回收站") },
-            text = { Text("确定永久删除回收站中的 ${items.size} 项吗？删除后无法恢复。") },
+            title = { Text(UiStrings.get(R.string.empty_trash)) },
+            text = { Text(UiStrings.get(R.string.confirm_empty, items.size)) },
             confirmButton = {
                 Button(
                     onClick = {
                         confirmEmpty = false
                         scope.launch {
                             val count = repository.empty()
-                            refresh("已永久删除 $count 项")
+                            refresh(UiStrings.get(R.string.deleted_count, count))
                         }
                     }
                 ) {
-                    Text("清空", color = MaterialTheme.colorScheme.error)
+                    Text(UiStrings.get(R.string.empty), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { confirmEmpty = false }) {
-                    Text("取消")
+                    Text(UiStrings.get(R.string.cancel))
                 }
             }
         )
@@ -252,8 +256,8 @@ fun TrashContent(
     deleteTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
-            title = { Text("永久删除") },
-            text = { Text("确定永久删除“${target.name}”吗？此操作无法恢复。") },
+            title = { Text(UiStrings.get(R.string.delete_forever)) },
+            text = { Text(UiStrings.get(R.string.confirm_delete, target.name)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -262,20 +266,20 @@ fun TrashContent(
                             val deleted = repository.deleteForever(target.id)
                             refresh(
                                 if (deleted) {
-                                    "已永久删除 ${target.name}"
+                                    UiStrings.get(R.string.deleted_named, target.name)
                                 } else {
-                                    "删除失败"
+                                    UiStrings.get(R.string.delete_failed)
                                 }
                             )
                         }
                     }
                 ) {
-                    Text("永久删除", color = MaterialTheme.colorScheme.error)
+                    Text(UiStrings.get(R.string.delete_forever), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { deleteTarget = null }) {
-                    Text("取消")
+                    Text(UiStrings.get(R.string.cancel))
                 }
             }
         )
@@ -319,7 +323,7 @@ private fun TrashItemRow(
             Text(
                 listOf(
                     if (item.isDirectory) {
-                        "文件夹"
+                        UiStrings.get(R.string.folder)
                     } else {
                         Formatter.formatShortFileSize(context, item.size)
                     },
@@ -330,12 +334,12 @@ private fun TrashItemRow(
             )
         }
         IconButton(onClick = onRestore) {
-            Icon(Icons.Outlined.Restore, contentDescription = "恢复 ${item.name}")
+            Icon(Icons.Outlined.Restore, contentDescription = UiStrings.get(R.string.restore_named, item.name))
         }
         IconButton(onClick = onDelete) {
             Icon(
                 Icons.Outlined.DeleteForever,
-                contentDescription = "永久删除 ${item.name}",
+                contentDescription = UiStrings.get(R.string.delete_named, item.name),
                 tint = MaterialTheme.colorScheme.error
             )
         }
