@@ -333,7 +333,7 @@ internal fun StorageQuickLocation(
                 modifier = Modifier.size(20.dp)
             )
             Text(
-                location.label,
+                location.displayLabel(),
                 modifier = Modifier.padding(start = 8.dp),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,

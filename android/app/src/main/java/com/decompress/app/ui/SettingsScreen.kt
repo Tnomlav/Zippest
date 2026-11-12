@@ -1021,7 +1021,7 @@ fun SettingsScreen(
                 Text(
                     context.getString(
                         R.string.settings_delete_location_question,
-                        deletingQuickLocation?.label.orEmpty()
+                        deletingQuickLocation?.displayLabel().orEmpty()
                     ) +
                         context.getString(R.string.settings_delete_location_body)
                 )
@@ -1084,7 +1084,7 @@ private fun QuickLocationSettingsRow(
                 .padding(vertical = 5.dp)
         ) {
             Text(
-                location.label,
+                location.displayLabel(),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )

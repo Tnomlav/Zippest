@@ -393,9 +393,15 @@ internal fun OpenWithDialog(
     onDismiss: () -> Unit,
     onLaunch: (OpenWithOption, Boolean) -> Unit
 ) {
-    var selectedIndex by remember(request) { mutableIntStateOf(0) }
+    val directOptions = request.options.filter { it.category == OpenWithCategory.DIRECT }
+    val shareOptions = request.options.filter { it.category == OpenWithCategory.SHARE }
+    var showShare by remember(request) {
+        mutableStateOf(directOptions.isEmpty() && shareOptions.isNotEmpty())
+    }
+    val visible = if (showShare) shareOptions else directOptions
+    var selectedIndex by remember(request, showShare) { mutableIntStateOf(0) }
     var rememberChoice by remember(request) { mutableStateOf(false) }
-    val selected = request.options.getOrNull(selectedIndex) ?: request.options.first()
+    val selected = visible.getOrNull(selectedIndex)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -409,45 +415,47 @@ internal fun OpenWithDialog(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.height(12.dp))
+                if (directOptions.isNotEmpty() && shareOptions.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = !showShare,
+                            onClick = { showShare = false },
+                            label = {
+                                Text(
+                                    UiStrings.get(R.string.open_direct) +
+                                        " · " + directOptions.size
+                                )
+                            }
+                        )
+                        FilterChip(
+                            selected = showShare,
+                            onClick = { showShare = true },
+                            label = {
+                                Text(
+                                    UiStrings.get(R.string.share_send) +
+                                        " · " + shareOptions.size
+                                )
+                            }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 420.dp)
+                        .heightIn(max = 380.dp)
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (request.options.isEmpty()) {
+                    if (visible.isEmpty()) {
                         Text(
                             UiStrings.get(R.string.browser_no_app),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    request.options.forEachIndexed { index, option ->
-                        val previous = request.options.getOrNull(index - 1)
-                        if (index == 0 || previous?.category != option.category) {
-                            Text(
-                                if (option.category == OpenWithCategory.DIRECT) {
-                                    UiStrings.get(R.string.open_direct) + " · " +
-                                        request.options.count {
-                                            it.category == OpenWithCategory.DIRECT
-                                        }
-                                } else {
-                                    UiStrings.get(R.string.share_send) + " · " +
-                                        request.options.count {
-                                            it.category == OpenWithCategory.SHARE
-                                        }
-                                },
-                                modifier = Modifier.padding(
-                                    start = 4.dp,
-                                    top = if (index == 0) 0.dp else 8.dp,
-                                    bottom = 4.dp
-                                ),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                    visible.forEachIndexed { index, option ->
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -525,14 +533,21 @@ internal fun OpenWithDialog(
         },
         confirmButton = {
             Button(
-                enabled = request.options.isNotEmpty(),
-                onClick = { onLaunch(selected, rememberChoice) }
+                enabled = selected != null,
+                onClick = { selected?.let { onLaunch(it, rememberChoice) } }
             ) {
                 Text(UiStrings.get(R.string.open))
             }
         },
         dismissButton = {
-            TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = onDismiss) { Text(UiStrings.get(R.string.cancel)) }
+            TextButton(
+                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                onClick = onDismiss
+            ) {
+                Text(UiStrings.get(R.string.cancel))
+            }
         }
     )
 }

@@ -57,8 +57,8 @@ internal fun BoxScope.FileBrowserOverlays(
             onOpen = { location ->
                 state.storageExpanded = false
                 scope.launch {
-                    val opened = controller.openFixedLocation(location.label, location.path)
-                    if (!opened) onNotify(UiStrings.get(R.string.unavailable_named, location.label))
+                    val opened = controller.openFixedLocation(location.displayLabel(), location.path)
+                    if (!opened) onNotify(UiStrings.get(R.string.unavailable_named, location.displayLabel()))
                 }
             },
             onOpenExternal = { storage ->

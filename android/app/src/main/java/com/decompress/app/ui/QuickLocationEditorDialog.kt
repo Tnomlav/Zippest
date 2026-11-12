@@ -43,7 +43,7 @@ internal fun QuickLocationEditorDialog(
     onDismiss: () -> Unit,
     onSaved: (String) -> Unit
 ) {
-    var label by remember(location?.id) { mutableStateOf(location?.label.orEmpty()) }
+    var label by remember(location?.id) { mutableStateOf(location?.displayLabel().orEmpty()) }
     var path by remember(location?.id) { mutableStateOf(location?.path.orEmpty()) }
     var hasSelectedPath by remember(location?.id) {
         mutableStateOf(location != null)

@@ -236,25 +236,20 @@ internal fun FileBrowserScreen(
         dismissFileDialogs()
         scope.launch {
             val viewIntent = createOpenWithIntent(context, entry)
-            val options = viewIntent?.let {
-                queryOpenWithOptions(context, it)
-            }.orEmpty()
-            if (viewIntent != null && options.isNotEmpty()) {
-                val request = OpenWithRequest(
-                    displayName = entry.name,
-                    mimeType = viewIntent.type ?: "*/*",
-                    extension = entry.name
-                        .substringAfterLast('.', "")
-                        .lowercase(),
-                    intent = viewIntent,
-                    options = options
-                )
-                if (!launchRememberedOpenWith(context, request)) {
-                    openWithRequest = request
-                }
-            } else {
+            if (viewIntent == null) {
                 notify(context.getString(R.string.browser_no_app))
+                return@launch
             }
+            // 交给系统选择器：它能列出设备上所有已注册应用，也不会和系统的
+            // 「总是 / 仅一次」默认项打架。
+            val chooser = Intent.createChooser(
+                viewIntent,
+                context.getString(R.string.open_with)
+            )
+            runCatching { context.startActivity(chooser) }
+                .onFailure {
+                    notify(context.getString(R.string.browser_no_app))
+                }
         }
     }
 
