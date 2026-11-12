@@ -337,19 +337,27 @@ fun SettingsScreen(
                             repository.update { current ->
                                 current.copy(language = language)
                             }
+                            val activity = context as? Activity
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                val localeManager = context.getSystemService(LocaleManager::class.java)
-                                if (localeManager != null) {
-                                    localeManager.applicationLocales = when (language) {
+                                // 系统会按 applicationLocales 自己重建 Activity；
+                                // 这里再调一次 recreate() 会和系统重建撞车，导致崩溃/闪回首页。
+                                runCatching {
+                                    context.getSystemService(LocaleManager::class.java)
+                                        ?.applicationLocales = when (language) {
                                         AppLanguage.SYSTEM -> LocaleList.getEmptyLocaleList()
                                         AppLanguage.CHINESE ->
                                             LocaleList.forLanguageTags("zh-CN")
                                         AppLanguage.ENGLISH ->
                                             LocaleList.forLanguageTags("en")
                                     }
+                                }.onFailure {
+                                    activity?.takeUnless { it.isFinishing || it.isDestroyed }
+                                        ?.recreate()
                                 }
+                            } else {
+                                activity?.takeUnless { it.isFinishing || it.isDestroyed }
+                                    ?.recreate()
                             }
-                            (context as? Activity)?.recreate()
                         }
                     )
                     SettingsDivider()

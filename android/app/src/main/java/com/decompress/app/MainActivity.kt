@@ -20,7 +20,9 @@ class MainActivity : ComponentActivity() {
     private val openLocation = mutableStateOf<OpenLocationRequest?>(null)
 
     override fun attachBaseContext(newBase: Context) {
-        val language = AppSettingsRepository.read(newBase).language
+        val language = runCatching {
+            AppSettingsRepository.read(newBase).language
+        }.getOrDefault(com.decompress.app.data.AppLanguage.SYSTEM)
         val wrapped = com.decompress.app.data.LanguageContext.wrap(newBase, language)
         com.decompress.app.ui.UiStrings.install(wrapped)
         super.attachBaseContext(wrapped)
