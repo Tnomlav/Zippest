@@ -442,8 +442,11 @@ internal fun StorageBar(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    "本机存储 · 已用 ${Formatter.formatShortFileSize(context, used)} / " +
-                        Formatter.formatShortFileSize(context, total),
+                    UiStrings.get(
+                        R.string.qa_storage,
+                        Formatter.formatShortFileSize(context, used),
+                        Formatter.formatShortFileSize(context, total)
+                    ),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
