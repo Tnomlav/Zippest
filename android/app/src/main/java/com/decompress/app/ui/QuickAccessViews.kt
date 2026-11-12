@@ -435,7 +435,7 @@ internal fun StorageBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 4.dp)
         ) {
             // 竖排而不是左右 SpaceBetween：200% 字号时两个长句会互相挤压，
             // 右侧状态会被压成每行一个字母。
@@ -450,12 +450,12 @@ internal fun StorageBar(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
             LinearProgressIndicator(
                 progress = { fraction.coerceIn(0f, 1f) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(5.dp)
+                    .height(4.dp)
                     .clip(RoundedCornerShape(ZippestRadius.pill)),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant

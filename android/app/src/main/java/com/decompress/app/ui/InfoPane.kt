@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.Modifier
 import com.decompress.app.R
 import androidx.compose.ui.text.font.FontWeight
@@ -29,7 +30,7 @@ internal fun BrowserInfoPane(
     InfoPaneScaffold(title = UiStrings.get(R.string.info_current), modifier = modifier) {
         InfoLine(UiStrings.get(R.string.info_name), folderName.ifBlank { UiStrings.get(R.string.info_internal) })
         InfoLine(UiStrings.get(R.string.info_path), path.joinToString(" / ").ifBlank { UiStrings.get(R.string.info_internal) })
-        InfoLine(UiStrings.get(R.string.info_items), UiStrings.get(R.string.info_count, itemCount))
+        InfoLine(UiStrings.get(R.string.info_items), pluralStringResource(R.plurals.info_count, itemCount, itemCount))
     }
 }
 
@@ -45,7 +46,7 @@ internal fun ArchiveInfoPane(
     InfoPaneScaffold(title = UiStrings.get(R.string.info_archive), modifier = modifier) {
         InfoLine(UiStrings.get(R.string.info_name), archiveName)
         InfoLine(UiStrings.get(R.string.info_size), sizeText)
-        InfoLine(UiStrings.get(R.string.info_entries), UiStrings.get(R.string.info_count, entryCount))
+        InfoLine(UiStrings.get(R.string.info_entries), pluralStringResource(R.plurals.info_count, entryCount, entryCount))
         InfoLine(UiStrings.get(R.string.info_encoding), encodingLabel)
     }
 }

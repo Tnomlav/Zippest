@@ -55,6 +55,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.Modifier
 import com.decompress.app.R
 import androidx.compose.ui.draw.clip
@@ -300,7 +301,7 @@ internal fun TaskCenterContent(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (activeTasks.isNotEmpty()) {
-                item { TaskSectionLabel(UiStrings.get(R.string.in_progress), UiStrings.get(R.string.active_count, activeTasks.size)) }
+                item { TaskSectionLabel(UiStrings.get(R.string.in_progress), pluralStringResource(R.plurals.active_count, activeTasks.size, activeTasks.size)) }
                 items(activeTasks, key = { "active-${it.id}" }) { task ->
                     TaskQueueRow(
                         task = task,
@@ -324,7 +325,7 @@ internal fun TaskCenterContent(
                 }
             }
             if (finishedTasks.isNotEmpty()) {
-                item { TaskSectionLabel(UiStrings.get(R.string.finished), UiStrings.get(R.string.finished_count, finishedTasks.size)) }
+                item { TaskSectionLabel(UiStrings.get(R.string.finished), pluralStringResource(R.plurals.finished_count, finishedTasks.size, finishedTasks.size)) }
                 items(finishedTasks, key = { "done-${it.id}" }) { task ->
                     TaskQueueRow(
                         task = task,
@@ -343,7 +344,7 @@ internal fun TaskCenterContent(
                 }
             }
             if (history.isNotEmpty()) {
-                item { TaskSectionLabel(UiStrings.get(R.string.history), UiStrings.get(R.string.history_count, history.size)) }
+                item { TaskSectionLabel(UiStrings.get(R.string.history), pluralStringResource(R.plurals.history_count, history.size, history.size)) }
                 items(history, key = { "history-${it.id}" }) { entry ->
                     TaskHistoryRow(
                         entry = entry,

@@ -360,7 +360,6 @@
     <string name="compress_cancel">Cancel</string>
     <string name="compress_start">Compress</string>
     <string name="qa_external_index">External storage %1$d</string>
-    <string name="info_count">%1$d items</string>
     <string name="qa_storage">Storage · %1$s used / %2$s</string>
     <string name="preview_archive_ext">Archive · %1$s</string>
     <string name="compress_single">%1$s can only compress a single file</string>
@@ -419,9 +418,6 @@
     <string name="delete_forever">Delete permanently</string>
     <string name="delete_failed">Delete failed</string>
     <string name="folder">Folder</string>
-    <string name="active_count">%1$d items</string>
-    <string name="finished_count">%1$d items</string>
-    <string name="history_count">%1$d records</string>
     <string name="title_more">%1$s · %2$d more</string>
     <string name="eta_seconds">%1$d s</string>
     <string name="eta_minutes">%1$d min %2$d s</string>
@@ -454,7 +450,6 @@
     <string name="cannot_undo">This cannot be undone</string>
     <string name="move">Move</string>
     <string name="copy">Copy</string>
-    <string name="action_count">%1$s %2$d items</string>
     <string name="toolbar_extract">Extract</string>
     <string name="toolbar_copy">Copy</string>
     <string name="toolbar_move">Move</string>
@@ -468,7 +463,6 @@
     <string name="state_failed_title">That didn’t work</string>
     <string name="hide_details">Hide details</string>
     <string name="show_details">Show details</string>
-    <string name="selected_count">%1$d selected</string>
     <string name="edit_named">%1$s (edit)</string>
     <string name="share">Share</string>
     <string name="send">Send</string>
@@ -667,7 +661,6 @@
     <string name="archive_summary">%1$s · %2$d entries · %3$s</string>
     <string name="archive_reading_count">Reading… %1$d entries so far</string>
     <string name="archive_selected_hint">%1$d selected · tap to select more</string>
-    <string name="archive_extract_selected">Extract %1$d selected</string>
     <string name="archive_destination_current">Extract to %1$s</string>
     <string name="archive_destination_multi">Extract into %1$s, one same-name folder per archive</string>
     <string name="archive_destination_folder">Extract to %1$s / %2$s</string>
@@ -695,4 +688,11 @@
     <string name="notif_channel_extract_desc">Background extraction progress and status</string>
     <string name="notif_channel_compress">Zippest compression</string>
     <string name="notif_channel_compress_desc">Background compression and split progress</string>
+    <plurals name="info_count"><item quantity="one">%1 item</item><item quantity="other">%1 items</item></plurals>
+    <plurals name="active_count"><item quantity="one">%1 active</item><item quantity="other">%1 active</item></plurals>
+    <plurals name="finished_count"><item quantity="one">%1 finished</item><item quantity="other">%1 finished</item></plurals>
+    <plurals name="history_count"><item quantity="one">%1 record</item><item quantity="other">%1 records</item></plurals>
+    <plurals name="selected_count"><item quantity="one">%1 selected</item><item quantity="other">%1 selected</item></plurals>
+    <plurals name="action_count"><item quantity="one">%1 %2 item</item><item quantity="other">%1 %2 items</item></plurals>
+    <plurals name="archive_extract_selected"><item quantity="one">Extract %1 item</item><item quantity="other">Extract %1 items</item></plurals>
 </resources>

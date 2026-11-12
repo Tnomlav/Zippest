@@ -25,6 +25,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.Modifier
 import com.decompress.app.R
 import androidx.compose.ui.platform.LocalContext
@@ -74,7 +75,7 @@ internal fun FileBrowserTopBar(
                 title = {
                     Column {
                         Text(
-                            UiStrings.get(R.string.selected_count, selectedCount),
+                            pluralStringResource(R.plurals.selected_count, selectedCount, selectedCount),
                             style = MaterialTheme.typography.titleMedium
                         )
                         Text(

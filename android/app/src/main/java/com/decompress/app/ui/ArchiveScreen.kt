@@ -107,6 +107,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.Modifier
 import com.decompress.app.R
 import androidx.compose.ui.draw.clip
@@ -816,7 +817,7 @@ private fun ArchiveBottomBar(
                 )
                 ArchiveAction(
                     Icons.Outlined.Archive,
-                    UiStrings.get(R.string.archive_extract_selected, selectionCount),
+                    pluralStringResource(R.plurals.archive_extract_selected, selectionCount, selectionCount),
                     true,
                     onExtractSelected
                 )

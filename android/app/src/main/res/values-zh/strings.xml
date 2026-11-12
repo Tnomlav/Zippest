@@ -360,7 +360,6 @@
     <string name="compress_cancel">取消</string>
     <string name="compress_start">开始压缩</string>
     <string name="qa_external_index">外部存储 %1$d</string>
-    <string name="info_count">%1$d 项</string>
     <string name="qa_storage">本机存储 · 已用 %1$s / %2$s</string>
     <string name="preview_archive_ext">压缩包 · %1$s</string>
     <string name="compress_single">%1$s 只能压缩单个文件</string>
@@ -419,9 +418,6 @@
     <string name="delete_forever">永久删除</string>
     <string name="delete_failed">删除失败</string>
     <string name="folder">文件夹</string>
-    <string name="active_count">%1$d 项</string>
-    <string name="finished_count">%1$d 项</string>
-    <string name="history_count">%1$d 条</string>
     <string name="title_more">%1$s · 另有 %2$d 项</string>
     <string name="eta_seconds">%1$d 秒</string>
     <string name="eta_minutes">%1$d 分 %2$d 秒</string>
@@ -454,7 +450,6 @@
     <string name="cannot_undo">此操作无法撤销</string>
     <string name="move">移动</string>
     <string name="copy">复制</string>
-    <string name="action_count">%1$s %2$d 项</string>
     <string name="toolbar_extract">解压</string>
     <string name="toolbar_copy">复制</string>
     <string name="toolbar_move">移动</string>
@@ -468,7 +463,6 @@
     <string name="state_failed_title">这一步没走通</string>
     <string name="hide_details">收起详情</string>
     <string name="show_details">查看详情</string>
-    <string name="selected_count">已选 %1$d 项</string>
     <string name="edit_named">%1$s（编辑）</string>
     <string name="share">分享</string>
     <string name="send">发送</string>
@@ -667,7 +661,6 @@
     <string name="archive_summary">%1$s · %2$d 项 · %3$s</string>
     <string name="archive_reading_count">正在读取… 已读取 %1$d 项</string>
     <string name="archive_selected_hint">已选 %1$d 项 · 点按继续选择</string>
-    <string name="archive_extract_selected">解压所选 %1$d</string>
     <string name="archive_destination_current">将解压到 %1$s</string>
     <string name="archive_destination_multi">将解压到 %1$s 下，每个压缩包建同名文件夹</string>
     <string name="archive_destination_folder">将解压到 %1$s / %2$s</string>
@@ -695,4 +688,11 @@
     <string name="notif_channel_extract_desc">显示可恢复的后台解压进度与完成状态</string>
     <string name="notif_channel_compress">Zippest 压缩任务</string>
     <string name="notif_channel_compress_desc">显示后台压缩与分卷任务进度</string>
+    <plurals name="info_count"><item quantity="other">%1 项</item></plurals>
+    <plurals name="active_count"><item quantity="other">%1 项</item></plurals>
+    <plurals name="finished_count"><item quantity="other">%1 项</item></plurals>
+    <plurals name="history_count"><item quantity="other">%1 条</item></plurals>
+    <plurals name="selected_count"><item quantity="other">已选 %1 项</item></plurals>
+    <plurals name="action_count"><item quantity="other">%1 %2 项</item></plurals>
+    <plurals name="archive_extract_selected"><item quantity="other">解压所选 %1</item></plurals>
 </resources>

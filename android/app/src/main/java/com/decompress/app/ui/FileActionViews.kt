@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.Modifier
 import com.decompress.app.R
 import androidx.compose.ui.text.font.FontWeight
@@ -129,7 +130,7 @@ internal fun TransferToolbar(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    UiStrings.get(R.string.action_count, action, itemCount),
+                    pluralStringResource(R.plurals.action_count, itemCount, action, itemCount),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
