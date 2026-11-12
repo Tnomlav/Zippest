@@ -1,3 +1,5 @@
+@file:Suppress("LocalContextGetResourceValueCall")
+
 package com.decompress.app.ui
 
 import android.Manifest
@@ -155,6 +157,7 @@ import androidx.work.WorkManager
 import com.decompress.app.IncomingArchive
 import com.decompress.app.OpenLocationRequest
 import com.decompress.app.MainActivity
+import com.decompress.app.R
 import com.decompress.app.data.AppSettingsRepository
 import com.decompress.app.data.BrowserSortMode
 import com.decompress.app.data.BrowserEntry
@@ -204,7 +207,7 @@ internal fun FileBrowserDialogs(
             }
         AlertDialog(
             onDismissRequest = { state.showBatchRename = false },
-            title = { Text("批量重命名 ${selectedEntries.size} 项") },
+            title = { Text(context.getString(R.string.dialog_batch_title, selectedEntries.size)) },
             text = {
                 Column {
                     OutlinedTextField(
@@ -212,11 +215,11 @@ internal fun FileBrowserDialogs(
                         onValueChange = { state.batchPattern = it },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        label = { Text("命名模板") }
+                        label = { Text(context.getString(R.string.dialog_template)) }
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "预览：",
+                        context.getString(R.string.dialog_preview),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -231,20 +234,20 @@ internal fun FileBrowserDialogs(
                     }
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        "怎么填：",
+                        context.getString(R.string.dialog_howto),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "{name} 原名 · {n} 1/2 · {001} 补零 · {ext} 后缀 · {date} 年月日 · {time} 时分秒",
+                        context.getString(R.string.dialog_tokens),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "常用写法",
+                        context.getString(R.string.dialog_common),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -281,15 +284,15 @@ internal fun FileBrowserDialogs(
                             }
                             state.batchRenaming = false
                             controller.clearSelection()
-                            notify("已重命名 $renamed/${targets.size} 项")
+                            notify(context.getString(R.string.dialog_renamed_count, renamed, targets.size))
                         }
                     }
                 ) {
-                    Text("重命名")
+                    Text(context.getString(R.string.dialog_rename))
                 }
             },
             dismissButton = {
-                TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { state.showBatchRename = false }) { Text("取消") }
+                TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { state.showBatchRename = false }) { Text(context.getString(R.string.dialog_cancel)) }
             }
         )
     }
@@ -297,10 +300,10 @@ internal fun FileBrowserDialogs(
     if (state.repairMessage != null) {
         AlertDialog(
             onDismissRequest = { state.repairMessage = null },
-            title = { Text("压缩包修复") },
+            title = { Text(context.getString(R.string.dialog_repair_title)) },
             text = { Text(state.repairMessage!!) },
             confirmButton = {
-                Button(onClick = { state.repairMessage = null }) { Text("知道了") }
+                Button(onClick = { state.repairMessage = null }) { Text(context.getString(R.string.dialog_got_it)) }
             }
         )
     }
@@ -309,7 +312,7 @@ internal fun FileBrowserDialogs(
         val entry = state.checksumTarget!!
         AlertDialog(
             onDismissRequest = { state.checksumTarget = null },
-            title = { Text("校验和") },
+            title = { Text(context.getString(R.string.dialog_checksum)) },
             text = {
                 Column {
                     Text(
@@ -324,13 +327,13 @@ internal fun FileBrowserDialogs(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("正在计算…", style = MaterialTheme.typography.labelMedium)
+                            Text(context.getString(R.string.dialog_calculating), style = MaterialTheme.typography.labelMedium)
                         }
                     } else if (state.checksumResult == null) {
-                        Text("算不出来：文件读不了", style = MaterialTheme.typography.labelMedium)
+                        Text(context.getString(R.string.dialog_calc_failed), style = MaterialTheme.typography.labelMedium)
                     } else {
                         val (sha, md5) = state.checksumResult!!
-                        Text("SHA-256（更保险）", style = MaterialTheme.typography.labelSmall)
+                        Text(context.getString(R.string.dialog_sha256_stronger), style = MaterialTheme.typography.labelSmall)
                         Text(
                             sha,
                             style = MaterialTheme.typography.labelSmall,
@@ -341,12 +344,12 @@ internal fun FileBrowserDialogs(
                                 android.content.ClipboardManager::class.java
                             )
                             clipboard?.setPrimaryClip(ClipData.newPlainText("SHA-256", sha))
-                            notify("已复制 SHA-256")
+                            notify(context.getString(R.string.dialog_sha_copied))
                         }) {
-                            Text("复制 SHA-256")
+                            Text(context.getString(R.string.dialog_copy_sha))
                         }
                         Spacer(Modifier.height(8.dp))
-                        Text("MD5（更快）", style = MaterialTheme.typography.labelSmall)
+                        Text(context.getString(R.string.dialog_md5_faster), style = MaterialTheme.typography.labelSmall)
                         Text(
                             md5,
                             style = MaterialTheme.typography.labelSmall,
@@ -357,12 +360,12 @@ internal fun FileBrowserDialogs(
                                 android.content.ClipboardManager::class.java
                             )
                             clipboard?.setPrimaryClip(ClipData.newPlainText("MD5", md5))
-                            notify("已复制 MD5")
+                            notify(context.getString(R.string.dialog_md5_copied))
                         }) {
-                            Text("复制 MD5")
+                            Text(context.getString(R.string.dialog_copy_md5))
                         }
                         Text(
-                            "算出来的值一样，就说明内容和对方完全一致。全程在本机算，不联网。",
+                            context.getString(R.string.dialog_checksum_hint),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -370,7 +373,7 @@ internal fun FileBrowserDialogs(
                 }
             },
             confirmButton = {
-                Button(onClick = { state.checksumTarget = null }) { Text("关闭") }
+                Button(onClick = { state.checksumTarget = null }) { Text(context.getString(R.string.dialog_close)) }
             }
         )
     }
@@ -391,13 +394,13 @@ internal fun FileBrowserDialogs(
                         notify(
                             when {
                                 count == targets.size && settings.useTrash ->
-                                    "已将 $count 项移入回收站"
+                                    context.getString(R.string.dialog_moved_to_trash, count)
                                 count == targets.size ->
-                                    "已永久删除 $count 项"
+                                    context.getString(R.string.dialog_deleted_permanently, count)
                                 count <= 0 ->
-                                    "删除失败，已恢复文件"
+                                    context.getString(R.string.dialog_delete_failed_restored)
                                 else ->
-                                    "已删除 $count 项，${targets.size - count} 项已恢复"
+                                    context.getString(R.string.dialog_deleted_partial, count, targets.size - count)
                             }
                         )
                     }
@@ -436,13 +439,13 @@ internal fun FileBrowserDialogs(
     if (state.showNewFolderDialog) {
         AlertDialog(
             onDismissRequest = { state.showNewFolderDialog = false },
-            title = { Text("新建文件夹") },
+            title = { Text(context.getString(R.string.dialog_new_folder)) },
             text = {
                 OutlinedTextField(
                     value = state.newFolderName,
                     onValueChange = { state.newFolderName = it },
                     singleLine = true,
-                    label = { Text("名称") }
+                    label = { Text(context.getString(R.string.dialog_name)) }
                 )
             },
             confirmButton = {
@@ -452,16 +455,16 @@ internal fun FileBrowserDialogs(
                         scope.launch {
                             val created = controller.createFolder(state.newFolderName.trim())
                             state.showNewFolderDialog = false
-                            notify(if (created) "文件夹已创建" else "创建失败")
+                            notify(if (created) context.getString(R.string.dialog_folder_created) else context.getString(R.string.dialog_create_failed))
                         }
                     }
                 ) {
-                    Text("创建")
+                    Text(context.getString(R.string.dialog_create))
                 }
             },
             dismissButton = {
                 TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { state.showNewFolderDialog = false }) {
-                    Text("取消")
+                    Text(context.getString(R.string.dialog_cancel))
                 }
             }
         )
@@ -470,7 +473,7 @@ internal fun FileBrowserDialogs(
     if (state.showRenameDialog) {
         AlertDialog(
             onDismissRequest = { state.showRenameDialog = false },
-            title = { Text("重命名") },
+            title = { Text(context.getString(R.string.dialog_rename)) },
             text = {
                 Column {
                     OutlinedTextField(
@@ -480,7 +483,7 @@ internal fun FileBrowserDialogs(
                             .fillMaxWidth()
                             .focusRequester(renameFocus),
                         singleLine = true,
-                        label = { Text("新名称") },
+                        label = { Text(context.getString(R.string.dialog_new_name)) },
                         trailingIcon = {
                             if (state.renameValue.text.isNotEmpty()) {
                                 IconButton(
@@ -490,7 +493,7 @@ internal fun FileBrowserDialogs(
                                 ) {
                                     Icon(
                                         Icons.Outlined.Close,
-                                        contentDescription = "清空名称"
+                                        contentDescription = context.getString(R.string.dialog_clear_name)
                                     )
                                 }
                             }
@@ -498,7 +501,7 @@ internal fun FileBrowserDialogs(
                     )
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        "后缀",
+                        context.getString(R.string.dialog_suffix),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -529,7 +532,7 @@ internal fun FileBrowserDialogs(
                                 state.showCustomSuffixDialog = true
                             },
                             modifier = Modifier.weight(1f),
-                            label = { Text("自定义", maxLines = 1) }
+                            label = { Text(context.getString(R.string.dialog_custom), maxLines = 1) }
                         )
                     }
                 }
@@ -542,23 +545,23 @@ internal fun FileBrowserDialogs(
                         val name = state.renameValue.text.trim()
                         state.showRenameDialog = false
                         if (entry == null || !controller.beginRename(entry, name)) {
-                            notify("重命名失败，名称无效或已存在")
+                            notify(context.getString(R.string.dialog_rename_failed_exists))
                             return@Button
                         }
                         scope.launch {
                             val renamed = controller.commitRename(entry, name)
                             if (renamed == null) {
-                                notify("重命名失败，文件名称已恢复")
+                                notify(context.getString(R.string.dialog_rename_failed_restored))
                             }
                         }
                     }
                 ) {
-                    Text("保存")
+                    Text(context.getString(R.string.dialog_save))
                 }
             },
             dismissButton = {
                 TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { state.showRenameDialog = false }) {
-                    Text("取消")
+                    Text(context.getString(R.string.dialog_cancel))
                 }
             }
         )
@@ -567,14 +570,14 @@ internal fun FileBrowserDialogs(
     if (state.showCustomSuffixDialog) {
         AlertDialog(
             onDismissRequest = { state.showCustomSuffixDialog = false },
-            title = { Text("自定义后缀") },
+            title = { Text(context.getString(R.string.dialog_custom_suffix)) },
             text = {
                 OutlinedTextField(
                     value = state.customSuffix,
                     onValueChange = { state.customSuffix = it },
                     singleLine = true,
-                    label = { Text("后缀") },
-                    supportingText = { Text("统一使用一个前导点，如 .tar.gz") }
+                    label = { Text(context.getString(R.string.dialog_suffix)) },
+                    supportingText = { Text(context.getString(R.string.dialog_suffix_hint)) }
                 )
             },
             confirmButton = {
@@ -588,12 +591,12 @@ internal fun FileBrowserDialogs(
                         state.showCustomSuffixDialog = false
                     }
                 ) {
-                    Text("应用")
+                    Text(context.getString(R.string.dialog_apply))
                 }
             },
             dismissButton = {
                 TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { state.showCustomSuffixDialog = false }) {
-                    Text("取消")
+                    Text(context.getString(R.string.dialog_cancel))
                 }
             }
         )
@@ -611,7 +614,7 @@ internal fun FileBrowserDialogs(
                     rememberChoice
                 )
                 state.openWithRequest = null
-                if (!opened) notify("无法打开此文件")
+                if (!opened) notify(context.getString(R.string.dialog_cannot_open))
             }
         )
     }
@@ -627,7 +630,7 @@ internal fun FileBrowserDialogs(
             onStarted = {
                 state.compressTarget = null
                 controller.clearSelection()
-                notify("压缩任务已加入后台队列")
+                notify(context.getString(R.string.dialog_queued_background))
             }
         )
     }
