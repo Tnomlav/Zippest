@@ -245,43 +245,53 @@ private fun storageRootFor(context: Context, file: File): File? {
 
 internal fun queryOpenWithOptions(context: Context, intent: Intent): List<OpenWithOption> {
     val packageManager = context.packageManager
-    val candidates = linkedMapOf<ComponentName, Pair<String, ResolveInfo>>()
-    listOf(Intent.ACTION_VIEW, Intent.ACTION_EDIT).forEach { action ->
-        val actionIntent = Intent(intent).setAction(action)
+    val candidates = mutableListOf<Pair<String, ResolveInfo>>()
+    // 不带 MATCH_DEFAULT_ONLY：很多应用注册了 VIEW / SEND，但不是默认处理者，
+    // 旧实现会把它们全部过滤掉，看起来像“没有可用的打开方式”。
+    listOf(Intent.ACTION_VIEW, Intent.ACTION_EDIT, Intent.ACTION_SEND).forEach { action ->
+        val actionIntent = Intent(intent).apply {
+            this.action = action
+            if (action == Intent.ACTION_SEND) {
+                type = intent.type ?: "*/*"
+                putExtra(Intent.EXTRA_STREAM, intent.data)
+                clipData = intent.clipData
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        }
         val infos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             packageManager.queryIntentActivities(
                 actionIntent,
-                PackageManager.ResolveInfoFlags.of(
-                    PackageManager.MATCH_DEFAULT_ONLY.toLong()
-                )
+                PackageManager.ResolveInfoFlags.of(0L)
             )
         } else {
             @Suppress("DEPRECATION")
-            packageManager.queryIntentActivities(
-                actionIntent,
-                PackageManager.MATCH_DEFAULT_ONLY
-            )
+            packageManager.queryIntentActivities(actionIntent, 0)
         }
         infos.forEach { info ->
             val activityInfo = info.activityInfo
             if (activityInfo.packageName == context.packageName) return@forEach
-            val component = ComponentName(activityInfo.packageName, activityInfo.name)
-            candidates.putIfAbsent(component, action to info)
+            candidates += action to info
         }
     }
     val options = candidates
-        .asSequence()
-        .map { (component, actionAndInfo) ->
-            val (action, resolveInfo) = actionAndInfo
+        .distinctBy { (action, info) ->
+            action + "/" + info.activityInfo.packageName + "/" + info.activityInfo.name
+        }
+        .map { (action, resolveInfo) ->
             val activityInfo = resolveInfo.activityInfo
+            val component = ComponentName(activityInfo.packageName, activityInfo.name)
             val label = resolveInfo.loadLabel(packageManager).toString()
-            val category = openWithCategory(
-                label,
-                component.packageName,
-                component.className
-            )
+            val category = if (action == Intent.ACTION_SEND) {
+                OpenWithCategory.SHARE
+            } else {
+                openWithCategory(label, component.packageName, component.className)
+            }
             OpenWithOption(
-                label = if (action == Intent.ACTION_EDIT) UiStrings.get(R.string.edit_named, label) else label,
+                label = if (action == Intent.ACTION_EDIT) {
+                    UiStrings.get(R.string.edit_named, label)
+                } else {
+                    label
+                },
                 component = component,
                 icon = runCatching {
                     resolveInfo.loadIcon(packageManager)
@@ -292,7 +302,6 @@ internal fun queryOpenWithOptions(context: Context, intent: Intent): List<OpenWi
                 action = action
             )
         }
-        .toList()
     val mimeType = intent.type.orEmpty()
     return options.sortedWith(
         compareBy<OpenWithOption> { it.category.ordinal }
