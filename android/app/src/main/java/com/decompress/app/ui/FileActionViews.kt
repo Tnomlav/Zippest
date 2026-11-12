@@ -88,27 +88,16 @@ internal fun DeleteConfirmationDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    OutlinedButton(
+                    DialogDismissButton(
                         onClick = onDismiss,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp)
-                    ) {
-                        Text(UiStrings.get(R.string.cancel))
-                    }
-                    Button(
+                        modifier = Modifier.weight(1f)
+                    )
+                    DialogDeleteButton(
                         onClick = onConfirm,
+                        text = UiStrings.get(R.string.toolbar_delete),
                         enabled = itemCount > 0,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        )
-                    ) {
-                        Text(UiStrings.get(R.string.toolbar_delete))
-                    }
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }

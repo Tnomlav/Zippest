@@ -209,11 +209,11 @@
     <string name="browser_open_with">Open with</string>
     <string name="browser_share">Share</string>
     <string name="browser_no_share_app">No app available to share with</string>
-    <string name="browser_no_match">No matching files</string>
+    <string name="browser_no_match">No matches</string>
     <string name="browser_try_keyword">Try another keyword</string>
     <string name="browser_empty_folder">This folder is empty</string>
     <string name="browser_empty_folder_hint">Create a folder with the New button above, or browse Downloads</string>
-    <string name="browser_browse_downloads">Browse Downloads</string>
+    <string name="browser_browse_downloads">Go to Downloads</string>
     <string name="browser_choose_folder">Choose another folder</string>
     <string name="browser_opened_archive">Open archives</string>
     <string name="browser_invalid_path">Local file path is not valid</string>
@@ -358,7 +358,7 @@
     <string name="compress_other">Choose another location</string>
     <string name="compress_choose_folder">Choose any folder on this phone</string>
     <string name="compress_cancel">Cancel</string>
-    <string name="compress_start">Start</string>
+    <string name="compress_start">Compress</string>
     <string name="qa_external_index">External storage %1$d</string>
     <string name="info_count">%1$d items</string>
     <string name="qa_storage">Storage · %1$s used / %2$s</string>
@@ -496,8 +496,8 @@
     <string name="view">View</string>
     <string name="edit">Edit</string>
     <string name="open_with">Open with</string>
-    <string name="open_direct">Open directly</string>
-    <string name="share_send">Share or send</string>
+    <string name="open_direct">Open</string>
+    <string name="share_send">Share</string>
     <string name="just_once">Just once</string>
     <string name="always">Always</string>
     <string name="open">Open</string>
@@ -550,8 +550,8 @@
     <string name="app_need_password">Password required</string>
     <string name="app_need_password_hint">This archive uses a different password; enter it to continue.</string>
     <string name="app_password">Password</string>
-    <string name="app_start_extract">Start extraction</string>
-    <string name="app_later">Later</string>
+    <string name="app_start_extract">Extract</string>
+    <string name="app_later">Not now</string>
     <string name="app_queued">Added to the background queue</string>
     <string name="about2_privacy_network">Data collection and network</string>
     <string name="about2_privacy_network_body">Zippest requires no account and contains no ads, tracking or analytics. The app holds the network permission but only uses it when you tap the version number to check for updates (GitHub Releases API) or open a project or licence link in your browser. Otherwise Zippest never uploads files, file names, passwords or usage data.</string>
@@ -601,7 +601,7 @@
     <string name="archive_search_inside_files">Search files inside</string>
     <string name="archive_clear">Clear</string>
     <string name="archive_search_hint">Type a keyword to search the whole archive</string>
-    <string name="archive_no_match">No matching files</string>
+    <string name="archive_no_match">No matches</string>
     <string name="archive_enter_password">Enter password</string>
     <string name="archive_archive_empty">The archive is empty</string>
     <string name="archive_archive_empty_hint">Try another archive, or check that the download finished</string>
@@ -649,7 +649,7 @@
     <string name="archive_choose_folder">Choose any folder on this phone</string>
     <string name="archive_existing_files">When a file already exists</string>
     <string name="archive_renaming">Renaming…</string>
-    <string name="archive_start_extract">Start extraction</string>
+    <string name="archive_start_extract">Extract</string>
     <string name="archive_clipboard">Clipboard</string>
     <string name="archive_system_clipboard_empty">System clipboard is empty</string>
     <string name="archive_clipboard_hint">Long-press the password field, or use the clipboard/paste button on your keyboard.</string>

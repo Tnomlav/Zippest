@@ -233,22 +233,19 @@ fun TrashContent(
             title = { Text(UiStrings.get(R.string.empty_trash)) },
             text = { Text(UiStrings.get(R.string.confirm_empty, items.size)) },
             confirmButton = {
-                Button(
+                DialogDeleteButton(
                     onClick = {
                         confirmEmpty = false
                         scope.launch {
                             val count = repository.empty()
                             refresh(UiStrings.get(R.string.deleted_count, count))
                         }
-                    }
-                ) {
-                    Text(UiStrings.get(R.string.empty), color = MaterialTheme.colorScheme.error)
-                }
+                    },
+                    text = UiStrings.get(R.string.empty)
+                )
             },
             dismissButton = {
-                TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { confirmEmpty = false }) {
-                    Text(UiStrings.get(R.string.cancel))
-                }
+                DialogDismissButton(onClick = { confirmEmpty = false })
             }
         )
     }
@@ -259,7 +256,7 @@ fun TrashContent(
             title = { Text(UiStrings.get(R.string.delete_forever)) },
             text = { Text(UiStrings.get(R.string.confirm_delete, target.name)) },
             confirmButton = {
-                Button(
+                DialogDeleteButton(
                     onClick = {
                         deleteTarget = null
                         scope.launch {
@@ -272,15 +269,12 @@ fun TrashContent(
                                 }
                             )
                         }
-                    }
-                ) {
-                    Text(UiStrings.get(R.string.delete_forever), color = MaterialTheme.colorScheme.error)
-                }
+                    },
+                    text = UiStrings.get(R.string.delete_forever)
+                )
             },
             dismissButton = {
-                TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { deleteTarget = null }) {
-                    Text(UiStrings.get(R.string.cancel))
-                }
+                DialogDismissButton(onClick = { deleteTarget = null })
             }
         )
     }

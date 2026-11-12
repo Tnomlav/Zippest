@@ -449,11 +449,6 @@ internal fun StorageBar(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    if (hasFullAccess) UiStrings.get(R.string.qa_all_granted) else UiStrings.get(R.string.qa_scoped),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
             }
             Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
