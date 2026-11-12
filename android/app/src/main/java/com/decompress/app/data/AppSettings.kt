@@ -50,8 +50,8 @@ enum class ExtractSection {
 
 enum class BrowserSortMode {
     NAME,
-    SIZE,
     DATE,
+    SIZE,
     TYPE
 }
 

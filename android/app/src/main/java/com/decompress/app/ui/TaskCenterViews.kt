@@ -41,6 +41,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -71,6 +74,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import com.decompress.app.ui.theme.ZippestRadius
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 internal fun TaskQueueDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
@@ -112,79 +116,117 @@ internal fun TaskQueueDialog(onDismiss: () -> Unit) {
             it.state != WorkInfo.State.BLOCKED
     }
 
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(UiStrings.get(R.string.task_title)) },
-        text = {
-            when {
-                loading -> LoadingSkeleton(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(240.dp),
-                    rows = 3,
-                    delayMillis = 200
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.88f)
+                .padding(horizontal = 20.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    UiStrings.get(R.string.task_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
                 )
-                sortedTasks.isEmpty() -> EmptyStateView(
-                    art = EmptyArt.TASKS,
-                    title = UiStrings.get(R.string.task_empty),
-                    description = UiStrings.get(R.string.task_empty_hint),
-                    actionLabel = UiStrings.get(R.string.close),
-                    onAction = onDismiss
-                )
-                else -> Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 440.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    sortedTasks.forEach { task ->
-                        TaskQueueRow(
-                            task = task,
-                            paused = task.id.toString() in pausedTaskIds,
-                            onTogglePause = {
-                                val paused = task.id.toString() !in pausedTaskIds
-                                ArchiveTaskControl.setPaused(context, task.id, paused)
-                                pausedTaskIds = if (paused) {
-                                    pausedTaskIds + task.id.toString()
-                                } else {
-                                    pausedTaskIds - task.id.toString()
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        Icons.Outlined.Close,
+                        contentDescription = UiStrings.get(R.string.close)
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                when {
+                    loading -> LoadingSkeleton(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(240.dp),
+                        rows = 3,
+                        delayMillis = 200
+                    )
+                    sortedTasks.isEmpty() -> EmptyStateView(
+                        art = EmptyArt.TASKS,
+                        title = UiStrings.get(R.string.task_empty),
+                        description = UiStrings.get(R.string.task_empty_hint),
+                        actionLabel = UiStrings.get(R.string.close),
+                        onAction = onDismiss
+                    )
+                    else -> Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        sortedTasks.forEach { task ->
+                            TaskQueueRow(
+                                task = task,
+                                paused = task.id.toString() in pausedTaskIds,
+                                onTogglePause = {
+                                    val paused = task.id.toString() !in pausedTaskIds
+                                    ArchiveTaskControl.setPaused(context, task.id, paused)
+                                    pausedTaskIds = if (paused) {
+                                        pausedTaskIds + task.id.toString()
+                                    } else {
+                                        pausedTaskIds - task.id.toString()
+                                    }
                                 }
+                            )
+                        }
+                        if (hasFinishedTasks) {
+                            TextButton(
+                                onClick = {
+                                    WorkManager.getInstance(context.applicationContext)
+                                        .pruneWork()
+                                },
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Text(UiStrings.get(R.string.clear_history))
                             }
-                        )
-                    }
-                    if (hasFinishedTasks) {
-                        TextButton(
-                            onClick = {
-                                WorkManager.getInstance(context.applicationContext)
-                                    .pruneWork()
-                            },
-                            modifier = Modifier.align(Alignment.End)
-                        ) {
-                            Text(UiStrings.get(R.string.clear_history))
                         }
                     }
                 }
             }
-        },
-        confirmButton = {
-            if (hasActiveTasks) {
-                Button(
-                    onClick = {
-                        WorkManager.getInstance(context.applicationContext).apply {
-                            cancelUniqueWork(ExtractionScheduler.QUEUE_NAME)
-                            cancelUniqueWork(CompressionScheduler.QUEUE_NAME)
-                        }
-                    }
-                ) {
-                    Text(UiStrings.get(R.string.cancel_all), color = MaterialTheme.colorScheme.error)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (hasActiveTasks) {
+                    DialogDeleteButton(
+                        onClick = {
+                            WorkManager.getInstance(context.applicationContext).apply {
+                                cancelUniqueWork(ExtractionScheduler.QUEUE_NAME)
+                                cancelUniqueWork(CompressionScheduler.QUEUE_NAME)
+                            }
+                        },
+                        text = UiStrings.get(R.string.cancel_all)
+                    )
+                } else {
+                    Spacer(Modifier.width(1.dp))
                 }
+                DialogDismissButton(onClick = onDismiss)
             }
-        },
-        dismissButton = {
-            TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = onDismiss) { Text(UiStrings.get(R.string.close)) }
         }
-    )
+    }
 }
 
 @Composable
