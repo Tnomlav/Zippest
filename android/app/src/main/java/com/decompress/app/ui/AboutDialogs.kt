@@ -38,14 +38,11 @@ internal fun AboutInfoDialog(
             SelectionContainer {
                 Column {
                     Text(
-                        "Android 文件管理与压缩工具",
+                        UiStrings.get(R.string.about2_about_tool_line),
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
-                        "版本：$versionName\n" +
-                            "包名：$packageName\n" +
-                            "最低系统：Android 8.0（API 26）\n" +
-                            "开发者：Tnomlav",
+                        UiStrings.get(R.string.about2_about_version_block, versionName, packageName),
                         modifier = Modifier.padding(top = 12.dp),
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -57,7 +54,7 @@ internal fun AboutInfoDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        "网络权限：仅检查更新\n" +
+                        UiStrings.get(R.string.about2_about_network_title) + "\n" +
                             "Zippest 平时不联网；只有你点按版本号检查更新时，才会访问 GitHub Releases API 查询版本并下载安装包。" +
                             "文件、密码和文件名仍只在本机处理。可在 系统设置 → 应用 → Zippest → 权限 里看到网络权限。",
                         modifier = Modifier.padding(top = 12.dp),
@@ -65,7 +62,7 @@ internal fun AboutInfoDialog(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        "开源许可：Apache-2.0",
+                        UiStrings.get(R.string.about2_about_license_title),
                         modifier = Modifier.padding(top = 8.dp),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -116,7 +113,7 @@ internal fun PrivacyPolicyDialog(
                 SelectionContainer {
                     Column {
                         Text(
-                            "生效日期：$ZIPPEST_PRIVACY_EFFECTIVE_DATE",
+                            UiStrings.get(R.string.about2_about_effective, ZIPPEST_PRIVACY_EFFECTIVE_DATE),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -227,7 +224,7 @@ internal fun LegalTextDialog(
     val body = remember(assetName) {
         runCatching {
             context.assets.open(assetName).bufferedReader().use { it.readText() }
-        }.getOrElse { "无法读取内置文本（" + assetName + "）。" }
+        }.getOrElse { UiStrings.get(R.string.about2_about_read_failed) + assetName + "）。" }
     }
     AlertDialog(
         onDismissRequest = onDismiss,
