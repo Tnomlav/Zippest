@@ -1,6 +1,10 @@
 package com.decompress.app.ui
 
 import android.os.Environment
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -19,6 +23,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -130,6 +136,21 @@ internal fun FileBrowserContent(
             }
         }
         return
+    }
+
+    // 接近底部时自动补一页；滚动太快来不及时仍可点底部的「显示更多」。
+    var autoLoadPending by remember { mutableStateOf(false) }
+    LaunchedEffect(pageSize) { autoLoadPending = false }
+    LaunchedEffect(listState, pageSize, visibleEntries.size) {
+        snapshotFlow {
+            val info = listState.layoutInfo
+            (info.visibleItemsInfo.lastOrNull()?.index ?: -1) to info.totalItemsCount
+        }.collect { (lastVisible, total) ->
+            if (!autoLoadPending && pageSize < visibleEntries.size && lastVisible >= total - 3) {
+                autoLoadPending = true
+                onLoadMore()
+            }
+        }
     }
 
     LazyColumn(
