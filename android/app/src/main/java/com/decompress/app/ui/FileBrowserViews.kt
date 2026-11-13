@@ -154,20 +154,6 @@ internal fun FileBrowserContent(
                 )
             }
         }
-        if (visibleEntries.size > pageSize) {
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    TextButton(onClick = onLoadMore) {
-                        Text(stringResource(R.string.browser_show_more, visibleEntries.size - pageSize))
-                    }
-                }
-            }
-        }
         val shownEntries = visibleEntries.take(pageSize)
         items(shownEntries, key = { it.uri.toString() }) { entry ->
             EntryRow(
@@ -214,6 +200,20 @@ internal fun FileBrowserContent(
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.32f)
             )
+        }
+        if (visibleEntries.size > pageSize) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    TextButton(onClick = onLoadMore) {
+                        Text(stringResource(R.string.browser_show_more, visibleEntries.size - pageSize))
+                    }
+                }
+            }
         }
     }
 }
