@@ -89,9 +89,10 @@ internal fun AboutInfoDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss) {
-                Text(stringResource(R.string.about_close))
-            }
+            DialogDismissButton(
+                onClick = onDismiss,
+                text = stringResource(R.string.about_close)
+            )
         }
     )
 }
@@ -136,9 +137,10 @@ internal fun PrivacyPolicyDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss) {
-                Text(stringResource(R.string.about_close))
-            }
+            DialogDismissButton(
+                onClick = onDismiss,
+                text = stringResource(R.string.about_close)
+            )
         }
     )
 }
@@ -203,9 +205,10 @@ internal fun OpenSourceLicensesDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss) {
-                Text(stringResource(R.string.about_close))
-            }
+            DialogDismissButton(
+                onClick = onDismiss,
+                text = stringResource(R.string.about_close)
+            )
         }
     )
 }
@@ -246,9 +249,10 @@ internal fun LegalTextDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss) {
-                Text(stringResource(R.string.about_close))
-            }
+            DialogDismissButton(
+                onClick = onDismiss,
+                text = stringResource(R.string.about_close)
+            )
         }
     )
 }

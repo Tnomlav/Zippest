@@ -95,18 +95,20 @@ internal fun FeedbackDialog(
             }
         },
         confirmButton = {
-            Button(
+            DialogConfirmButton(
                 onClick = {
                     copyToClipboard(context, text)
                     onOpenLink(ZIPPEST_ISSUES_URL)
                     onDismiss()
-                }
-            ) {
-                Text(UiStrings.get(R.string.copy_open_github))
-            }
+                },
+                text = UiStrings.get(R.string.copy_open_github)
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(UiStrings.get(R.string.close)) }
+            DialogDismissButton(
+                onClick = onDismiss,
+                text = UiStrings.get(R.string.close)
+            )
         }
     )
 }

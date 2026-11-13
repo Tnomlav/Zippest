@@ -167,14 +167,13 @@ internal fun QuickLocationEditorDialog(
             }
         },
         confirmButton = {
-            Button(onClick = ::save) {
-                Text(UiStrings.get(R.string.save))
-            }
+            DialogConfirmButton(
+                onClick = ::save,
+                text = UiStrings.get(R.string.save)
+            )
         },
         dismissButton = {
-            TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = onDismiss) {
-                Text(UiStrings.get(R.string.cancel))
-            }
+            DialogDismissButton(onClick = onDismiss)
         }
     )
 }

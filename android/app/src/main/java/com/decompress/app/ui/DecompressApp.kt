@@ -478,7 +478,9 @@ fun ZippestApp(
                     }
                 },
                 confirmButton = {
-                    Button(onClick = {
+                    DialogConfirmButton(
+                        text = UiStrings.get(R.string.app_copy_details),
+                        onClick = {
                         val clipboard = context.getSystemService(
                             android.content.ClipboardManager::class.java
                         )
@@ -488,20 +490,17 @@ fun ZippestApp(
                         com.decompress.app.data.CrashLog.clear(context)
                         crashReport = null
                         scope.launch { snackbarHostState.showSnackbar(UiStrings.get(R.string.app_crash_copied)) }
-                    }) {
-                        Text(UiStrings.get(R.string.app_copy_details))
-                    }
+                        }
+                    )
                 },
                 dismissButton = {
-                    TextButton(onClick = {
-                        com.decompress.app.data.CrashLog.clear(context)
-                        crashReport = null
-                    }) {
-                        Text(
-                            UiStrings.get(R.string.app_close),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    DialogDismissButton(
+                        onClick = {
+                            com.decompress.app.data.CrashLog.clear(context)
+                            crashReport = null
+                        },
+                        text = UiStrings.get(R.string.app_close)
+                    )
                 }
             )
         }
@@ -540,26 +539,26 @@ fun ZippestApp(
                     }
                 },
                 confirmButton = {
-                    Button(
+                    DialogConfirmButton(
                         enabled = pendingPasswordInput.isNotEmpty(),
+                        text = UiStrings.get(R.string.app_start_extract),
                         onClick = {
                             enqueuePendingPassword(request, pendingPasswordInput)
                             PendingPasswordStore.remove(context, request.id)
                             pendingPasswordInput = ""
                             pendingPasswordRequest = PendingPasswordStore.all(context).firstOrNull()
                         }
-                    ) {
-                        Text(UiStrings.get(R.string.app_start_extract))
-                    }
+                    )
                 },
                 dismissButton = {
-                    TextButton(onClick = {
-                        // 只收起，不丢请求：下次进应用或任务结束时还会再问。
-                        pendingPasswordRequest = null
-                        pendingPasswordInput = ""
-                    }) {
-                        Text(UiStrings.get(R.string.app_later))
-                    }
+                    DialogDismissButton(
+                        onClick = {
+                            // 只收起，不丢请求：下次进应用或任务结束时还会再问。
+                            pendingPasswordRequest = null
+                            pendingPasswordInput = ""
+                        },
+                        text = UiStrings.get(R.string.app_later)
+                    )
                 }
             )
         }

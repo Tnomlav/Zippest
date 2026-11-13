@@ -1747,7 +1747,12 @@ fun ExtractSheet(
                     }
                 },
                 confirmButton = {
-                    Button(
+                    DialogConfirmButton(
+                        text = if (index + 1 == archives.size) {
+                            UiStrings.get(R.string.archive_start_extract)
+                        } else {
+                            UiStrings.get(R.string.archive_next)
+                        },
                         onClick = {
                             val updated = perArchivePasswords.toMutableList().also {
                                 it[index] = passwordDialogValue
@@ -1765,14 +1770,13 @@ fun ExtractSheet(
                                 requestPermissionAndLaunch(archives, updated)
                             }
                         }
-                    ) {
-                        Text(if (index + 1 == archives.size) UiStrings.get(R.string.archive_start_extract) else UiStrings.get(R.string.archive_next))
-                    }
+                    )
                 },
                 dismissButton = {
-                    TextButton(colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),onClick = { passwordDialogIndex = null }) {
-                        Text(UiStrings.get(R.string.archive_cancel))
-                    }
+                    DialogDismissButton(
+                        onClick = { passwordDialogIndex = null },
+                        text = UiStrings.get(R.string.archive_cancel)
+                    )
                 }
             )
         }
