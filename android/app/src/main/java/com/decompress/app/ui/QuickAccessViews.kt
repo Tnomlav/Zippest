@@ -75,10 +75,15 @@ internal fun QuickAccessTopTitle(
             .padding(end = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val fontScale = LocalDensity.current.fontScale
         Text(
             if (directStorage) UiStrings.get(R.string.qa_title) else folderName.ifBlank { UiStrings.get(R.string.qa_files) },
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 1,
+            style = if (fontScale > 1.3f) {
+                MaterialTheme.typography.titleSmall
+            } else {
+                MaterialTheme.typography.titleMedium
+            },
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
         if (directStorage) {
