@@ -695,4 +695,6 @@
     <plurals name="selected_count"><item quantity="one">%1 selected</item><item quantity="other">%1 selected</item></plurals>
     <plurals name="action_count"><item quantity="one">%1 %2 item</item><item quantity="other">%1 %2 items</item></plurals>
     <plurals name="archive_extract_selected"><item quantity="one">Extract %1 item</item><item quantity="other">Extract %1 items</item></plurals>
+    <string name="settings_diagnostics">Export diagnostics</string>
+    <string name="settings_diagnostics_desc">Version, device, settings and task counts; no files or passwords</string>
 </resources>

@@ -695,4 +695,6 @@
     <plurals name="selected_count"><item quantity="other">已选 %1 项</item></plurals>
     <plurals name="action_count"><item quantity="other">%1 %2 项</item></plurals>
     <plurals name="archive_extract_selected"><item quantity="other">解压所选 %1</item></plurals>
+    <string name="settings_diagnostics">导出诊断信息</string>
+    <string name="settings_diagnostics_desc">版本、机型、设置与任务数量；不含文件与密码</string>
 </resources>

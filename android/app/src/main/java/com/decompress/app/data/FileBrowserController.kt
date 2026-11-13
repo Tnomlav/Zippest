@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.MediaStore
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -253,7 +254,15 @@ class FileBrowserController(context: Context) {
         val foldedNeedle = NameText.foldForSearch(needle)
         if (needle.isEmpty() || storageMode != StorageMode.DIRECT) return@withContext emptyList()
         val root = Environment.getExternalStorageDirectory()
+        val seenPaths = mutableSetOf<String>()
         val hits = mutableListOf<GlobalSearchHit>()
+        // 第一段：MediaStore 索引命中，通常几十毫秒返回，覆盖照片/视频/文档等常见文件。
+        if (limit > 0) {
+            mediaStoreHits(root, needle).forEach { hit ->
+                val path = runCatching { hit.entry.uri.path }.getOrNull()
+                if (path != null && seenPaths.add(path)) hits += hit
+            }
+        }
         val queue = ArrayDeque<File>()
         queue.addLast(root)
         var visited = 0
@@ -263,6 +272,7 @@ class FileBrowserController(context: Context) {
             val children = runCatching { directory.listFiles() }.getOrNull() ?: continue
             for (child in children) {
                 visited++
+                if (child.absolutePath in seenPaths) continue
                 val name = child.name
                 if (name.startsWith(".")) continue
                 if (child.isDirectory) {
@@ -285,6 +295,36 @@ class FileBrowserController(context: Context) {
             }
         }
         hits.sortedWith(compareByDescending<GlobalSearchHit> { it.entry.lastModified })
+    }
+
+    private fun mediaStoreHits(root: File, needle: String): List<GlobalSearchHit> {
+        val escaped = needle.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        val projection = arrayOf(MediaStore.Files.FileColumns.DATA)
+        val selection = MediaStore.Files.FileColumns.DISPLAY_NAME + " LIKE ? ESCAPE '\\'"
+        val hits = mutableListOf<GlobalSearchHit>()
+        runCatching {
+            appContext.contentResolver.query(
+                MediaStore.Files.getContentUri("external"),
+                projection,
+                selection,
+                arrayOf("%$escaped%"),
+                null
+            )?.use { cursor ->
+                while (cursor.moveToNext() && hits.size < 100) {
+                    val data = cursor.getString(0) ?: continue
+                    val file = File(data)
+                    if (!file.exists() || file.name.startsWith(".")) continue
+                    if (!NameText.foldForSearch(file.name).contains(NameText.foldForSearch(needle))) {
+                        continue
+                    }
+                    hits += GlobalSearchHit(
+                        entry = repository.directEntry(file),
+                        parentPath = displayPath(root, file.parentFile)
+                    )
+                }
+            }
+        }
+        return hits
     }
 
     private fun displayPath(root: File, directory: File?): String {

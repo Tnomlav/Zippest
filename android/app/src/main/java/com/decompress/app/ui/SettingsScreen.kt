@@ -969,6 +969,14 @@ fun SettingsScreen(
                     )
                     SettingsDivider()
                     SettingsAction(
+                        title = context.getString(R.string.settings_diagnostics),
+                        detail = context.getString(R.string.settings_diagnostics_desc),
+                        onClick = {
+                            com.decompress.app.data.DiagnosticsExport.share(context)
+                        }
+                    )
+                    SettingsDivider()
+                    SettingsAction(
                         title = context.getString(R.string.settings_github_project),
                         detail = ZIPPEST_GITHUB_URL,
                         onClick = { openExternalLink(ZIPPEST_GITHUB_URL) }
