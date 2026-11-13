@@ -113,16 +113,6 @@ internal fun FileBrowserMenus(
                 }
             )
             ZippestMenuItem(
-                text = { Text(context.getString(R.string.browser_tasks)) },
-                leadingIcon = { Icon(Icons.Outlined.Schedule, null) },
-                onClick = {
-                    state.moreExpanded = false
-                    onClosePanels()
-                    onDismissDialogs()
-                    state.showTaskQueue = true
-                }
-            )
-            ZippestMenuItem(
                 text = { Text(context.getString(R.string.browser_trash)) },
                 leadingIcon = { Icon(Icons.Outlined.Delete, null) },
                 onClick = {

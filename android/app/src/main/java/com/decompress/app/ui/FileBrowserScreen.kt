@@ -366,6 +366,10 @@ internal fun FileBrowserScreen(
     val listStates = remember { mutableMapOf<String, LazyListState>() }
     val listKey = controller.currentUri?.toString() ?: controller.path.joinToString("/")
     val fileListState = listStates.getOrPut(listKey) { LazyListState() }
+    // 切换排序方式/方向后回到列表顶部，避免停在旧位置看起来「顺序没生效」。
+    LaunchedEffect(appSettings.defaultSortMode, appSettings.sortAscending) {
+        fileListState.scrollToItem(0)
+    }
 
     fun startTransfer(move: Boolean) {
         if (selectedEntries.isEmpty()) {
