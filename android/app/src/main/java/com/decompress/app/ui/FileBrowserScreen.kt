@@ -321,9 +321,7 @@ internal fun FileBrowserScreen(
             }
         }
         .sortedWith(
-            compareByDescending<BrowserEntry> { it.isDirectory }.then(
-                if (appSettings.sortAscending) sortComparator else sortComparator.reversed()
-            )
+            if (appSettings.sortAscending) sortComparator else sortComparator.reversed()
         )
     var recentExtracts by remember { mutableStateOf<List<TaskHistoryEntry>>(emptyList()) }
     LaunchedEffect(appSettings.showRecentExtractions) {
