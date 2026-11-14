@@ -688,13 +688,13 @@
     <string name="notif_channel_extract_desc">Background extraction progress and status</string>
     <string name="notif_channel_compress">Zippest compression</string>
     <string name="notif_channel_compress_desc">Background compression and split progress</string>
-    <plurals name="info_count"><item quantity="one">%1 item</item><item quantity="other">%1 items</item></plurals>
-    <plurals name="active_count"><item quantity="one">%1 active</item><item quantity="other">%1 active</item></plurals>
-    <plurals name="finished_count"><item quantity="one">%1 finished</item><item quantity="other">%1 finished</item></plurals>
-    <plurals name="history_count"><item quantity="one">%1 record</item><item quantity="other">%1 records</item></plurals>
-    <plurals name="selected_count"><item quantity="one">%1 selected</item><item quantity="other">%1 selected</item></plurals>
-    <plurals name="action_count"><item quantity="one">%1 %2 item</item><item quantity="other">%1 %2 items</item></plurals>
-    <plurals name="archive_extract_selected"><item quantity="one">Extract %1 item</item><item quantity="other">Extract %1 items</item></plurals>
+    <plurals name="info_count"><item quantity="one">%1$d item</item><item quantity="other">%1$d items</item></plurals>
+    <plurals name="active_count"><item quantity="one">%1$d active</item><item quantity="other">%1$d active</item></plurals>
+    <plurals name="finished_count"><item quantity="one">%1$d finished</item><item quantity="other">%1$d finished</item></plurals>
+    <plurals name="history_count"><item quantity="one">%1$d record</item><item quantity="other">%1$d records</item></plurals>
+    <plurals name="selected_count"><item quantity="one">%1$d selected</item><item quantity="other">%1$d selected</item></plurals>
+    <plurals name="action_count"><item quantity="one">%1$s %2$d item</item><item quantity="other">%1$s %2$d items</item></plurals>
+    <plurals name="archive_extract_selected"><item quantity="one">Extract %1$d item</item><item quantity="other">Extract %1$d items</item></plurals>
     <string name="settings_diagnostics">Export diagnostics</string>
     <string name="settings_diagnostics_desc">Version, device, settings and task counts; no files or passwords</string>
 </resources>

@@ -688,13 +688,13 @@
     <string name="notif_channel_extract_desc">显示可恢复的后台解压进度与完成状态</string>
     <string name="notif_channel_compress">Zippest 压缩任务</string>
     <string name="notif_channel_compress_desc">显示后台压缩与分卷任务进度</string>
-    <plurals name="info_count"><item quantity="other">%1 项</item></plurals>
-    <plurals name="active_count"><item quantity="other">%1 项</item></plurals>
-    <plurals name="finished_count"><item quantity="other">%1 项</item></plurals>
-    <plurals name="history_count"><item quantity="other">%1 条</item></plurals>
-    <plurals name="selected_count"><item quantity="other">已选 %1 项</item></plurals>
-    <plurals name="action_count"><item quantity="other">%1 %2 项</item></plurals>
-    <plurals name="archive_extract_selected"><item quantity="other">解压所选 %1</item></plurals>
+    <plurals name="info_count"><item quantity="other">%1$d 项</item></plurals>
+    <plurals name="active_count"><item quantity="other">%1$d 项</item></plurals>
+    <plurals name="finished_count"><item quantity="other">%1$d 项</item></plurals>
+    <plurals name="history_count"><item quantity="other">%1$d 条</item></plurals>
+    <plurals name="selected_count"><item quantity="other">已选 %1$d 项</item></plurals>
+    <plurals name="action_count"><item quantity="other">%1$s %2$d 项</item></plurals>
+    <plurals name="archive_extract_selected"><item quantity="other">解压所选 %1$d</item></plurals>
     <string name="settings_diagnostics">导出诊断信息</string>
     <string name="settings_diagnostics_desc">版本、机型、设置与任务数量；不含文件与密码</string>
 </resources>
