@@ -464,6 +464,12 @@ if [ -n "$DEVICE_SERIAL" ] && [ "$CLEAN_DEVICE" -eq 1 ]; then
     fi
 fi
 
+if python3 "$ROOT/tools/check_format_args.py" >>"$REPORT" 2>&1; then
+    pass 20 "资源占位符" "占位符全部为 %1\$d / %1\$s 形式"
+else
+    fail 20 "资源占位符" "存在 %1 这类缺少 \$ 的占位符，见报告"
+fi
+
 printf '\n报告：%s\n' "$REPORT" | tee -a "$REPORT"
 printf '通过 %d ／ 失败 %d\n' "$PASSED" "$FAILED" | tee -a "$REPORT"
 summary

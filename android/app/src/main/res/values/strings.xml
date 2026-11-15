@@ -421,7 +421,7 @@
     <string name="title_more">%1$s · %2$d more</string>
     <string name="eta_seconds">%1$d s</string>
     <string name="eta_minutes">%1$d min %2$d s</string>
-    <string name="about_eta">About %1</string>
+    <string name="about_eta">About %1$s</string>
     <string name="eta_hours">%1$d h %2$d min</string>
     <string name="trash_usage">%1$d items · %2$s used / %3$s</string>
     <string name="trash_count_used">Cleaned %1$d expired items</string>
@@ -697,5 +697,5 @@
     <plurals name="archive_extract_selected"><item quantity="one">Extract %1$d item</item><item quantity="other">Extract %1$d items</item></plurals>
     <string name="settings_diagnostics">Export diagnostics</string>
     <string name="settings_diagnostics_desc">Version, device, settings and task counts; no files or passwords</string>
-    <plurals name="folder_file_count"><item quantity="one">%1 file</item><item quantity="other">%1 files</item></plurals>
+    <plurals name="folder_file_count"><item quantity="one">%1$d file</item><item quantity="other">%1$d files</item></plurals>
 </resources>
