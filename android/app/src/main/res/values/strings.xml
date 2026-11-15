@@ -697,4 +697,5 @@
     <plurals name="archive_extract_selected"><item quantity="one">Extract %1$d item</item><item quantity="other">Extract %1$d items</item></plurals>
     <string name="settings_diagnostics">Export diagnostics</string>
     <string name="settings_diagnostics_desc">Version, device, settings and task counts; no files or passwords</string>
+    <plurals name="folder_file_count"><item quantity="one">%1 file</item><item quantity="other">%1 files</item></plurals>
 </resources>

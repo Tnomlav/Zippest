@@ -32,7 +32,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.semantics.stateDescription
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,6 +60,14 @@ internal fun EntryRow(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    // 文件夹行显示直接子文件数量（不递归、不包子文件夹）；SAF 目录拿不到时退回「文件夹」。
+    val fileCount by produceState<Int?>(initialValue = null, entry.uri, entry.isDirectory) {
+        value = if (entry.isDirectory) {
+            withContext(Dispatchers.IO) { countDirectFiles(entry) }
+        } else {
+            null
+        }
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -68,7 +81,7 @@ internal fun EntryRow(
             )
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .semantics(mergeDescendants = true) {
-                contentDescription = "${entry.name}，${entryMeta(context, entry)}"
+                contentDescription = "${entry.name}，${entryMeta(context, entry, fileCount)}"
                 if (selectionMode) {
                     stateDescription = if (selected) context.getString(R.string.browser_list_selected) else context.getString(R.string.browser_list_unselected)
                 }
@@ -104,7 +117,7 @@ internal fun EntryRow(
             )
             Spacer(Modifier.height(3.dp))
             Text(
-                text = entryMeta(context, entry),
+                text = entryMeta(context, entry, fileCount),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
@@ -141,7 +154,11 @@ internal fun EntryRow(
     }
 }
 
-internal fun entryMeta(context: Context, entry: BrowserEntry): String {
+internal fun entryMeta(
+    context: Context,
+    entry: BrowserEntry,
+    fileCount: Int? = null
+): String {
     val date = if (entry.lastModified > 0L) {
         DateUtils.getRelativeTimeSpanString(
             entry.lastModified,
@@ -152,11 +169,22 @@ internal fun entryMeta(context: Context, entry: BrowserEntry): String {
         ""
     }
     return if (entry.isDirectory) {
-        listOf(context.getString(R.string.browser_folder), date).filter { it.isNotBlank() }.joinToString(" · ")
+        val countLabel = fileCount?.let {
+            context.resources.getQuantityString(R.plurals.folder_file_count, it, it)
+        }
+        listOf(countLabel ?: context.getString(R.string.browser_folder), date)
+            .filter { it.isNotBlank() }
+            .joinToString(" · ")
     } else {
         listOf(
             Formatter.formatShortFileSize(context, entry.size),
             date
         ).filter { it.isNotBlank() }.joinToString(" · ")
     }
+}
+
+private fun countDirectFiles(entry: BrowserEntry): Int? {
+    if (entry.uri.scheme != "file") return null
+    val path = entry.uri.path ?: return null
+    return runCatching { File(path).listFiles()?.count { !it.isDirectory } }.getOrNull()
 }

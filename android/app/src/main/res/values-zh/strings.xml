@@ -697,4 +697,5 @@
     <plurals name="archive_extract_selected"><item quantity="other">解压所选 %1$d</item></plurals>
     <string name="settings_diagnostics">导出诊断信息</string>
     <string name="settings_diagnostics_desc">版本、机型、设置与任务数量；不含文件与密码</string>
+    <plurals name="folder_file_count"><item quantity="other">%1 个文件</item></plurals>
 </resources>
