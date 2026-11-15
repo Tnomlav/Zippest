@@ -38,6 +38,7 @@ import androidx.compose.ui.semantics.stateDescription
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import android.util.LruCache
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -61,9 +62,9 @@ internal fun EntryRow(
 ) {
     val context = LocalContext.current
     // 文件夹行显示直接子文件数量（不递归、不包子文件夹）；SAF 目录拿不到时退回「文件夹」。
-    val fileCount by produceState<Int?>(initialValue = null, entry.uri, entry.isDirectory) {
+    val fileCount by produceState<Int?>(initialValue = null, entry.uri, entry.isDirectory, entry.lastModified) {
         value = if (entry.isDirectory) {
-            withContext(Dispatchers.IO) { countDirectFiles(entry) }
+            withContext(Dispatchers.IO) { countFilesRecursive(entry) }
         } else {
             null
         }
@@ -183,8 +184,40 @@ internal fun entryMeta(
     }
 }
 
-private fun countDirectFiles(entry: BrowserEntry): Int? {
+private const val MAX_COUNT_FILES = 100_000
+private val folderCountCache = LruCache<String, Int>(128)
+
+/**
+ * 递归统计文件夹下所有层级的文件数，不把子文件夹本身计入。
+ * 超过上限时返回 null，界面回退显示「文件夹」，避免给出错误数字。
+ */
+private fun countFilesRecursive(entry: BrowserEntry): Int? {
     if (entry.uri.scheme != "file") return null
     val path = entry.uri.path ?: return null
-    return runCatching { File(path).listFiles()?.count { !it.isDirectory } }.getOrNull()
+    val key = path + ":" + entry.lastModified
+    folderCountCache.get(key)?.let { return if (it < 0) null else it }
+    val root = File(path)
+    if (!root.isDirectory) return null
+    var files = 0
+    var visited = 0
+    val stack = ArrayDeque<File>()
+    stack.addLast(root)
+    while (stack.isNotEmpty()) {
+        val directory = stack.removeLast()
+        val children = runCatching { directory.listFiles() }.getOrNull() ?: continue
+        for (child in children) {
+            visited++
+            if (visited > MAX_COUNT_FILES) {
+                folderCountCache.put(key, -1)
+                return null
+            }
+            if (child.isDirectory) {
+                stack.addLast(child)
+            } else {
+                files++
+            }
+        }
+    }
+    folderCountCache.put(key, files)
+    return files
 }
