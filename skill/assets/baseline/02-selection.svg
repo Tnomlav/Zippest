@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="393" height="852" viewBox="0 0 393 852" role="img" aria-labelledby="t d">
+  <title id="t">Zippest 设计语言 · 选择态基准</title>
+  <desc id="d">顶栏切换为已选计数与全选，行出现复选框，选中行浅绿填充，底栏切换为操作条。</desc>
+  <rect width="393" height="852" fill="#F6F7F5"/>
+
+  <g fill="#1B211E" font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12">
+    <text x="24" y="28">9:41</text>
+    <rect x="330" y="12" width="3" height="14" rx="1.5"/>
+    <rect x="344" y="15" width="20" height="10" rx="3" fill="none" stroke="#1B211E" stroke-width="1.2"/>
+    <rect x="346" y="17" width="14" height="6" rx="1.5"/>
+  </g>
+
+  <!-- selection top bar -->
+  <g fill="none" stroke="#1B211E" stroke-width="1.8" stroke-linecap="round">
+    <path d="M17 64 L25 72 L17 80"/>
+    <path d="M29 64 L37 80"/>
+  </g>
+  <text x="56" y="66" font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="16" font-weight="600" fill="#1B211E">已选 3 项</text>
+  <text x="56" y="86" font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12" fill="#59625D">点按项目继续选择</text>
+  <rect x="350" y="54" width="20" height="20" rx="4" fill="#0F6B4F"/>
+  <path d="M354 64 L358.5 68.5 L366 59" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- rows -->
+  <g font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif">
+    <!-- 1 旅行 (unselected) -->
+    <rect x="20" y="126" width="20" height="20" rx="4" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <rect x="52" y="116" width="40" height="40" rx="12" fill="#D9F2E7"/>
+    <path d="M60 133 A1.5 1.5 0 0 1 61.5 131.5 h5 l2.5 2.5 h8.5 A1.5 1.5 0 0 1 79 135.5 v9 A1.5 1.5 0 0 1 77.5 146 h-16 A1.5 1.5 0 0 1 60 144.5 z" fill="none" stroke="#0F6B4F" stroke-width="1.6"/>
+    <text x="108" y="134" font-size="14" font-weight="500" fill="#1B211E">旅行</text>
+    <text x="108" y="152" font-size="12" fill="#59625D">128 项 · 昨天</text>
+    <line x1="12" y1="167.5" x2="381" y2="167.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <!-- 2 家庭 (selected) -->
+    <rect x="12" y="168" width="369" height="64" fill="#EEF7F2"/>
+    <rect x="20" y="190" width="20" height="20" rx="4" fill="#0F6B4F"/>
+    <path d="M24 200 L28.5 204.5 L36 195" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="52" y="180" width="40" height="40" rx="12" fill="#D9F2E7"/>
+    <path d="M60 197 A1.5 1.5 0 0 1 61.5 195.5 h5 l2.5 2.5 h8.5 A1.5 1.5 0 0 1 79 199.5 v9 A1.5 1.5 0 0 1 77.5 210 h-16 A1.5 1.5 0 0 1 60 208.5 z" fill="none" stroke="#0F6B4F" stroke-width="1.6"/>
+    <text x="108" y="198" font-size="14" font-weight="500" fill="#1B211E">家庭</text>
+    <text x="108" y="216" font-size="12" fill="#59625D">36 项 · 10月18日</text>
+    <line x1="12" y1="231.5" x2="381" y2="231.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <!-- 3 工作 (selected) -->
+    <rect x="12" y="232" width="369" height="64" fill="#EEF7F2"/>
+    <rect x="20" y="254" width="20" height="20" rx="4" fill="#0F6B4F"/>
+    <path d="M24 264 L28.5 268.5 L36 259" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="52" y="244" width="40" height="40" rx="12" fill="#D9F2E7"/>
+    <path d="M60 261 A1.5 1.5 0 0 1 61.5 259.5 h5 l2.5 2.5 h8.5 A1.5 1.5 0 0 1 79 263.5 v9 A1.5 1.5 0 0 1 77.5 274 h-16 A1.5 1.5 0 0 1 60 272.5 z" fill="none" stroke="#0F6B4F" stroke-width="1.6"/>
+    <text x="108" y="262" font-size="14" font-weight="500" fill="#1B211E">工作</text>
+    <text x="108" y="280" font-size="12" fill="#59625D">54 项 · 10月17日</text>
+    <line x1="12" y1="295.5" x2="381" y2="295.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <!-- 4 归档 (selected) -->
+    <rect x="12" y="296" width="369" height="64" fill="#EEF7F2"/>
+    <rect x="20" y="318" width="20" height="20" rx="4" fill="#0F6B4F"/>
+    <path d="M24 328 L28.5 332.5 L36 323" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="52" y="308" width="40" height="40" rx="12" fill="#D6E3EE"/>
+    <rect x="62" y="320" width="20" height="16" rx="2" fill="none" stroke="#41586A" stroke-width="1.6"/>
+    <path d="M62 325 H82" stroke="#41586A" stroke-width="1.6"/>
+    <text x="108" y="326" font-size="14" font-weight="500" fill="#1B211E">2026-11 归档</text>
+    <text x="108" y="344" font-size="12" fill="#59625D">248.6 MB · 10月16日</text>
+    <line x1="12" y1="359.5" x2="381" y2="359.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <!-- 5 封面 -->
+    <rect x="20" y="382" width="20" height="20" rx="4" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <rect x="52" y="372" width="40" height="40" rx="12" fill="#DCE9E2"/>
+    <circle cx="67" cy="387" r="2.4" fill="none" stroke="#4F6B5E" stroke-width="1.6"/>
+    <path d="M60 400 L67 392 L73 398 L77 393 L80 396" fill="none" stroke="#4F6B5E" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="108" y="390" font-size="14" font-weight="500" fill="#1B211E">封面</text>
+    <text x="108" y="408" font-size="12" fill="#59625D">18 项 · 10月15日</text>
+    <line x1="12" y1="423.5" x2="381" y2="423.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <!-- 6 说明文档 -->
+    <rect x="20" y="446" width="20" height="20" rx="4" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <rect x="52" y="436" width="40" height="40" rx="12" fill="#E9EFEA"/>
+    <rect x="63" y="448" width="17" height="20" rx="2" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <path d="M67 455 H76 M67 460 H76 M67 465 H73" stroke="#59625D" stroke-width="1.4"/>
+    <text x="108" y="454" font-size="14" font-weight="500" fill="#1B211E">说明文档</text>
+    <text x="108" y="472" font-size="12" fill="#59625D">12 KB · 10月12日</text>
+    <line x1="12" y1="487.5" x2="381" y2="487.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <!-- 7 年度精选 -->
+    <rect x="20" y="510" width="20" height="20" rx="4" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <rect x="52" y="500" width="40" height="40" rx="12" fill="#D9F2E7"/>
+    <path d="M60 517 A1.5 1.5 0 0 1 61.5 515.5 h5 l2.5 2.5 h8.5 A1.5 1.5 0 0 1 79 519.5 v9 A1.5 1.5 0 0 1 77.5 530 h-16 A1.5 1.5 0 0 1 60 528.5 z" fill="none" stroke="#0F6B4F" stroke-width="1.6"/>
+    <text x="108" y="518" font-size="14" font-weight="500" fill="#1B211E">年度精选</text>
+    <text x="108" y="536" font-size="12" fill="#59625D">42 项 · 10月11日</text>
+    <line x1="12" y1="551.5" x2="381" y2="551.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <!-- 8 备忘 -->
+    <rect x="20" y="574" width="20" height="20" rx="4" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <rect x="52" y="564" width="40" height="40" rx="12" fill="#E9EFEA"/>
+    <rect x="63" y="576" width="17" height="20" rx="2" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <text x="108" y="582" font-size="14" font-weight="500" fill="#1B211E">备忘</text>
+    <text x="108" y="600" font-size="12" fill="#59625D">3 项 · 10月9日</text>
+    <line x1="12" y1="615.5" x2="381" y2="615.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+  </g>
+
+  <!-- selection toolbar -->
+  <rect x="0" y="744" width="393" height="108" fill="#FFFFFF"/>
+  <line x1="0" y1="744.5" x2="393" y2="744.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+  <g font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12" fill="#1B211E" text-anchor="middle">
+    <!-- 整理 -->
+    <g transform="translate(22,760)" fill="none" stroke="#1B211E" stroke-width="1.6" stroke-linejoin="round">
+      <rect x="1" y="4" width="20" height="6" rx="1.5"/>
+      <path d="M3 10 V19 A1 1 0 0 0 4 20 H18 A1 1 0 0 0 19 19 V10"/>
+      <path d="M8 14 H14"/>
+    </g>
+    <text x="33" y="806">整理</text>
+    <!-- 导出 -->
+    <g transform="translate(87,760)" fill="none" stroke="#1B211E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 18 V5 M6 10 L11 5 L16 10"/>
+      <path d="M3 15 V19 A1 1 0 0 0 4 20 H18 A1 1 0 0 0 19 19 V15"/>
+    </g>
+    <text x="98" y="806">导出</text>
+    <!-- 移动 -->
+    <g transform="translate(152,760)" fill="none" stroke="#1B211E" stroke-width="1.6" stroke-linejoin="round">
+      <path d="M2 6 A1.5 1.5 0 0 1 3.5 4.5 h5 l2.5 2.5 h7 A1.5 1.5 0 0 1 19.5 8.5 v9 A1.5 1.5 0 0 1 18 19 H3.5 A1.5 1.5 0 0 1 2 17.5 z"/>
+      <path d="M7 13 H15 M12 10 L15 13 L12 16" stroke-linecap="round"/>
+    </g>
+    <text x="163" y="806">移动</text>
+    <!-- 重命名 -->
+    <g transform="translate(217,760)" fill="none" stroke="#1B211E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 17 L4.5 13 L14 3.5 A1.8 1.8 0 0 1 16.5 6 L7 15.5 z"/>
+      <path d="M3 20 H19"/>
+    </g>
+    <text x="228" y="806">重命名</text>
+    <!-- 删除 -->
+    <g transform="translate(282,760)" fill="none" stroke="#1B211E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 6 H18 M9 6 V4 H13 V6"/>
+      <path d="M6 6 L6.8 18.5 A1.5 1.5 0 0 0 8.3 20 H13.7 A1.5 1.5 0 0 0 15.2 18.5 L16 6"/>
+      <path d="M9.5 9 V17 M12.5 9 V17"/>
+    </g>
+    <text x="293" y="806">删除</text>
+    <!-- 更多 -->
+    <g fill="#1B211E">
+      <circle cx="358" cy="765" r="1.7"/><circle cx="358" cy="770" r="1.7"/><circle cx="358" cy="775" r="1.7"/>
+    </g>
+    <text x="358" y="806">更多</text>
+  </g>
+
+  <rect x="164" y="836" width="65" height="4" rx="2" fill="#1B211E" fill-opacity="0.28"/>
+</svg>

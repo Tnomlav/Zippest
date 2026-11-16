@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="600" viewBox="0 0 840 600" role="img" aria-labelledby="t d">
+  <title id="t">Zippest 设计语言 · 宽屏三栏基准</title>
+  <desc id="d">上部 240dp 导航、中部内容列表、右侧 320dp 预览栏；三栏共享同一套行高与描边。</desc>
+  <rect width="840" height="600" fill="#F6F7F5"/>
+
+  <!-- top bar (0–64) -->
+  <g fill="none" stroke="#1B211E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 25 L15 32 L22 39"/>
+    <circle cx="782" cy="30" r="6.5"/>
+    <path d="M787 35 L792 40"/>
+    <path d="M814 26 V38 M808 32 H820"/>
+  </g>
+  <text x="56" y="40" font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="22" font-weight="600" fill="#1B211E">项目</text>
+  <g fill="#1B211E"><circle cx="752" cy="30" r="1.6"/><circle cx="752" cy="35" r="1.6"/><circle cx="752" cy="40" r="1.6"/></g>
+
+  <!-- nav pane -->
+  <g font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif">
+    <text x="16" y="96" font-size="12" font-weight="600" fill="#59625D">位置</text>
+    <rect x="8" y="104" width="224" height="40" rx="12" fill="#D9F2E7"/>
+    <text x="24" y="129" font-size="14" font-weight="500" fill="#083B2B">全部项目</text>
+    <text x="24" y="173" font-size="14" fill="#1B211E">旅行</text>
+    <text x="24" y="217" font-size="14" fill="#1B211E">家庭</text>
+    <text x="24" y="261" font-size="14" fill="#1B211E">工作</text>
+    <text x="16" y="312" font-size="12" font-weight="600" fill="#59625D">分组</text>
+    <text x="24" y="341" font-size="14" fill="#1B211E">素材</text>
+    <text x="24" y="385" font-size="14" fill="#1B211E">归档</text>
+    <text x="24" y="429" font-size="14" fill="#1B211E">截图</text>
+  </g>
+  <line x1="240.5" y1="64" x2="240.5" y2="600" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+  <!-- content list -->
+  <g font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif">
+    <rect x="252" y="84" width="40" height="40" rx="12" fill="#D9F2E7"/>
+    <path d="M260 101 A1.5 1.5 0 0 1 261.5 99.5 h5 l2.5 2.5 h8.5 A1.5 1.5 0 0 1 279 103.5 v9 A1.5 1.5 0 0 1 277.5 114 h-16 A1.5 1.5 0 0 1 260 112.5 z" fill="none" stroke="#0F6B4F" stroke-width="1.6"/>
+    <text x="304" y="102" font-size="14" font-weight="500" fill="#1B211E">海边</text>
+    <text x="304" y="120" font-size="12" fill="#59625D">128 项 · 昨天</text>
+    <path d="M498 96 l6 8 l-6 8" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <line x1="252" y1="135.5" x2="508" y2="135.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <rect x="252" y="148" width="40" height="40" rx="12" fill="#D9F2E7"/>
+    <path d="M260 165 A1.5 1.5 0 0 1 261.5 163.5 h5 l2.5 2.5 h8.5 A1.5 1.5 0 0 1 279 167.5 v9 A1.5 1.5 0 0 1 277.5 178 h-16 A1.5 1.5 0 0 1 260 176.5 z" fill="none" stroke="#0F6B4F" stroke-width="1.6"/>
+    <text x="304" y="166" font-size="14" font-weight="500" fill="#1B211E">山里</text>
+    <text x="304" y="184" font-size="12" fill="#59625D">96 项 · 10月18日</text>
+    <path d="M498 160 l6 8 l-6 8" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <line x1="252" y1="199.5" x2="508" y2="199.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <rect x="252" y="212" width="40" height="40" rx="12" fill="#D6E3EE"/>
+    <rect x="262" y="224" width="20" height="16" rx="2" fill="none" stroke="#41586A" stroke-width="1.6"/>
+    <path d="M262 229 H282" stroke="#41586A" stroke-width="1.6"/>
+    <text x="304" y="230" font-size="14" font-weight="500" fill="#1B211E">2026-11 归档</text>
+    <text x="304" y="248" font-size="12" fill="#59625D">248.6 MB · 10月16日</text>
+    <line x1="252" y1="263.5" x2="508" y2="263.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <rect x="252" y="276" width="40" height="40" rx="12" fill="#DCE9E2"/>
+    <circle cx="267" cy="291" r="2.4" fill="none" stroke="#4F6B5E" stroke-width="1.6"/>
+    <path d="M260 304 L267 296 L273 302 L277 297 L280 300" fill="none" stroke="#4F6B5E" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="304" y="294" font-size="14" font-weight="500" fill="#1B211E">封面</text>
+    <text x="304" y="312" font-size="12" fill="#59625D">18 项 · 10月15日</text>
+    <line x1="252" y1="327.5" x2="508" y2="327.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <rect x="252" y="340" width="40" height="40" rx="12" fill="#E9EFEA"/>
+    <rect x="263" y="352" width="17" height="20" rx="2" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <path d="M267 359 H276 M267 364 H276 M267 369 H273" stroke="#59625D" stroke-width="1.4"/>
+    <text x="304" y="358" font-size="14" font-weight="500" fill="#1B211E">说明文档</text>
+    <text x="304" y="376" font-size="12" fill="#59625D">12 KB · 10月12日</text>
+    <line x1="252" y1="391.5" x2="508" y2="391.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <rect x="252" y="404" width="40" height="40" rx="12" fill="#D9F2E7"/>
+    <path d="M260 421 A1.5 1.5 0 0 1 261.5 419.5 h5 l2.5 2.5 h8.5 A1.5 1.5 0 0 1 279 423.5 v9 A1.5 1.5 0 0 1 277.5 434 h-16 A1.5 1.5 0 0 1 260 432.5 z" fill="none" stroke="#0F6B4F" stroke-width="1.6"/>
+    <text x="304" y="422" font-size="14" font-weight="500" fill="#1B211E">年度精选</text>
+    <text x="304" y="440" font-size="12" fill="#59625D">42 项 · 10月11日</text>
+    <line x1="252" y1="455.5" x2="508" y2="455.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+  </g>
+
+  <!-- third pane -->
+  <rect x="520" y="64" width="320" height="536" fill="#FFFFFF"/>
+  <line x1="520" y1="64" x2="520" y2="600" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+  <g font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif">
+    <rect x="536" y="80" width="288" height="176" rx="16" fill="#E9EFEA"/>
+    <circle cx="648" cy="150" r="16" fill="none" stroke="#7D8C82" stroke-opacity="0.55" stroke-width="1.5"/>
+    <path d="M572 226 L620 182 L652 210 L676 190 L708 226" fill="none" stroke="#7D8C82" stroke-opacity="0.55" stroke-width="1.5" stroke-linejoin="round"/>
+
+    <text x="536" y="292" font-size="16" font-weight="600" fill="#1B211E">旅行</text>
+    <text x="536" y="312" font-size="12" fill="#59625D">128 项 · 1.4 GB · 2026年10月</text>
+    <line x1="536" y1="332" x2="824" y2="332" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <text x="536" y="360" font-size="12" fill="#59625D">位置</text>
+    <text x="824" y="360" font-size="12" fill="#1B211E" text-anchor="end">本机 / 旅行</text>
+    <line x1="536" y1="376" x2="824" y2="376" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <text x="536" y="404" font-size="12" fill="#59625D">最早</text>
+    <text x="824" y="404" font-size="12" fill="#1B211E" text-anchor="end">2024年3月12日</text>
+    <line x1="536" y1="420" x2="824" y2="420" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <text x="536" y="448" font-size="12" fill="#59625D">最近</text>
+    <text x="824" y="448" font-size="12" fill="#1B211E" text-anchor="end">昨天 21:14</text>
+  </g>
+
+  <rect x="536" y="540" width="288" height="48" rx="12" fill="#0F6B4F"/>
+  <text x="680" y="570" font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="14" font-weight="500" fill="#FFFFFF" text-anchor="middle">整理这一组</text>
+</svg>

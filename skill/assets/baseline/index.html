@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zippest 设计语言 · 基准板</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  body { margin: 0; padding: 40px 32px 64px; background: var(--z-bg); color: var(--z-fg); }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 32px; line-height: 40px; font-weight: 600; margin: 0 0 8px; }
+  .sub { color: var(--z-muted); font-size: 14px; line-height: 20px; margin: 0 0 32px; }
+  h2 { font-size: 22px; line-height: 28px; font-weight: 600; margin: 48px 0 16px; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .sw { border-radius: var(--z-r-sm); overflow: hidden; background: var(--z-surface); }
+  .sw i { display: block; height: 56px; }
+  .sw span { display: block; padding: 8px 12px; font-size: 11px; line-height: 16px; color: var(--z-muted); }
+  .boards { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .board { background: var(--z-surface); border-radius: var(--z-r-lg); padding: 12px; }
+  .board img { display: block; width: 100%; height: auto; border-radius: var(--z-r-xs); }
+  .board.phone { width: 393px; }
+  .board.wide { width: 840px; max-width: 100%; }
+  .board figcaption { font-size: 12px; line-height: 16px; color: var(--z-muted); padding: 10px 4px 2px; }
+  .type div { padding: 6px 0; border-bottom: 1px solid var(--z-outline-variant); }
+  .type small { color: var(--z-muted); font-size: 11px; margin-left: 12px; }
+  .note { margin-top: 40px; color: var(--z-muted); font-size: 12px; line-height: 20px; }
+  code { font-family: var(--z-mono); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Zippest 设计语言</h1>
+  <p class="sub">基准板 · 基线 Zippest 1.54.0 · 2026-11-14 · 数值来自 assets/tokens.css，与 tokens.json 同源</p>
+
+  <h2>颜色角色</h2>
+  <div class="swatches">
+    <div class="sw"><i style="background:var(--z-bg)"></i><span>background · #F6F7F5</span></div>
+    <div class="sw"><i style="background:var(--z-surface);box-shadow:inset 0 0 0 1px var(--z-outline-variant)"></i><span>surface · #FFFFFF</span></div>
+    <div class="sw"><i style="background:var(--z-primary)"></i><span>primary · #0F6B4F</span></div>
+    <div class="sw"><i style="background:var(--z-primary-container)"></i><span>primaryContainer · #D9F2E7</span></div>
+    <div class="sw"><i style="background:var(--z-secondary-container)"></i><span>secondaryContainer · #DCE9E2</span></div>
+    <div class="sw"><i style="background:var(--z-tertiary-container)"></i><span>tertiaryContainer · #D6E3EE</span></div>
+    <div class="sw"><i style="background:var(--z-error)"></i><span>error · #A24617</span></div>
+    <div class="sw"><i style="background:var(--z-error-container)"></i><span>errorContainer · #FBE7DC</span></div>
+    <div class="sw"><i style="background:var(--z-muted)"></i><span>muted · #59625D</span></div>
+    <div class="sw"><i style="background:var(--z-outline)"></i><span>outline · #7D8C82</span></div>
+  </div>
+
+  <h2>字阶（同屏最多 4 种）</h2>
+  <div class="type">
+    <div style="font-size:24px;line-height:32px;font-weight:600">页面标题 24 / 32 SemiBold<small>headlineSmall</small></div>
+    <div style="font-size:22px;line-height:28px;font-weight:600">顶栏标题 22 / 28 SemiBold<small>titleLarge</small></div>
+    <div style="font-size:16px;line-height:24px;font-weight:600">分区标题 16 / 24 SemiBold<small>titleMedium</small></div>
+    <div style="font-size:14px;line-height:20px">默认正文 14 / 20<small>bodyMedium</small></div>
+    <div style="font-size:12px;line-height:16px;color:var(--z-muted)">次要信息 12 / 16<small>labelMedium</small></div>
+    <div style="font-size:11px;line-height:16px;color:var(--z-muted)">脚注 11 / 16<small>labelSmall</small></div>
+  </div>
+
+  <h2>结构基准</h2>
+  <div class="boards">
+    <figure class="board phone" style="margin:0">
+      <img src="01-list.svg" alt="列表页基准图">
+      <figcaption>01 · 列表页：顶栏同底色、10 行 × 64、语义色方底图标、底部状态条</figcaption>
+    </figure>
+    <figure class="board phone" style="margin:0">
+      <img src="02-selection.svg" alt="选择态基准图">
+      <figcaption>02 · 选择态：顶栏换成已选计数、行内复选框、底栏换成操作条</figcaption>
+    </figure>
+    <figure class="board phone" style="margin:0">
+      <img src="04-sheet.svg" alt="底部面板基准图">
+      <figcaption>03 · 底部面板：88% 高、顶角 28、字段组、sticky 主按钮</figcaption>
+    </figure>
+    <figure class="board wide" style="margin:0">
+      <img src="03-wide.svg" alt="宽屏三栏基准图" style="max-width:100%">
+      <figcaption>04 · 宽屏三栏：240 导航 + 内容 + 320 第三栏（宽度按 840dp 基准）</figcaption>
+    </figure>
+  </div>
+
+  <p class="note">
+    这些是<strong>结构基准</strong>，不是截图：没有状态栏适配、系统字体回退或 200% 字号验证。
+    把它们和真实实现并排，检查行高、栏宽、面板高度这三组比例；颜色与字号以
+    <code>assets/tokens.css</code> 为准。修改 token 后，SVG 与本页要一起更新。
+  </p>
+</div>
+</body>
+</html>

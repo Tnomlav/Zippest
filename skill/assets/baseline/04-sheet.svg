@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="393" height="852" viewBox="0 0 393 852" role="img" aria-labelledby="t d">
+  <title id="t">Zippest 设计语言 · 底部面板基准</title>
+  <desc id="d">88% 高、顶角 28、拖拽把手、字段组 20 间距、底部 sticky 主按钮。</desc>
+  <rect width="393" height="852" fill="#F6F7F5"/>
+
+  <!-- 背景页（被遮罩压暗） -->
+  <g font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif" fill="#1B211E">
+    <text x="56" y="79" font-size="22" font-weight="600">旅行</text>
+    <rect x="12" y="116" width="40" height="40" rx="12" fill="#D9F2E7"/>
+    <text x="68" y="134" font-size="14" font-weight="500">海边</text>
+    <text x="68" y="152" font-size="12" fill="#59625D">128 项 · 昨天</text>
+  </g>
+  <rect width="393" height="852" fill="#000000" fill-opacity="0.32"/>
+
+  <!-- sheet -->
+  <path d="M0 132 Q0 104 28 104 H365 Q393 104 393 132 V852 H0 Z" fill="#FFFFFF"/>
+  <rect x="180.5" y="120" width="32" height="4" rx="2" fill="#DDE4DE"/>
+
+  <g font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif">
+    <text x="24" y="180" font-size="24" font-weight="600" fill="#1B211E">整理选项</text>
+    <text x="24" y="204" font-size="12" fill="#59625D">已选 3 项 · 旅行</text>
+
+    <text x="24" y="240" font-size="12" font-weight="500" fill="#59625D">输出位置</text>
+    <rect x="24" y="252" width="345" height="56" rx="12" fill="#FFFFFF" stroke="#7D8C82" stroke-width="1"/>
+    <text x="40" y="286" font-size="14" fill="#1B211E">本机 / 旅行</text>
+
+    <text x="24" y="340" font-size="12" font-weight="500" fill="#59625D">方式</text>
+    <rect x="24" y="352" width="64" height="36" rx="18" fill="#DCE9E2"/>
+    <text x="56" y="375" font-size="14" font-weight="500" fill="#12201A" text-anchor="middle">复制</text>
+    <rect x="96" y="352" width="64" height="36" rx="18" fill="#FFFFFF" stroke="#7D8C82" stroke-width="1"/>
+    <text x="128" y="375" font-size="14" fill="#1B211E" text-anchor="middle">移动</text>
+    <rect x="168" y="352" width="86" height="36" rx="18" fill="#FFFFFF" stroke="#7D8C82" stroke-width="1"/>
+    <text x="211" y="375" font-size="14" fill="#1B211E" text-anchor="middle">仅索引</text>
+
+    <text x="24" y="424" font-size="12" font-weight="500" fill="#59625D">命名</text>
+    <rect x="24" y="436" width="345" height="56" rx="12" fill="#FFFFFF" stroke="#0F6B4F" stroke-width="2"/>
+    <text x="40" y="470" font-size="14" fill="#1B211E">旅行_2026-11</text>
+    <text x="24" y="512" font-size="12" fill="#59625D">同名项目将自动重命名，不覆盖原文件</text>
+
+    <line x1="24" y1="640" x2="369" y2="640" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+    <text x="24" y="672" font-size="14" fill="#1B211E">预计占用</text>
+    <text x="369" y="672" font-size="14" fill="#1B211E" text-anchor="end">1.4 GB</text>
+    <line x1="24" y1="696" x2="369" y2="696" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+    <text x="24" y="728" font-size="14" fill="#1B211E">完成后打开</text>
+    <rect x="345" y="716" width="24" height="14" rx="7" fill="#0F6B4F"/>
+    <circle cx="362" cy="723" r="6" fill="#FFFFFF"/>
+  </g>
+
+  <!-- sticky actions -->
+  <text x="80" y="805" font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="14" font-weight="500" fill="#0F6B4F" text-anchor="middle">取消</text>
+  <rect x="176" y="776" width="193" height="48" rx="12" fill="#0F6B4F"/>
+  <text x="272.5" y="806" font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="14" font-weight="500" fill="#FFFFFF" text-anchor="middle">开始整理</text>
+  <rect x="164" y="836" width="65" height="4" rx="2" fill="#1B211E" fill-opacity="0.28"/>
+</svg>

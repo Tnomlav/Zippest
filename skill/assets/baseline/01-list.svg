@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="393" height="852" viewBox="0 0 393 852" role="img" aria-labelledby="t d">
+  <title id="t">Zippest 设计语言 · 列表页基准</title>
+  <desc id="d">暖白底、64dp 扁平行、语义色方底图标、顶栏与页面同色、底部状态条。</desc>
+  <rect width="393" height="852" fill="#F6F7F5"/>
+
+  <!-- status bar -->
+  <g fill="#1B211E" font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12">
+    <text x="24" y="28">9:41</text>
+    <rect x="318" y="18" width="3" height="8" rx="1.5" fill="#1B211E"/>
+    <rect x="324" y="15" width="3" height="11" rx="1.5" fill="#1B211E"/>
+    <rect x="330" y="12" width="3" height="14" rx="1.5" fill="#1B211E"/>
+    <rect x="344" y="15" width="20" height="10" rx="3" fill="none" stroke="#1B211E" stroke-width="1.2"/>
+    <rect x="346" y="17" width="14" height="6" rx="1.5" fill="#1B211E"/>
+  </g>
+
+  <!-- top bar 64 -->
+  <g fill="none" stroke="#1B211E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 65 L15 72 L22 79"/>
+    <path d="M156 69 L161 74 L166 69"/>
+    <circle cx="313" cy="70" r="6.5"/>
+    <path d="M318 75 L323 80"/>
+    <path d="M346 66 V78 M340 72 H352"/>
+  </g>
+  <g fill="#1B211E">
+    <circle cx="374" cy="68" r="1.6"/><circle cx="374" cy="72" r="1.6"/><circle cx="374" cy="76" r="1.6"/>
+  </g>
+  <text x="56" y="79" font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="22" font-weight="600" fill="#1B211E">最近项目</text>
+
+  <!-- list: 10 rows × 64 -->
+  <g font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif">
+    <!-- row template repeated; y = 104 + 64n -->
+    <!-- 1 旅行 -->
+    <rect x="12" y="116" width="40" height="40" rx="12" fill="#D9F2E7"/>
+    <path d="M20 133 A1.5 1.5 0 0 1 21.5 131.5 h5 l2.5 2.5 h8.5 A1.5 1.5 0 0 1 39 135.5 v9 A1.5 1.5 0 0 1 37.5 146 h-16 A1.5 1.5 0 0 1 20 144.5 z" fill="none" stroke="#0F6B4F" stroke-width="1.6"/>
+    <text x="68" y="134" font-size="14" font-weight="500" fill="#1B211E">旅行</text>
+    <text x="68" y="152" font-size="12" fill="#59625D">128 项 · 昨天</text>
+    <path d="M360 128 l6 8 l-6 8" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <line x1="12" y1="167.5" x2="381" y2="167.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <!-- 2 家庭 -->
+    <rect x="12" y="180" width="40" height="40" rx="12" fill="#D9F2E7"/>
+    <path d="M20 197 A1.5 1.5 0 0 1 21.5 195.5 h5 l2.5 2.5 h8.5 A1.5 1.5 0 0 1 39 199.5 v9 A1.5 1.5 0 0 1 37.5 210 h-16 A1.5 1.5 0 0 1 20 208.5 z" fill="none" stroke="#0F6B4F" stroke-width="1.6"/>
+    <text x="68" y="198" font-size="14" font-weight="500" fill="#1B211E">家庭</text>
+    <text x="68" y="216" font-size="12" fill="#59625D">36 项 · 10月18日</text>
+    <path d="M360 192 l6 8 l-6 8" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <line x1="12" y1="231.5" x2="381" y2="231.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <!-- 3 工作 -->
+    <rect x="12" y="244" width="40" height="40" rx="12" fill="#D9F2E7"/>
+    <path d="M20 261 A1.5 1.5 0 0 1 21.5 259.5 h5 l2.5 2.5 h8.5 A1.5 1.5 0 0 1 39 263.5 v9 A1.5 1.5 0 0 1 37.5 274 h-16 A1.5 1.5 0 0 1 20 272.5 z" fill="none" stroke="#0F6B4F" stroke-width="1.6"/>
+    <text x="68" y="262" font-size="14" font-weight="500" fill="#1B211E">工作</text>
+    <text x="68" y="280" font-size="12" fill="#59625D">54 项 · 10月17日</text>
+    <path d="M360 256 l6 8 l-6 8" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <line x1="12" y1="295.5" x2="381" y2="295.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <!-- 4 素材（归档对象，tertiary） -->
+    <rect x="12" y="308" width="40" height="40" rx="12" fill="#D6E3EE"/>
+    <rect x="22" y="320" width="20" height="16" rx="2" fill="none" stroke="#41586A" stroke-width="1.6"/>
+    <path d="M22 325 H42" stroke="#41586A" stroke-width="1.6"/>
+    <text x="68" y="326" font-size="14" font-weight="500" fill="#1B211E">2026-11 归档</text>
+    <text x="68" y="344" font-size="12" fill="#59625D">248.6 MB · 10月16日</text>
+    <path d="M360 320 l6 8 l-6 8" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <line x1="12" y1="359.5" x2="381" y2="359.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <!-- 5 封面（媒体，secondary） -->
+    <rect x="12" y="372" width="40" height="40" rx="12" fill="#DCE9E2"/>
+    <circle cx="27" cy="387" r="2.4" fill="none" stroke="#4F6B5E" stroke-width="1.6"/>
+    <path d="M20 400 L27 392 L33 398 L37 393 L40 396" fill="none" stroke="#4F6B5E" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="68" y="390" font-size="14" font-weight="500" fill="#1B211E">封面</text>
+    <text x="68" y="408" font-size="12" fill="#59625D">18 项 · 10月15日</text>
+    <path d="M360 384 l6 8 l-6 8" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <line x1="12" y1="423.5" x2="381" y2="423.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <!-- 6 文档（中性） -->
+    <rect x="12" y="436" width="40" height="40" rx="12" fill="#E9EFEA"/>
+    <rect x="23" y="448" width="17" height="20" rx="2" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <path d="M27 455 H36 M27 460 H36 M27 465 H33" stroke="#59625D" stroke-width="1.4"/>
+    <text x="68" y="454" font-size="14" font-weight="500" fill="#1B211E">说明文档</text>
+    <text x="68" y="472" font-size="12" fill="#59625D">12 KB · 10月12日</text>
+    <path d="M360 448 l6 8 l-6 8" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <line x1="12" y1="487.5" x2="381" y2="487.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <!-- 7-10 -->
+    <rect x="12" y="500" width="40" height="40" rx="12" fill="#D9F2E7"/>
+    <path d="M20 517 A1.5 1.5 0 0 1 21.5 515.5 h5 l2.5 2.5 h8.5 A1.5 1.5 0 0 1 39 519.5 v9 A1.5 1.5 0 0 1 37.5 530 h-16 A1.5 1.5 0 0 1 20 528.5 z" fill="none" stroke="#0F6B4F" stroke-width="1.6"/>
+    <text x="68" y="518" font-size="14" font-weight="500" fill="#1B211E">年度精选</text>
+    <text x="68" y="536" font-size="12" fill="#59625D">42 项 · 10月11日</text>
+    <path d="M360 512 l6 8 l-6 8" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <line x1="12" y1="551.5" x2="381" y2="551.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <rect x="12" y="564" width="40" height="40" rx="12" fill="#E9EFEA"/>
+    <path d="M32 578 v12 M26 584 h12" stroke="#59625D" stroke-width="1.6"/>
+    <text x="68" y="582" font-size="14" font-weight="500" fill="#1B211E">新建项目</text>
+    <text x="68" y="600" font-size="12" fill="#59625D">空白 · 今天</text>
+    <line x1="12" y1="615.5" x2="381" y2="615.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <rect x="12" y="628" width="40" height="40" rx="12" fill="#E9EFEA"/>
+    <rect x="23" y="640" width="17" height="20" rx="2" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <text x="68" y="646" font-size="14" font-weight="500" fill="#1B211E">备忘</text>
+    <text x="68" y="664" font-size="12" fill="#59625D">3 项 · 10月9日</text>
+    <path d="M360 640 l6 8 l-6 8" fill="none" stroke="#59625D" stroke-width="1.6"/>
+    <line x1="12" y1="679.5" x2="381" y2="679.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+
+    <rect x="12" y="692" width="40" height="40" rx="12" fill="#DCE9E2"/>
+    <circle cx="27" cy="707" r="2.4" fill="none" stroke="#4F6B5E" stroke-width="1.6"/>
+    <path d="M20 720 L27 712 L33 718 L37 713 L40 716" fill="none" stroke="#4F6B5E" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="68" y="710" font-size="14" font-weight="500" fill="#1B211E">截图</text>
+    <text x="68" y="728" font-size="12" fill="#59625D">64 项 · 10月8日</text>
+    <path d="M360 704 l6 8 l-6 8" fill="none" stroke="#59625D" stroke-width="1.6"/>
+  </g>
+
+  <!-- bottom status bar -->
+  <rect x="0" y="744" width="393" height="108" fill="#FFFFFF"/>
+  <line x1="0" y1="744.5" x2="393" y2="744.5" stroke="#7D8C82" stroke-opacity="0.32" stroke-width="1"/>
+  <g font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12" fill="#59625D">
+    <text x="12" y="772">本机存储 · 已用 436 GB / 491 GB</text>
+    <text x="381" y="772" text-anchor="end">可用 55 GB</text>
+  </g>
+  <rect x="12" y="786" width="369" height="5" rx="2.5" fill="#E9EFEA"/>
+  <rect x="12" y="786" width="325" height="5" rx="2.5" fill="#0F6B4F"/>
+  <rect x="164" y="836" width="65" height="4" rx="2" fill="#1B211E" fill-opacity="0.28"/>
+</svg>

@@ -278,6 +278,43 @@ private fun looksGarbled(name: String): Boolean =
 
 private const val LIST_BATCH_SIZE = 200
 
+
+/**
+ * zip4j 的 AES 密码按 ISO-8859-1 转字节，中文会被替换成 '?'，导致正确密码也校验失败。
+ * 这里把密码的 UTF-8 字节重新按 ISO-8859-1 解释，PBKDF2 得到的字节就与 ZArchiver/WinZip 一致。
+ */
+private fun aesSafePassword(password: String, charset: Charset): CharArray {
+    val bytes = password.toByteArray(charset)
+    return String(bytes, Charsets.ISO_8859_1).toCharArray()
+}
+
+private fun passwordCandidates(password: String): List<CharArray> {
+    val plain = password.toCharArray()
+    if (password.all { it.code < 0x80 }) return listOf(plain)
+    return listOf(
+        plain,
+        aesSafePassword(password, Charsets.UTF_8),
+        aesSafePassword(password, Charset.forName("GBK"))
+    )
+}
+
+/** 逐一把候选密码套到 AES 条目上试读，返回能通过的 Zip4jFile。 */
+private fun openZipWithWorkingPassword(file: File, password: String): Zip4jFile {
+    var lastError: Throwable? = null
+    passwordCandidates(password).forEach { chars ->
+        val archive = Zip4jFile(file, chars)
+        val header = archive.fileHeaders.firstOrNull { !it.isDirectory && it.isEncrypted }
+        try {
+            if (header == null) return archive
+            archive.getInputStream(header).use { it.read(ByteArray(16)) }
+            return archive
+        } catch (error: Throwable) {
+            lastError = error
+        }
+    }
+    throw ArchiveException("密码错误", lastError)
+}
+
 class ZipArchiveEngine(private val context: Context) {
     private val resolver: ContentResolver = context.contentResolver
 
@@ -603,7 +640,7 @@ class ZipArchiveEngine(private val context: Context) {
                 } ?: throw ArchiveException("无法读取压缩包")
             }
             return runCatching {
-                val archive = Zip4jFile(archiveFile, password.toCharArray())
+                val archive = openZipWithWorkingPassword(archiveFile, password)
                 val headers = archive.fileHeaders
                 if (headers.size > MAX_ENTRIES) {
                     throw ArchiveException(
@@ -666,7 +703,7 @@ class ZipArchiveEngine(private val context: Context) {
 
             var rollbackOutput: SafOutput? = null
             runCatching {
-                val archive = Zip4jFile(archiveFile, settings.password.toCharArray())
+                val archive = openZipWithWorkingPassword(archiveFile, settings.password)
                 val headers = archive.fileHeaders
                 if (headers.size > MAX_ENTRIES) {
                     throw ArchiveException(
